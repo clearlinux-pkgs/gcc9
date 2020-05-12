@@ -89,7 +89,7 @@ Provides:       g++
 %description
 GNU cc and gcc C compilers.
 
-%package -n gcc-dev
+%package -n gcc9-dev
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
@@ -104,7 +104,7 @@ Provides:       libstdc++-dev
 Requires:       gcc-libs-math
 Requires:       libstdc++
 
-%description -n gcc-dev
+%description -n gcc9-dev
 GNU cc and gcc C compilers dev files
 
 
@@ -163,28 +163,12 @@ Group:          devel
 %description libstdc++32
 GNU cc and gcc C compilers.
 
-%package -n gcc-doc
+%package -n gcc9-doc
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          doc
 
-%package go
-License:        GPL-3.0-with-GCC-exception and GPL-3.0
-Summary:        GNU Compile Collection GO compiler
-Group:          devel
-
-%description go
-GNU Compile Collection GO compiler
-
-%package go-lib
-License:        GPL-3.0-with-GCC-exception and GPL-3.0
-Summary:        GNU Compile Collection GO runtime
-Group:          devel
-
-%description go-lib
-GNU Compile Collection GO runtime
-
-%description -n gcc-doc
+%description -n gcc9-doc
 GNU cc and gcc C compilers.
 
 %package locale
@@ -538,13 +522,7 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
-
-
-#/usr/lib/libvtv.a
-#/usr/lib/libvtv.so
 /usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
-
-
 
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
@@ -591,34 +569,12 @@ cat *.lang > gcc.lang
 /usr/lib32/libstdc++.so.*
 
 
-%files -n gcc-doc
+%files -n gcc9-doc
 %{_mandir}/man1
 %{_mandir}/man7
 %{_infodir}
 
-%files go
-/usr/libexec/gccgo/bin/*
-/usr/bin/gccgo
-/usr/bin/x86_64-generic-linux-gccgo
-/usr/lib64/gcc/x86_64-generic-linux/*/cgo
-/usr/lib64/gcc/x86_64-generic-linux/*/go1
-/usr/lib64/gcc/x86_64-generic-linux/*/buildid
-/usr/lib64/gcc/x86_64-generic-linux/*/test2json
-/usr/lib64/gcc/x86_64-generic-linux/*/vet
-/usr/lib64/libgo.a
-/usr/lib64/libgo.so
-/usr/lib64/libgobegin.a
-/usr/lib64/libgolibbegin.a
-#no 32 bit go
-%exclude /usr/lib32/go/
-
-%files go-lib
-/usr/lib64/libgo.so.*
-/usr/lib64/go/*/x86_64-generic-linux/*.gox
-/usr/lib64/go/*/x86_64-generic-linux/*/*.gox
-/usr/lib64/go/*/x86_64-generic-linux/*/*/*.gox
-
-%files -n gcc-locale -f gcc.lang
+%files -n gcc9-locale -f gcc.lang
 
 %files libubsan
 /usr/lib64/libubsan*

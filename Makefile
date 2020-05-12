@@ -1,4 +1,4 @@
-PKG_NAME := gcc
+PKG_NAME := gcc9
 URL := https://mirrors.kernel.org/gnu/gcc/gcc-9.1.0/gcc-9.1.0.tar.gz
 
 include ../common/Makefile.common
