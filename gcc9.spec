@@ -12,7 +12,7 @@
 # avoton (silvermont target) && ivybridge (OBS builders) = westmere
 %define march westmere
 
-Name     : gcc
+Name     : gcc9
 Version  : 9.3.1
 Release  : 853
 URL      : http://www.gnu.org/software/gcc/
@@ -81,12 +81,10 @@ Provides:       gcc-symlinks
 Provides:       cpp
 Provides:       cpp-symlinks
 Provides:       gcov
-Provides:       gfortran-symlinks
 Provides:       g77
 Provides:       g77-symlinks
 Provides:       g++-symlinks
 Provides:       g++
-Provides:       gfortran
 
 %description
 GNU cc and gcc C compilers.
@@ -279,7 +277,7 @@ export LIBRARY_PATH=/usr/lib64
     --enable-linker-build-id \
     --build=%{gcc_target}\
     --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran,go" \
+    --enable-languages="c,c++" \
     --enable-bootstrap \
     --with-ppl=yes \
     --with-isl \
@@ -349,10 +347,6 @@ if [ -e %{gcc_target}-g77 ]; then
     ln -sf %{gcc_target}-g77 g77 || true
     ln -sf g77 f77 || true
 fi
-if [ -e x86_64-generic-linux-gfortran ]; then
-    ln -sf %{gcc_target}-gfortran gfortran || true
-    ln -sf gfortran f95 || true
-fi
 ln -sf %{gcc_target}-g++ g++
 ln -sf %{gcc_target}-gcc gcc
 #ln -sf %{gcc_target}-cpp cpp
@@ -419,13 +413,13 @@ cat *.lang > gcc.lang
 /usr/bin/%{gcc_target}-c++-9
 /usr/bin/%{gcc_target}-gcc-%{gccver}
 /usr/bin/gcc-9
-/usr/bin/cc-9
+/usr/bin/cc
 /usr/bin/gcc-ar-9
 /usr/bin/gcc-nm-9
 /usr/bin/gcc-ranlib-9
 /usr/bin/gcov-9
 /usr/bin/gcov-tool-9
-/usr/lib/cpp-9
+/usr/lib/cpp
 /usr/bin/cpp-9
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
@@ -447,13 +441,6 @@ cat *.lang > gcc.lang
 /usr/lib64/*.a
 /usr/lib64/*.o
 
-
-#gfortran
-/usr/bin/%{gcc_target}-gfortran
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/f951
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/finclude
-/usr/bin/f95
-/usr/bin/gfortran
 
 #g++
 /usr/bin/%{gcc_target}-g++
@@ -483,8 +470,6 @@ cat *.lang > gcc.lang
 /usr/lib64/libssp*.a
 /usr/lib64/libgomp.a
 /usr/lib64/libgomp.spec
-/usr/lib64/libgfortran.so
-/usr/lib64/libgfortran.spec
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
@@ -540,9 +525,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libasan.so
 /usr/lib32/libatomic.a
 /usr/lib32/libatomic.so
-/usr/lib32/libgfortran.a
-/usr/lib32/libgfortran.so
-/usr/lib32/libgfortran.spec
 /usr/lib32/libgomp.a
 /usr/lib32/libgomp.so
 /usr/lib32/libgomp.spec
@@ -556,7 +538,6 @@ cat *.lang > gcc.lang
 /usr/lib32/libssp.so
 /usr/lib32/libubsan.a
 /usr/lib32/libubsan.so
-#/usr/lib64/gcc/x86_64-generic-linux/*/32/include/ISO_Fortran_binding.h
 
 
 #/usr/lib/libvtv.a
@@ -574,7 +555,6 @@ cat *.lang > gcc.lang
 /usr/lib64/libatomic*.so.*
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
-/usr/lib64/libgfortran*.so.*
 
 %files libgcc32
 /usr/lib32/libasan.so.5
@@ -587,8 +567,6 @@ cat *.lang > gcc.lang
 #/usr/lib32/libcilkrts.spec
 /usr/lib32/libgcc_s.so
 /usr/lib32/libgcc_s.so.1
-/usr/lib32/libgfortran.so.5
-/usr/lib32/libgfortran.so.5.0.0
 %exclude /usr/lib32/libgo.*
 %exclude /usr/lib32/libgobegin.a
 %exclude /usr/lib32/libgolibbegin.a
