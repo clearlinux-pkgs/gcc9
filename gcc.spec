@@ -257,6 +257,7 @@ export CPATH=/usr/include
 export LIBRARY_PATH=/usr/lib64
 
 ../%{gccpath}/configure \
+	--program-suffix="-9" \
     --prefix=/usr \
     --with-pkgversion='Clear Linux OS for Intel Architecture'\
     --libdir=/usr/lib64 \
@@ -296,117 +297,6 @@ export LIBRARY_PATH=/usr/lib64
 
 make %{?_smp_mflags} profiledbootstrap
 
-popd
-
-rm -rf ../gcc-build-avx2
-mkdir ../gcc-build-avx2
-pushd ../gcc-build-avx2
-unset CFLAGS
-unset CXXFLAGS
-export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
-export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000"
-export CFLAGS_FOR_TARGET="$CFLAGS -march=haswell -mtune=skylake -fno-semantic-interposition "
-export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=haswell -mtune=skylake -fno-semantic-interposition "
-export FFLAGS_FOR_TARGET="$FFLAGS -march=haswell -mtune=skylake -fno-semantic-interposition "
-
-export CPATH=/usr/include
-export LIBRARY_PATH=%{_libdir}
-../%{gccpath}/configure \
-    --prefix=%{_prefix} \
-    --with-pkgversion='Clear Linux OS for Intel Architecture'\
-    --libdir=/usr/lib64 \
-    --enable-libstdcxx-pch\
-    --libexecdir=/usr/lib64 \
-    --with-system-zlib\
-    --enable-shared\
-    --enable-gnu-indirect-function \
-    --disable-vtable-verify \
-    --enable-threads=posix\
-    --enable-__cxa_atexit\
-    --enable-plugin\
-    --enable-ld=default\
-    --enable-clocale=gnu\
-    --disable-multiarch\
-    --disable-multilib\
-    --enable-lto\
-    --enable-linker-build-id \
-    --build=%{gcc_target}\
-    --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran" \
-    --with-ppl=yes \
-    --with-isl \
-    --includedir=%{_includedir} \
-    --exec-prefix=%{_prefix} \
-    --with-glibc-version=2.19 \
-    --with-system-libunwind \
-    --with-gnu-ld \
-    --with-tune=haswell \
-    --with-arch=haswell \
-    --disable-bootstrap \
-    --enable-cet \
-    --disable-libmpx \
-    --with-gcc-major-version-only \
-    --enable-default-pie
-
-make %{?_smp_mflags}
-
-popd
-
-rm -rf ../gcc-build-avx512
-mkdir ../gcc-build-avx512
-pushd ../gcc-build-avx512
-unset CFLAGS
-unset CXXFLAGS
-export CFLAGS="-march=ivybridge -g -O3 -fstack-protector -Wl,-z -Wl,now -Wl,-z -Wl,relro  -Wl,-z,max-page-size=0x1000"
-export CXXFLAGS="-march=ivybridge -g -O3  -Wl,-z,max-page-size=0x1000"
-export CFLAGS_FOR_TARGET="$CFLAGS -march=skylake-avx512 -mtune=skylake -fno-semantic-interposition "
-export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=skylake-avx512 -mtune=skylake -fno-semantic-interposition "
-export FFLAGS_FOR_TARGET="$FFLAGS -march=skylake-avx512 -mtune=skylake -fno-semantic-interposition "
-
-export CPATH=/usr/include
-export LIBRARY_PATH=%{_libdir}
-
-../%{gccpath}/configure \
-    --prefix=%{_prefix} \
-    --with-pkgversion='Clear Linux OS for Intel Architecture'\
-    --libdir=/usr/lib64 \
-    --enable-libstdcxx-pch\
-    --libexecdir=/usr/lib64 \
-    --with-system-zlib\
-    --enable-shared\
-    --enable-gnu-indirect-function \
-    --disable-vtable-verify \
-    --enable-threads=posix\
-    --enable-__cxa_atexit\
-    --enable-plugin\
-    --enable-ld=default\
-    --enable-clocale=gnu\
-    --disable-multiarch\
-    --disable-multilib\
-    --enable-lto\
-    --enable-linker-build-id \
-    --build=%{gcc_target}\
-    --target=%{gcc_target}\
-    --enable-languages="c,c++,fortran" \
-    --with-ppl=yes \
-    --with-isl \
-    --includedir=%{_includedir} \
-    --exec-prefix=%{_prefix} \
-    --with-glibc-version=2.19 \
-    --with-system-libunwind \
-    --with-gnu-ld \
-    --with-tune=skylake-avx512 \
-    --with-arch=skylake-avx512 \
-    --disable-bootstrap \
-    --enable-cet \
-    --disable-libmpx \
-    --with-gcc-major-version-only \
-    --enable-default-pie
-
-make %{?_smp_mflags}
-
-popd
-
 
 # Work around libstdc++'s use of weak symbols to libpthread in static
 # mode: libpthread doesn't get pulled in and therefore we get crashes
@@ -439,42 +329,16 @@ for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
     done
 done
 
-%check
-pushd ../gcc-build
-export CHECK_TEST_FRAMEWORK=1
-make -k  %{?_smp_mflags} check  || :
-popd
+# %check
+# pushd ../gcc-build
+# export CHECK_TEST_FRAMEWORK=1
+# make -k  %{?_smp_mflags} check  || :
+# popd
 
 
 %install
 export CPATH=/usr/include
 export LIBRARY_PATH=/usr/lib64
-
-pushd ../gcc-build-avx512
-%make_install
-popd
-rm -rf %{buildroot}/usr/share
-rm -rf %{buildroot}/usr/bin
-rm -rf %{buildroot}/usr/lib64/gcc/
-rm -rf %{buildroot}/usr/lib64/*.a
-rm -rf %{buildroot}/usr/lib64/*.o
-rm -rf %{buildroot}/usr/lib64/*.so
-rm -rf %{buildroot}/usr/lib64/*.spec
-mkdir -p %{buildroot}/usr/lib64/haswell/avx512_1
-mv %{buildroot}/usr/lib64/*so*  %{buildroot}/usr/lib64/haswell/avx512_1
-
-pushd ../gcc-build-avx2
-%make_install
-popd
-rm -rf %{buildroot}/usr/share
-rm -rf %{buildroot}/usr/bin
-rm -rf %{buildroot}/usr/lib64/gcc/
-rm -rf %{buildroot}/usr/lib64/*.a
-rm -rf %{buildroot}/usr/lib64/*.o
-rm -rf %{buildroot}/usr/lib64/*.so
-rm -rf %{buildroot}/usr/lib64/*.spec
-mkdir -p %{buildroot}/usr/lib64/haswell
-mv %{buildroot}/usr/lib64/*so*  %{buildroot}/usr/lib64/haswell/
 
 pushd ../gcc-build
 %make_install
@@ -501,8 +365,8 @@ cd -
 # This conflicts with golang, stash away
 # We use gccgo to build golang
 mkdir -p %{buildroot}/usr/libexec/gccgo/bin
-mv %{buildroot}/usr/bin/go %{buildroot}/usr/libexec/gccgo/bin
-mv %{buildroot}/usr/bin/gofmt %{buildroot}/usr/libexec/gccgo/bin
+mv %{buildroot}/usr/bin/go-9 %{buildroot}/usr/libexec/gccgo/bin
+mv %{buildroot}/usr/bin/gofmt-9 %{buildroot}/usr/libexec/gccgo/bin
 
 find %{buildroot}/usr/ -name libiberty.a | xargs rm -f
 find %{buildroot}/usr/ -name libiberty.h | xargs rm -f
@@ -548,21 +412,21 @@ popd
 cat *.lang > gcc.lang
 
 %files
-/usr/bin/%{gcc_target}-gcc-ar
-/usr/bin/%{gcc_target}-gcc-ranlib
-/usr/bin/%{gcc_target}-gcc-nm
-/usr/bin/%{gcc_target}-gcc
-/usr/bin/%{gcc_target}-c++
+/usr/bin/%{gcc_target}-gcc-ar-9
+/usr/bin/%{gcc_target}-gcc-ranlib-9
+/usr/bin/%{gcc_target}-gcc-nm-9
+/usr/bin/%{gcc_target}-gcc-9
+/usr/bin/%{gcc_target}-c++-9
 /usr/bin/%{gcc_target}-gcc-%{gccver}
-/usr/bin/gcc
-/usr/bin/cc
-/usr/bin/gcc-ar
-/usr/bin/gcc-nm
-/usr/bin/gcc-ranlib
-/usr/bin/gcov
-/usr/bin/gcov-tool
-/usr/lib/cpp
-/usr/bin/cpp
+/usr/bin/gcc-9
+/usr/bin/cc-9
+/usr/bin/gcc-ar-9
+/usr/bin/gcc-nm-9
+/usr/bin/gcc-ranlib-9
+/usr/bin/gcov-9
+/usr/bin/gcov-tool-9
+/usr/lib/cpp-9
+/usr/bin/cpp-9
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
@@ -704,12 +568,6 @@ cat *.lang > gcc.lang
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
 
-#avx2
-%exclude /usr/lib64/haswell/libgcc_s.so.1
-
-#avx512
-%exclude /usr/lib64/haswell/avx512_1/libgcc_s.so.1
-
 %files libs-math
 /usr/lib64/libssp.so*
 /usr/lib64/libgomp*so*
@@ -717,24 +575,6 @@ cat *.lang > gcc.lang
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
 /usr/lib64/libgfortran*.so.*
-
-#avx2
-/usr/lib64/haswell/libgomp.so.1
-/usr/lib64/haswell/libgomp.so.1.0.0
-%exclude /usr/lib64/haswell/libitm.so.1
-%exclude /usr/lib64/haswell/libitm.so.1.0.0
-/usr/lib64/haswell/libquadmath.so.0
-/usr/lib64/haswell/libquadmath.so.0.0.0
-/usr/lib64/haswell/libgfortran.so.5
-/usr/lib64/haswell/libgfortran.so.5.0.0
-
-#avx512
-%exclude /usr/lib64/haswell/avx512_1/libgomp.so.1
-%exclude /usr/lib64/haswell/avx512_1/libgomp.so.1.0.0
-/usr/lib64/haswell/avx512_1/libquadmath.so.0
-/usr/lib64/haswell/avx512_1/libquadmath.so.0.0.0
-/usr/lib64/haswell/avx512_1/libgfortran.so.5
-/usr/lib64/haswell/avx512_1/libgfortran.so.5.0.0
 
 %files libgcc32
 /usr/lib32/libasan.so.5
@@ -768,14 +608,6 @@ cat *.lang > gcc.lang
 
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
-
-#avx2
-%exclude /usr/lib64/haswell/libstdc++.so.6
-%exclude /usr/lib64/haswell/libstdc++.so.6.0.*
-
-#avx512
-%exclude /usr/lib64/haswell/avx512_1/libstdc++.so.6
-%exclude /usr/lib64/haswell/avx512_1/libstdc++.so.6.0.*
 
 %files libstdc++32
 /usr/lib32/libstdc++.so.*
@@ -817,6 +649,3 @@ cat *.lang > gcc.lang
 /usr/lib64/liblsan*
 /usr/lib64/libsanit*
 
-#avx2
-%exclude /usr/lib64/haswell/*
-%exclude /usr/lib64/haswell/avx512_1/*
