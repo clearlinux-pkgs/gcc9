@@ -68,8 +68,6 @@ BuildRequires : libxslt
 BuildRequires : graphviz
 BuildRequires : gdb-dev
 BuildRequires : procps-ng
-BuildRequires : glibc-libc32
-BuildRequires : glibc-dev32
 BuildRequires : docbook-xml docbook-utils doxygen
 BuildRequires : util-linux
 
@@ -107,19 +105,6 @@ Requires:       libstdc++
 %description -n gcc9-dev
 GNU cc and gcc C compilers dev files
 
-
-
-%package dev32
-License:        GPL-3.0-with-GCC-exception and GPL-3.0
-Summary:        GNU cc and gcc C compilers
-Group:          devel
-
-%description dev32
-GNU cc and gcc C compilers dev files
-
-
-
-
 %package -n libgcc1
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
@@ -129,14 +114,6 @@ Provides:       libssp0
 Provides:       libgomp1
 
 %description -n libgcc1
-GNU cc and gcc C compilers.
-
-%package libgcc32
-License:        GPL-3.0-with-GCC-exception and GPL-3.0
-Summary:        GNU cc and gcc C compilers
-Group:          devel
-
-%description libgcc32
 GNU cc and gcc C compilers.
 
 %package libubsan
@@ -153,14 +130,6 @@ Summary:        GNU cc and gcc C compilers
 Group:          devel
 
 %description -n libstdc++
-GNU cc and gcc C compilers.
-
-%package libstdc++32
-License:        GPL-3.0-with-GCC-exception and GPL-3.0
-Summary:        GNU cc and gcc C compilers
-Group:          devel
-
-%description libstdc++32
 GNU cc and gcc C compilers.
 
 %package -n gcc9-doc
@@ -255,7 +224,7 @@ export LIBRARY_PATH=/usr/lib64
     --enable-ld=default\
     --enable-clocale=gnu\
     --disable-multiarch\
-    --enable-multilib\
+    --disable-multilib\
     --enable-lto\
     --disable-werror \
     --enable-linker-build-id \
@@ -280,43 +249,11 @@ export LIBRARY_PATH=/usr/lib64
 make %{?_smp_mflags} profiledbootstrap
 
 
-# Work around libstdc++'s use of weak symbols to libpthread in static
-# mode: libpthread doesn't get pulled in and therefore we get crashes
-# due to the calls being resolved to address 0x0.
-# We rebuild the .a without weak symbols.
-# See:
-#  https://sourceware.org/bugzilla/show_bug.cgi?id=5784
-#  https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78017
-#  (and more)
-for dir in ../gcc-build/x86_64-generic-linux/{,32}; do
-    for lib in libstdc++-v3/libsupc++ libstdc++-v3/src; do
-        pushd $dir/$lib
-        # Save any shared libraries
-        mv .libs saved.libs || :
-        rename lib savedlib lib*.so.* || :
-
-        make clean
-        make %{?_smp_mflags} CPPFLAGS="-D_GLIBCXX_GTHREAD_USE_WEAK=0" \
-             LIBGCC2_DEBUG_CFLAGS="-g -DGTHREAD_USE_WEAK=0"
-
-        # Restore the saved shared libraries (if any)
-        rename savedlib lib savedlib* || :
-        if [ -d saved.libs ]; then
-            mv saved.libs/*.so.* .libs || :
-        fi
-
-        # Update timestamps so make install won't recreate
-        find -name '*.so*' | xargs -rt touch -r `find -name '*.a' | head -1`
-        popd
-    done
-done
-
 # %check
 # pushd ../gcc-build
 # export CHECK_TEST_FRAMEWORK=1
 # make -k  %{?_smp_mflags} check  || :
 # popd
-
 
 %install
 export CPATH=/usr/include
@@ -327,29 +264,9 @@ pushd ../gcc-build
 cd -
 
 cd %{buildroot}/usr/bin
-if [ -e %{gcc_target}-g77 ]; then
-    ln -sf %{gcc_target}-g77 g77 || true
-    ln -sf g77 f77 || true
-fi
-ln -sf %{gcc_target}-g++ g++
-ln -sf %{gcc_target}-gcc gcc
-#ln -sf %{gcc_target}-cpp cpp
-install -d %{buildroot}/usr/lib
-ln -sf /usr/bin/cpp %{buildroot}/usr/lib/cpp
-ln -sf g++ c++
-ln -sf gcc cc
-cd -
-
-# This conflicts with golang, stash away
-# We use gccgo to build golang
-mkdir -p %{buildroot}/usr/libexec/gccgo/bin
-mv %{buildroot}/usr/bin/go-9 %{buildroot}/usr/libexec/gccgo/bin
-mv %{buildroot}/usr/bin/gofmt-9 %{buildroot}/usr/libexec/gccgo/bin
 
 find %{buildroot}/usr/ -name libiberty.a | xargs rm -f
 find %{buildroot}/usr/ -name libiberty.h | xargs rm -f
-chmod 0755 %{buildroot}/usr/lib64/libgcc_s.so.1
-chmod 0755 %{buildroot}/usr/lib32/libgcc_s.so.1
 
 chmod a+x %{buildroot}/usr/bin
 chmod a+x %{buildroot}/usr/lib64
@@ -359,35 +276,17 @@ find %{buildroot}/usr/lib64 %{buildroot}/usr/lib*/gcc -name '*.o' -print0 | xarg
 
 # This is only for gdb
 mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
-mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib32
-mv %{buildroot}//usr/lib64/libstdc++.so.*-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib64/.
-mv %{buildroot}//usr/lib32/libstdc++.so.*-gdb.py %{buildroot}//usr/share/gdb/auto-load//usr/lib32/.
 
-# merge the two C++ include trees (needed for Clang)
-pushd %{buildroot}/usr/include/c++/*/x86_64-generic-linux
-find -type f \! -path ./32/\* | while read f; do
-    cmp -s $f 32/$f && continue
-    (
-        echo '#ifdef __LP64__'
-        cat $f
-        echo '#else'
-        cat 32/$f
-        echo '#endif'
-    ) > rpm-tmp-hdr
-    mv rpm-tmp-hdr $f
-done
-rm -rf 32
-ln -s . 32
-popd
+rm -rf %{buildroot}/usr/share/locale
 
-# Also clang compat
-(cd %{buildroot}/usr/lib64 && ln -s -t . gcc/x86_64-generic-linux/*/*.[ao])
-(cd %{buildroot}/usr/lib32 && ln -s -t . ../lib64/gcc/x86_64-generic-linux/*/32/*.[ao])
-
-%find_lang cpplib cpp.lang
-%find_lang gcc tmp.lang
-%find_lang libstdc++ cxx.lang
-cat *.lang > gcc.lang
+rm -f %{buildroot}/usr/bin/abifiles.list
+rm -f %{buildroot}/usr/bin/c++-8
+rm -f %{buildroot}/usr/bin/gcov-dump-8
+rm -f %{buildroot}/usr/lib64/libatomic.so
+rm -f %{buildroot}/usr/lib64/libitm.so
+rm -f %{buildroot}/usr/lib64/libitm.spec
+rm -f %{buildroot}/usr/lib64/libquadmath.so
+rm -f %{buildroot}/usr/lib64/libstdc++.so
 
 %files
 /usr/bin/%{gcc_target}-gcc-ar-9
@@ -397,19 +296,16 @@ cat *.lang > gcc.lang
 /usr/bin/%{gcc_target}-c++-9
 /usr/bin/%{gcc_target}-gcc-%{gccver}
 /usr/bin/gcc-9
-/usr/bin/cc
 /usr/bin/gcc-ar-9
 /usr/bin/gcc-nm-9
 /usr/bin/gcc-ranlib-9
 /usr/bin/gcov-9
 /usr/bin/gcov-tool-9
-/usr/lib/cpp
 /usr/bin/cpp-9
 #/usr/lib64/libvtv*
 /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
-/usr/lib64/gcc/%{gcc_target}/%{gccver}/libcaf_*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/lto1
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/lto-wrapper
@@ -427,9 +323,9 @@ cat *.lang > gcc.lang
 
 
 #g++
-/usr/bin/%{gcc_target}-g++
-/usr/bin/c++
-/usr/bin/g++
+/usr/bin/%{gcc_target}-g++-9
+/usr/bin/c++-9
+/usr/bin/g++-9
 
 # gcc-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/liblto_plugin.so
@@ -465,64 +361,11 @@ cat *.lang > gcc.lang
 /usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
 /usr/lib64/libstdc++fs.a
 /usr/bin/gcov-dump
-/usr/lib64/gcc/x86_64-generic-linux/%{gccver}/32/finclude/
 /usr/lib64/libatomic.so
 /usr/lib64/libitm.so
 /usr/lib64/libitm.spec
 /usr/lib64/libquadmath.so
 
-%files dev32
-/usr/lib32/crtbegin.o
-/usr/lib32/crtbeginS.o
-/usr/lib32/crtbeginT.o
-/usr/lib32/crtend.o
-/usr/lib32/crtendS.o
-/usr/lib32/crtfastmath.o
-/usr/lib32/crtprec32.o
-/usr/lib32/crtprec64.o
-/usr/lib32/crtprec80.o
-/usr/lib32/libcaf_single.a
-/usr/lib32/libgcc.a
-/usr/lib32/libgcc_eh.a
-/usr/lib32/libgcov.a
-/usr/lib32/libstdc++.a
-/usr/lib32/libstdc++.so
-/usr/lib32/libstdc++fs.a
-/usr/lib32/libsupc++.a
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbegin.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginS.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtbeginT.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtend.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtendS.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtfastmath.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec32.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec64.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/crtprec80.o
-/usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_arithmetic.mod
-/usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_exceptions.mod
-/usr/lib64/gcc/x86_64-generic-linux/*/32/finclude/ieee_features.mod
-/usr/lib64/gcc/x86_64-generic-linux/*/32/libcaf_single.a
-/usr/lib64/gcc/x86_64-generic-linux/*/32/libgcc.a
-/usr/lib64/gcc/x86_64-generic-linux/*/32/libgcc_eh.a
-/usr/lib64/gcc/x86_64-generic-linux/*/32/libgcov.a
-/usr/lib32/libasan.a
-/usr/lib32/libasan.so
-/usr/lib32/libatomic.a
-/usr/lib32/libatomic.so
-/usr/lib32/libgomp.a
-/usr/lib32/libgomp.so
-/usr/lib32/libgomp.spec
-/usr/lib32/libitm.a
-/usr/lib32/libitm.so
-/usr/lib32/libitm.spec
-/usr/lib32/libquadmath.a
-/usr/lib32/libquadmath.so
-/usr/lib32/libsanitizer.spec
-/usr/lib32/libssp.a
-/usr/lib32/libssp.so
-/usr/lib32/libubsan.a
-/usr/lib32/libubsan.so
-/usr/share/gdb/auto-load//usr/lib32/libstdc++.so.*
 
 %files -n libgcc1
 /usr/lib64/libgcc_s.so.1
@@ -534,47 +377,13 @@ cat *.lang > gcc.lang
 /usr/lib64/libitm*.so.*
 /usr/lib64/libquadmath*.so.*
 
-%files libgcc32
-/usr/lib32/libasan.so.5
-/usr/lib32/libasan.so.5.0.0
-/usr/lib32/libasan_preinit.o
-/usr/lib32/libatomic.so.1
-/usr/lib32/libatomic.so.1.2.0
-#/usr/lib32/libcilkrts.so.5
-#/usr/lib32/libcilkrts.so.5.0.0
-#/usr/lib32/libcilkrts.spec
-/usr/lib32/libgcc_s.so
-/usr/lib32/libgcc_s.so.1
-%exclude /usr/lib32/libgo.*
-%exclude /usr/lib32/libgobegin.a
-%exclude /usr/lib32/libgolibbegin.a
-/usr/lib32/libgomp.so.1
-/usr/lib32/libgomp.so.1.0.0
-/usr/lib32/libitm.so.1
-/usr/lib32/libitm.so.1.0.0
-/usr/lib32/libquadmath.so.0
-/usr/lib32/libquadmath.so.0.0.0
-/usr/lib32/libssp.so.0
-/usr/lib32/libssp.so.0.0.0
-/usr/lib32/libssp_nonshared.a
-/usr/lib32/libubsan.so.1
-/usr/lib32/libubsan.so.1.0.0
-#/usr/lib/libvtv.so.0
-#/usr/lib/libvtv.so.0.0.0
-
 %files -n libstdc++
 /usr/lib64/libstdc++.so.*
-
-%files libstdc++32
-/usr/lib32/libstdc++.so.*
-
 
 %files -n gcc9-doc
 %{_mandir}/man1
 %{_mandir}/man7
 %{_infodir}
-
-%files -n gcc9-locale -f gcc.lang
 
 %files libubsan
 /usr/lib64/libubsan*
