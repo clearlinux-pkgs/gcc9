@@ -281,8 +281,6 @@ mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
 rm -rf %{buildroot}/usr/share/locale
 
 rm -f %{buildroot}/usr/bin/abifiles.list
-rm -f %{buildroot}/usr/bin/c++-9
-rm -f %{buildroot}/usr/bin/gcov-dump-9
 rm -f %{buildroot}/usr/lib64/libatomic.so
 rm -f %{buildroot}/usr/lib64/libitm.so
 rm -f %{buildroot}/usr/lib64/libitm.spec
