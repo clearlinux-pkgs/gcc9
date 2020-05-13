@@ -11,6 +11,7 @@
 # Lowest compatible ABI (must be lowest of current targets & OBS builders)
 # avoton (silvermont target) && ivybridge (OBS builders) = westmere
 %define march westmere
+%define abi_package %{nil}
 
 Name     : gcc9
 Version  : 9.3.1
@@ -75,45 +76,45 @@ BuildRequires : util-linux
 Requires: gcc-libubsan
 Requires: gcc-doc
 
-Provides:       gcc-symlinks
-Provides:       cpp
-Provides:       cpp-symlinks
-Provides:       gcov
-Provides:       g77
-Provides:       g77-symlinks
-Provides:       g++-symlinks
-Provides:       g++
+# Provides:       gcc-symlinks
+# Provides:       cpp
+# Provides:       cpp-symlinks
+# Provides:       gcov
+# Provides:       g77
+# Provides:       g77-symlinks
+# Provides:       g++-symlinks
+# Provides:       g++
 
 %description
 GNU cc and gcc C compilers.
 
-%package -n gcc9-dev
+%package dev
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
-Provides:       libgcov-dev
-Provides:       libssp-dev
-Provides:       libssp-staticdev
-Provides:       libgomp-dev
-Provides:       libgomp-staticdev
-Provides:       libgcc-s-dev
-Provides:       gcc-plugin-dev
-Provides:       libstdc++-dev
+# Provides:       libgcov-dev
+# Provides:       libssp-dev
+# Provides:       libssp-staticdev
+# Provides:       libgomp-dev
+# Provides:       libgomp-staticdev
+# Provides:       libgcc-s-dev
+# Provides:       gcc-plugin-dev
+# Provides:       libstdc++-dev
 Requires:       gcc-libs-math
 Requires:       libstdc++
 
-%description -n gcc9-dev
+%description dev
 GNU cc and gcc C compilers dev files
 
-%package -n libgcc1
+%package libgcc1
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
 Requires:       filesystem
-Provides:       libssp0
-Provides:       libgomp1
+# Provides:       libssp0
+# Provides:       libgomp1
 
-%description -n libgcc1
+%description libgcc1
 GNU cc and gcc C compilers.
 
 %package libubsan
@@ -124,20 +125,20 @@ Group:          devel
 %description libubsan
 Address sanitizer runtime libs
 
-%package -n libstdc++
+%package libstdc++
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
 
-%description -n libstdc++
+%description libstdc++
 GNU cc and gcc C compilers.
 
-%package -n gcc9-doc
+%package doc
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          doc
 
-%description -n gcc9-doc
+%description doc
 GNU cc and gcc C compilers.
 
 %package locale
@@ -280,8 +281,8 @@ mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
 rm -rf %{buildroot}/usr/share/locale
 
 rm -f %{buildroot}/usr/bin/abifiles.list
-rm -f %{buildroot}/usr/bin/c++-8
-rm -f %{buildroot}/usr/bin/gcov-dump-8
+rm -f %{buildroot}/usr/bin/c++-9
+rm -f %{buildroot}/usr/bin/gcov-dump-9
 rm -f %{buildroot}/usr/lib64/libatomic.so
 rm -f %{buildroot}/usr/lib64/libitm.so
 rm -f %{buildroot}/usr/lib64/libitm.spec
@@ -358,9 +359,9 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 %exclude /usr/lib64/libsupc++.a
 /usr/include/c++/*
 %exclude /usr/lib64/libstdc++fs.a
+%exclude /usr/bin/abifiles.list
 
-
-%files -n libgcc1
+%files libgcc1
 %exclude /usr/lib64/libgcc_s.so.1
 
 %files libs-math
@@ -370,10 +371,10 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 %exclude /usr/lib64/libitm*.so.*
 %exclude /usr/lib64/libquadmath*.so.*
 
-%files -n libstdc++
+%files libstdc++
 %exclude /usr/lib64/libstdc++.so.*
 
-%files -n gcc9-doc
+%files doc
 %exclude %{_mandir}/man1
 %exclude %{_mandir}/man7
 %exclude %{_infodir}
