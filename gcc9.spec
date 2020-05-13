@@ -303,7 +303,7 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 /usr/bin/gcov-tool-9
 /usr/bin/cpp-9
 #/usr/lib64/libvtv*
-/usr/lib64/libcc1*
+%exclude /usr/lib64/libcc1*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include-fixed/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/install-tools/
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/
@@ -318,8 +318,8 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/*.so.*
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/include/
 /usr/share/gcc-%{gccver}
-/usr/lib64/*.a
-/usr/lib64/*.o
+%exclude /usr/lib64/*.a
+%exclude /usr/lib64/*.o
 
 
 #g++
@@ -344,51 +344,44 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginS.o
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtprec64.o
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/crtbeginT.o
-/usr/lib64/libgcc_s.so
+%exclude /usr/lib64/libgcc_s.so
 /usr/lib64/gcc/x86_64-generic-linux/%{gccver}/libgcov.a
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
-/usr/lib64/libssp*.a
-/usr/lib64/libgomp.a
+%exclude /usr/lib64/libssp*.a
+%exclude /usr/lib64/libgomp.a
 /usr/lib64/libgomp.spec
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
 # libstdc++
-/usr/lib64/libstdc++.so
-/usr/lib64/libstdc++.a
-/usr/lib64/libsupc++.a
+%exclude /usr/lib64/libstdc++.a
+%exclude /usr/lib64/libsupc++.a
 /usr/include/c++/*
-/usr/share/gdb/auto-load//usr/lib64/libstdc++.so.*
-/usr/lib64/libstdc++fs.a
-/usr/bin/gcov-dump
-/usr/lib64/libatomic.so
-/usr/lib64/libitm.so
-/usr/lib64/libitm.spec
-/usr/lib64/libquadmath.so
+%exclude /usr/lib64/libstdc++fs.a
 
 
 %files -n libgcc1
-/usr/lib64/libgcc_s.so.1
+%exclude /usr/lib64/libgcc_s.so.1
 
 %files libs-math
-/usr/lib64/libssp.so*
-/usr/lib64/libgomp*so*
-/usr/lib64/libatomic*.so.*
-/usr/lib64/libitm*.so.*
-/usr/lib64/libquadmath*.so.*
+%exclude /usr/lib64/libssp.so*
+%exclude /usr/lib64/libgomp*so*
+%exclude /usr/lib64/libatomic*.so.*
+%exclude /usr/lib64/libitm*.so.*
+%exclude /usr/lib64/libquadmath*.so.*
 
 %files -n libstdc++
-/usr/lib64/libstdc++.so.*
+%exclude /usr/lib64/libstdc++.so.*
 
 %files -n gcc9-doc
-%{_mandir}/man1
-%{_mandir}/man7
-%{_infodir}
+%exclude %{_mandir}/man1
+%exclude %{_mandir}/man7
+%exclude %{_infodir}
 
 %files libubsan
-/usr/lib64/libubsan*
-/usr/lib64/libasan*
-/usr/lib64/libtsan*
-/usr/lib64/liblsan*
-/usr/lib64/libsanit*
+%exclude /usr/lib64/libubsan*
+%exclude /usr/lib64/libasan*
+%exclude /usr/lib64/libtsan*
+%exclude /usr/lib64/liblsan*
+%exclude /usr/lib64/libsanit*
 
