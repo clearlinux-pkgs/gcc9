@@ -331,7 +331,7 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/include/ssp
 %exclude /usr/lib64/libssp*.a
 %exclude /usr/lib64/libgomp.a
-/usr/lib64/libgomp.spec
+%exclude /usr/lib64/libgomp.spec
 # gcc-plugin-dev
 /usr/lib64/gcc/%{gcc_target}/%{gccver}/plugin/gengtype
 
