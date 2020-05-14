@@ -73,17 +73,8 @@ BuildRequires : docbook-xml docbook-utils doxygen
 BuildRequires : util-linux
 
 
-Requires: gcc-libubsan
-Requires: gcc-doc
-
-# Provides:       gcc-symlinks
-# Provides:       cpp
-# Provides:       cpp-symlinks
-# Provides:       gcov
-# Provides:       g77
-# Provides:       g77-symlinks
-# Provides:       g++-symlinks
-# Provides:       g++
+Requires: gcc9-libubsan
+Requires: gcc9-doc
 
 %description
 GNU cc and gcc C compilers.
@@ -92,16 +83,8 @@ GNU cc and gcc C compilers.
 License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
-# Provides:       libgcov-dev
-# Provides:       libssp-dev
-# Provides:       libssp-staticdev
-# Provides:       libgomp-dev
-# Provides:       libgomp-staticdev
-# Provides:       libgcc-s-dev
-# Provides:       gcc-plugin-dev
-# Provides:       libstdc++-dev
-Requires:       gcc-libs-math
-Requires:       libstdc++
+Requires:       gcc9-libs-math
+Requires:       gcc9-libstdc++
 
 %description dev
 GNU cc and gcc C compilers dev files
@@ -111,8 +94,6 @@ License:        GPL-3.0-with-GCC-exception and GPL-3.0
 Summary:        GNU cc and gcc C compilers
 Group:          devel
 Requires:       filesystem
-# Provides:       libssp0
-# Provides:       libgomp1
 
 %description libgcc1
 GNU cc and gcc C compilers.
@@ -281,6 +262,7 @@ mkdir -p %{buildroot}//usr/share/gdb/auto-load//usr/lib64
 rm -rf %{buildroot}/usr/share/locale
 
 rm -f %{buildroot}/usr/bin/abifiles.list
+rm -f %{buildroot}/usr/bin/x86_64-generic-linux-gcc-tmp
 rm -f %{buildroot}/usr/lib64/libatomic.so
 rm -f %{buildroot}/usr/lib64/libitm.so
 rm -f %{buildroot}/usr/lib64/libitm.spec
@@ -299,6 +281,7 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 /usr/bin/gcc-nm-9
 /usr/bin/gcc-ranlib-9
 /usr/bin/gcov-9
+/usr/bin/gcov-dump-9
 /usr/bin/gcov-tool-9
 /usr/bin/cpp-9
 #/usr/lib64/libvtv*
@@ -383,4 +366,3 @@ rm -f %{buildroot}/usr/lib64/libstdc++.so
 %exclude /usr/lib64/libtsan*
 %exclude /usr/lib64/liblsan*
 %exclude /usr/lib64/libsanit*
-
