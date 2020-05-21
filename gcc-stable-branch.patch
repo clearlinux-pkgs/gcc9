@@ -28,6 +28,15 @@ Carl Love (3):
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
 
+Clement Chigot (1):
+      rs6000: Link with libc128.a for long-double-128.
+
+David Edelsohn (1):
+      rs6000: AIX long double builtins for 64 bit long double.
+
+Douglas Rupp (1):
+      Require powerpc_vsx_ok in gcc.target/powerpc/pr71763.c
+
 Eric Botcazou (4):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
@@ -38,7 +47,21 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (56):
+GCC Administrator (70):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -96,18 +119,24 @@ GCC Administrator (56):
       Daily bump.
       Daily bump.
 
-H.J. Lu (3):
+H.J. Lu (5):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
       x86: Allow -fcf-protection with external thunk
+      x86: Update GFNI check
+      x86: Update VPCLMULQDQ check
 
 Harald Anlauf (1):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
 
-Iain Buclaw (3):
+Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
       libphobos: Fix struct layout of stat32_t on sparc-*-solaris*
       libphobos: Fix struct layout of addrinfo on sparc-*-solaris*
+      libphobos: Fix struct layout of stat_t on sparc-*-solaris*
+      d: Fix wrong vtable offset in virtual function call
+      d: Fix ICE in verify_gimple_stmt, at tree-cfg.c:4959
+      d: Fix multiple definition error when using mixins and interfaces.
 
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
@@ -170,7 +199,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (24):
+Jonathan Wakely (25):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -195,6 +224,7 @@ Jonathan Wakely (24):
       libstdc++: Fix type-erasure in experimental::net::executor (PR 94203)
       libstdc++: Fix broken link to SGI STL FAQ
       libstdc++: Document library versioning for 9.[123] and 10.1
+      libstdc++: Fix incorrect size calculation in PMR resource  (PR 94906)
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -225,19 +255,24 @@ Marek Polacek (2):
       c++: Fix ICE with lambda in operator function [PR93597]
       c++: Fix bogus -Wparentheses warning with fold-expression [PR94505]
 
-Mark Eggleston (3):
+Mark Eggleston (6):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
+      Fortran : Spurious warning message with -Wsurprising PR59107
+      Fortran  : ICE in gfc_conv_array_constructor_expr PR93497
+      Fortran  : ProcPtr function results: 'ppr@' in error message PR39695
 
 Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (3):
+Martin Liska (5):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
+      Add outline-atomics to target attribute.
+      Fix backport due to usage for x_target_flags.
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -265,6 +300,12 @@ Richard Biener (4):
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
+
+Szabolcs Nagy (4):
+      aarch64, libgcc: Fix unwinding from pac-ret to normal frames [PR94514]
+      aarch64: Fix .cfi_window_save with pac-ret [PR94515]
+      aarch64: ensure bti c is emitted at function start [PR94697]
+      aarch64: don't emit bti j after NOTE_INSN_DELETED_LABEL [PR94748]
 
 Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
@@ -300,6 +341,9 @@ Will Schmidt (2):
       backport PR90763: PowerPC vec_xl_len should take const argument.
       rs6000 pragma fix backport from mainline to gcc-9
 
+Xionghu Luo (1):
+      rs6000: Don't use HARD_FRAME_POINTER_REGNUM if it's not live in pro_and_epilogue (PR91518)
+
 Zackery Spytz (1):
       doc: Fix a typo in the documentation of the copy attribute
 
@@ -329,11 +373,89 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..3fad79c3706 100644
+index d8e53874e68..9b46fc9556f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,687 @@
-+2020-05-07  Uroš Bizjak  <ubizjak@gmail.com>
+@@ -1,3 +1,765 @@
++2020-05-21  Martin Liska  <mliska@suse.cz>
++
++	* common/config/aarch64/aarch64-common.c (aarch64_handle_option):
++	Use MASK_OUTLINE_ATOMICS for x_target_flags.
++
++2020-05-21  Martin Liska  <mliska@suse.cz>
++
++	* common/config/aarch64/aarch64-common.c (aarch64_handle_option):
++	Handle OPT_moutline_atomics.
++	* config/aarch64/aarch64.c: Add outline-atomics to
++	aarch64_attributes.
++	* doc/extend.texi: Document the newly added target attribute.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-30  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94748
++	* config/aarch64/aarch64-bti-insert.c (rest_of_insert_bti): Remove
++	the check for NOTE_INSN_DELETED_LABEL.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-23  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94697
++	* config/aarch64/aarch64-bti-insert.c (rest_of_insert_bti): Swap
++	bti c and bti j handling.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-27  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94515
++	* dwarf2cfi.c (struct GTY): Add ra_mangled.
++	(cfi_row_equal_p): Check ra_mangled.
++	(dwarf2out_frame_debug_cfa_window_save): Remove the argument,
++	this only handles the sparc logic now.
++	(dwarf2out_frame_debug_cfa_toggle_ra_mangle): New function for
++	the aarch64 specific logic.
++	(dwarf2out_frame_debug): Update to use the new subroutines.
++	(change_cfi_row): Check ra_mangled.
++
++2020-05-12  David Edelsohn  <dje.gcc@gmail.com>
++
++	Backport from mainline
++	2020-04-08  Clement Chigot  <clement.chigot@atos.net>
++
++        * config/rs6000/aix61.h (LIB_SPEC): Add -lc128 with -mlong-double-128.
++        * config/rs6000/aix71.h (LIB_SPEC): Likewise.
++        * config/rs6000/aix72.h (LIB_SPEC): Likewise.
++
++2020-05-12  David Edelsohn  <dje.gcc@gmail.com>
++
++	Backport from mainline
++	2020-05-04  Clement Chigot  <clement.chigot@atos.net>
++		    David Edelsohn  <dje.gcc@gmail.com>
++
++	* config/rs6000/rs6000.c (rs6000_init_builtins): Override explicit
++	for fmodl, frexpl, ldexpl and modfl builtins.
++
++2020-05-11  Xiong Hu Luo  <luoxhu@linux.ibm.com>
++
++	Backport from master.
++	2020-04-27  Xiong Hu Luo  <luoxhu@linux.ibm.com>
++
++	PR target/91518
++	* config/rs6000/rs6000.c (frame_pointer_needed_indeed):
++	New variable.
++	(rs6000_emit_prologue_components):
++	Check with frame_pointer_needed_indeed.
++	(rs6000_emit_epilogue_components): Likewise.
++	(rs6000_emit_prologue): Likewise.
++	(rs6000_emit_epilogue): Set frame_pointer_needed_indeed.
++
++2020-05-07 Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	* config/alpha/alpha.c (alpha_atomic_assign_expand_fenv): Use
 +	TARGET_EXPR instead of MODIFY_EXPR for the first assignments to
@@ -1553,10 +1675,24 @@ index 4a27867b82c..0f933bdc758 100644
        TREE_PUBLIC (decl) = 1;
      }
 diff --git a/gcc/common/config/aarch64/aarch64-common.c b/gcc/common/config/aarch64/aarch64-common.c
-index bab3ab3fa36..db9842b1ea6 100644
+index bab3ab3fa36..bc59d646a4c 100644
 --- a/gcc/common/config/aarch64/aarch64-common.c
 +++ b/gcc/common/config/aarch64/aarch64-common.c
-@@ -433,7 +433,22 @@ aarch64_get_extension_string_for_isa_flags (unsigned long isa_flags,
+@@ -161,6 +161,13 @@ aarch64_handle_option (struct gcc_options *opts,
+       opts->x_flag_omit_leaf_frame_pointer = val;
+       return true;
+ 
++    case OPT_moutline_atomics:
++      if (val)
++	opts->x_target_flags |= MASK_OUTLINE_ATOMICS;
++      else
++	opts->x_target_flags &= ~MASK_OUTLINE_ATOMICS;
++      return true;
++
+     default:
+       return true;
+     }
+@@ -433,7 +440,22 @@ aarch64_get_extension_string_for_isa_flags (unsigned long isa_flags,
  	/* We remove all the dependent bits, to prevent them from being turned
  	   on twice.  This only works because we assume that all there are
  	   individual options to set all bits standalone.  */
@@ -1580,6 +1716,73 @@ index bab3ab3fa36..db9842b1ea6 100644
  	isa_flag_bits |= opt->flag_canonical;
        }
      }
+diff --git a/gcc/config/aarch64/aarch64-bti-insert.c b/gcc/config/aarch64/aarch64-bti-insert.c
+index e519a0f0ac1..7da89074ce0 100644
+--- a/gcc/config/aarch64/aarch64-bti-insert.c
++++ b/gcc/config/aarch64/aarch64-bti-insert.c
+@@ -130,22 +130,6 @@ rest_of_insert_bti (void)
+   rtx_insn *insn;
+   basic_block bb;
+ 
+-  /* Since a Branch Target Exception can only be triggered by an indirect call,
+-     we exempt function that are only called directly.  We also exempt
+-     functions that are already protected by Return Address Signing (PACIASP/
+-     PACIBSP).  For all other cases insert a BTI C at the beginning of the
+-     function.  */
+-  if (!cgraph_node::get (cfun->decl)->only_called_directly_p ())
+-    {
+-      bb = ENTRY_BLOCK_PTR_FOR_FN (cfun)->next_bb;
+-      insn = BB_HEAD (bb);
+-      if (!aarch64_pac_insn_p (get_first_nonnote_insn ()))
+-	{
+-	  bti_insn = gen_bti_c ();
+-	  emit_insn_before (bti_insn, insn);
+-	}
+-    }
+-
+   bb = 0;
+   FOR_EACH_BB_FN (bb, cfun)
+     {
+@@ -153,14 +137,10 @@ rest_of_insert_bti (void)
+ 	   insn = NEXT_INSN (insn))
+ 	{
+ 	  /* If a label is marked to be preserved or can be a non-local goto
+-	     target, it must be protected with a BTI J.  The same applies to
+-	     NOTE_INSN_DELETED_LABEL since they are basically labels that might
+-	     be referenced via variables or constant pool.  */
+-	  if ((LABEL_P (insn)
++	     target, it must be protected with a BTI J.  */
++	  if (LABEL_P (insn)
+ 	       && (LABEL_PRESERVE_P (insn)
+ 		   || bb->flags & BB_NON_LOCAL_GOTO_TARGET))
+-	      || (NOTE_P (insn)
+-		  && NOTE_KIND (insn) == NOTE_INSN_DELETED_LABEL))
+ 	    {
+ 	      bti_insn = gen_bti_j ();
+ 	      emit_insn_after (bti_insn, insn);
+@@ -201,6 +181,22 @@ rest_of_insert_bti (void)
+ 	}
+     }
+ 
++  /* Since a Branch Target Exception can only be triggered by an indirect call,
++     we exempt function that are only called directly.  We also exempt
++     functions that are already protected by Return Address Signing (PACIASP/
++     PACIBSP).  For all other cases insert a BTI C at the beginning of the
++     function.  */
++  if (!cgraph_node::get (cfun->decl)->only_called_directly_p ())
++    {
++      bb = ENTRY_BLOCK_PTR_FOR_FN (cfun)->next_bb;
++      insn = BB_HEAD (bb);
++      if (!aarch64_pac_insn_p (get_first_nonnote_insn ()))
++	{
++	  bti_insn = gen_bti_c ();
++	  emit_insn_before (bti_insn, insn);
++	}
++    }
++
+   timevar_pop (TV_MACH_DEP);
+   return 0;
+ }
 diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
 index c083cad5327..b9bfb281275 100644
 --- a/gcc/config/aarch64/aarch64-protos.h
@@ -1761,7 +1964,7 @@ index e3852c5d182..f413575cfc9 100644
  
  
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..78acd7ecfdb 100644
+index b452a53af99..e61c9bb00cb 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -1879,10 +1879,33 @@ emit_set_insn (rtx x, rtx y)
@@ -1861,7 +2064,16 @@ index b452a53af99..78acd7ecfdb 100644
        break;
  
      case 'X':
-@@ -15426,16 +15454,26 @@ static void
+@@ -12517,6 +12545,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
+      aarch64_handle_attr_branch_protection, OPT_mbranch_protection_ },
+   { "sign-return-address", aarch64_attr_enum, false, NULL,
+      OPT_msign_return_address_ },
++  { "outline-atomics", aarch64_attr_bool, true, NULL,
++     OPT_moutline_atomics},
+   { NULL, aarch64_attr_custom, false, NULL, OPT____ }
+ };
+ 
+@@ -15426,16 +15456,26 @@ static void
  aarch64_emit_load_exclusive (machine_mode mode, rtx rval,
  			     rtx mem, rtx model_rtx)
  {
@@ -1891,7 +2103,7 @@ index b452a53af99..78acd7ecfdb 100644
  }
  
  /* Mark the previous jump instruction as unlikely.  */
-@@ -15447,6 +15485,82 @@ aarch64_emit_unlikely_jump (rtx insn)
+@@ -15447,6 +15487,82 @@ aarch64_emit_unlikely_jump (rtx insn)
    add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
  }
  
@@ -1974,7 +2186,7 @@ index b452a53af99..78acd7ecfdb 100644
  /* Expand a compare and swap pattern.  */
  
  void
-@@ -15493,6 +15607,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
+@@ -15493,6 +15609,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
  						   newval, mod_s));
        cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
      }
@@ -1992,7 +2204,7 @@ index b452a53af99..78acd7ecfdb 100644
    else
      {
        /* The oldval predicate varies by mode.  Test it and force to reg.  */
-@@ -15538,13 +15663,11 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15538,13 +15665,11 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* Split after prolog/epilog to avoid interactions with shrinkwrapping.  */
    gcc_assert (epilogue_completed);
  
@@ -2007,7 +2219,7 @@ index b452a53af99..78acd7ecfdb 100644
  
    rval = operands[0];
    mem = operands[1];
-@@ -15565,7 +15688,8 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15565,7 +15690,8 @@ aarch64_split_compare_and_swap (rtx operands[])
  	CBNZ	scratch, .label1
      .label2:
  	CMP	rval, 0.  */
@@ -2017,7 +2229,7 @@ index b452a53af99..78acd7ecfdb 100644
  
    label1 = NULL;
    if (!is_weak)
-@@ -15578,35 +15702,20 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15578,35 +15704,20 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* The initial load can be relaxed for a __sync operation since a final
       barrier will be emitted to stop code hoisting.  */
    if (is_mm_sync (model))
@@ -2060,7 +2272,7 @@ index b452a53af99..78acd7ecfdb 100644
  
    aarch64_emit_store_exclusive (mode, scratch, mem, newval, model_rtx);
  
-@@ -15627,22 +15736,16 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15627,22 +15738,16 @@ aarch64_split_compare_and_swap (rtx operands[])
        aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
      }
    else
@@ -2852,6 +3064,42 @@ index 5f530a43000..1be79e1964c 100644
        assemble_name (file, name);
        fputs (":", file);
        ASM_OUTPUT_SKIP (file, size);
+diff --git a/gcc/config/rs6000/aix61.h b/gcc/config/rs6000/aix61.h
+index 57ea9ecfc47..31e4c48b38d 100644
+--- a/gcc/config/rs6000/aix61.h
++++ b/gcc/config/rs6000/aix61.h
+@@ -154,6 +154,7 @@ do {									\
+    %{!maix64:%{!shared:%{g*:-lg}}}\
+    %{fprofile-arcs|fprofile-generate*|coverage:-lpthreads}\
+    %{mpe:-L%R/usr/lpp/ppe.poe/lib -lmpi -lvtd}\
++   %{mlong-double-128:-lc128}\
+    %{pthread:-lpthreads} -lc"
+ 
+ #undef LINK_SPEC
+diff --git a/gcc/config/rs6000/aix71.h b/gcc/config/rs6000/aix71.h
+index 263cc42b9dd..1ac9d082beb 100644
+--- a/gcc/config/rs6000/aix71.h
++++ b/gcc/config/rs6000/aix71.h
+@@ -162,6 +162,7 @@ do {									\
+    %{!maix64:%{!shared:%{g*:-lg}}}\
+    %{fprofile-arcs|fprofile-generate*|coverage:-lpthreads}\
+    %{mpe:-L%R/usr/lpp/ppe.poe/lib -lmpi -lvtd}\
++   %{mlong-double-128:-lc128}\
+    %{pthread:-lpthreads} -lc"
+ 
+ #undef LINK_SPEC
+diff --git a/gcc/config/rs6000/aix72.h b/gcc/config/rs6000/aix72.h
+index 065e1ebeadc..5f533228fc1 100644
+--- a/gcc/config/rs6000/aix72.h
++++ b/gcc/config/rs6000/aix72.h
+@@ -163,6 +163,7 @@ do {									\
+    %{!maix64:%{!shared:%{g*:-lg}}}\
+    %{fprofile-arcs|fprofile-generate*|coverage:-lpthreads}\
+    %{mpe:-L%R/usr/lpp/ppe.poe/lib -lmpi -lvtd}\
++   %{mlong-double-128:-lc128}\
+    %{pthread:-lpthreads} -lc"
+ 
+ #undef LINK_SPEC
 diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
 index d66ae7ca2c7..dbe5b7a1909 100644
 --- a/gcc/config/rs6000/altivec.h
@@ -2919,7 +3167,7 @@ index d0d69beafd4..47a5d0576d0 100644
  
  /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 87d60078bb0..8043cbc8752 100644
+index 87d60078bb0..fa3e04571b6 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -4099,6 +4099,14 @@ rs6000_option_override_internal (bool global_init_p)
@@ -2978,7 +3226,40 @@ index 87d60078bb0..8043cbc8752 100644
  
  	  element_offset = base_tmp;
  	}
-@@ -17056,7 +17066,6 @@ altivec_init_builtins (void)
+@@ -17019,10 +17029,28 @@ rs6000_init_builtins (void)
+   def_builtin ("__builtin_cpu_is", ftype, RS6000_BUILTIN_CPU_IS);
+   def_builtin ("__builtin_cpu_supports", ftype, RS6000_BUILTIN_CPU_SUPPORTS);
+ 
+-  /* AIX libm provides clog as __clog.  */
+-  if (TARGET_XCOFF &&
+-      (tdecl = builtin_decl_explicit (BUILT_IN_CLOG)) != NULL_TREE)
+-    set_user_assembler_name (tdecl, "__clog");
++  if (TARGET_XCOFF)
++    {
++      /* AIX libm provides clog as __clog.  */
++      if ((tdecl = builtin_decl_explicit (BUILT_IN_CLOG)) != NULL_TREE)
++	set_user_assembler_name (tdecl, "__clog");
++
++      /* When long double is 64 bit, some long double builtins of libc
++	 functions (like __builtin_frexpl) must call the double version
++	 (frexp) not the long double version (frexpl) that expects a 128 bit
++	 argument.  */
++      if (! TARGET_LONG_DOUBLE_128)
++	{
++	  if ((tdecl = builtin_decl_explicit (BUILT_IN_FMODL)) != NULL_TREE)
++	    set_user_assembler_name (tdecl, "fmod");
++	  if ((tdecl = builtin_decl_explicit (BUILT_IN_FREXPL)) != NULL_TREE)
++	    set_user_assembler_name (tdecl, "frexp");
++	  if ((tdecl = builtin_decl_explicit (BUILT_IN_LDEXPL)) != NULL_TREE)
++	    set_user_assembler_name (tdecl, "ldexp");
++	  if ((tdecl = builtin_decl_explicit (BUILT_IN_MODFL)) != NULL_TREE)
++	    set_user_assembler_name (tdecl, "modf");
++	}
++    }
+ 
+ #ifdef SUBTARGET_INIT_BUILTINS
+   SUBTARGET_INIT_BUILTINS;
+@@ -17056,7 +17084,6 @@ altivec_init_builtins (void)
    size_t i;
    tree ftype;
    tree decl;
@@ -2986,7 +3267,7 @@ index 87d60078bb0..8043cbc8752 100644
  
    tree pvoid_type_node = build_pointer_type (void_type_node);
  
-@@ -17418,17 +17427,8 @@ altivec_init_builtins (void)
+@@ -17418,17 +17445,8 @@ altivec_init_builtins (void)
    d = bdesc_dst;
    for (i = 0; i < ARRAY_SIZE (bdesc_dst); i++, d++)
      {
@@ -3004,7 +3285,7 @@ index 87d60078bb0..8043cbc8752 100644
        def_builtin (d->name, void_ftype_pcvoid_int_int, d->code);
      }
  
-@@ -17438,15 +17438,6 @@ altivec_init_builtins (void)
+@@ -17438,15 +17456,6 @@ altivec_init_builtins (void)
      {
        machine_mode mode1;
        tree type;
@@ -3020,7 +3301,7 @@ index 87d60078bb0..8043cbc8752 100644
  
        if (rs6000_overloaded_builtin_p (d->code))
  	mode1 = VOIDmode;
-@@ -17493,15 +17484,6 @@ altivec_init_builtins (void)
+@@ -17493,15 +17502,6 @@ altivec_init_builtins (void)
      {
        machine_mode mode0;
        tree type;
@@ -3036,7 +3317,17 @@ index 87d60078bb0..8043cbc8752 100644
  
        /* Cannot define builtin if the instruction is disabled.  */
        gcc_assert (d->icode != CODE_FOR_nothing);
-@@ -23092,7 +23074,11 @@ rs6000_emit_p9_fp_minmax (rtx dest, rtx op, rtx true_cond, rtx false_cond)
+@@ -20926,6 +20926,9 @@ rs6000_got_register (rtx value ATTRIBUTE_UNUSED)
+ 
+ static rs6000_stack_t stack_info;
+ 
++/* Set if HARD_FRAM_POINTER_REGNUM is really needed.  */
++static bool frame_pointer_needed_indeed = false;
++
+ /* Function to init struct machine_function.
+    This will be called, via a pointer variable,
+    from push_function_context.  */
+@@ -23092,7 +23095,11 @@ rs6000_emit_p9_fp_minmax (rtx dest, rtx op, rtx true_cond, rtx false_cond)
    if (rtx_equal_p (op0, true_cond) && rtx_equal_p (op1, false_cond))
      ;
  
@@ -3049,7 +3340,63 @@ index 87d60078bb0..8043cbc8752 100644
      max_p = !max_p;
  
    else
-@@ -33063,8 +33049,9 @@ rs6000_longcall_ref (rtx call_ref, rtx arg)
+@@ -26856,9 +26863,9 @@ static void
+ rs6000_emit_prologue_components (sbitmap components)
+ {
+   rs6000_stack_t *info = rs6000_stack_info ();
+-  rtx ptr_reg = gen_rtx_REG (Pmode, frame_pointer_needed
+-			     ? HARD_FRAME_POINTER_REGNUM
+-			     : STACK_POINTER_REGNUM);
++  rtx ptr_reg = gen_rtx_REG (Pmode, frame_pointer_needed_indeed
++				      ? HARD_FRAME_POINTER_REGNUM
++				      : STACK_POINTER_REGNUM);
+ 
+   machine_mode reg_mode = Pmode;
+   int reg_size = TARGET_32BIT ? 4 : 8;
+@@ -26936,9 +26943,9 @@ static void
+ rs6000_emit_epilogue_components (sbitmap components)
+ {
+   rs6000_stack_t *info = rs6000_stack_info ();
+-  rtx ptr_reg = gen_rtx_REG (Pmode, frame_pointer_needed
+-			     ? HARD_FRAME_POINTER_REGNUM
+-			     : STACK_POINTER_REGNUM);
++  rtx ptr_reg = gen_rtx_REG (Pmode, frame_pointer_needed_indeed
++				      ? HARD_FRAME_POINTER_REGNUM
++				      : STACK_POINTER_REGNUM);
+ 
+   machine_mode reg_mode = Pmode;
+   int reg_size = TARGET_32BIT ? 4 : 8;
+@@ -27116,7 +27123,10 @@ rs6000_emit_prologue (void)
+                            && (lookup_attribute ("no_split_stack",
+                                                  DECL_ATTRIBUTES (cfun->decl))
+                                == NULL));
+- 
++
++  frame_pointer_needed_indeed
++    = frame_pointer_needed && df_regs_ever_live_p (HARD_FRAME_POINTER_REGNUM);
++
+   /* Offset to top of frame for frame_reg and sp respectively.  */
+   HOST_WIDE_INT frame_off = 0;
+   HOST_WIDE_INT sp_off = 0;
+@@ -27778,7 +27788,7 @@ rs6000_emit_prologue (void)
+     }
+ 
+   /* Set frame pointer, if needed.  */
+-  if (frame_pointer_needed)
++  if (frame_pointer_needed_indeed)
+     {
+       insn = emit_move_insn (gen_rtx_REG (Pmode, HARD_FRAME_POINTER_REGNUM),
+ 			     sp_reg_rtx);
+@@ -28622,7 +28632,7 @@ rs6000_emit_epilogue (int sibcall)
+     }
+   /* If we have a frame pointer, we can restore the old stack pointer
+      from it.  */
+-  else if (frame_pointer_needed)
++  else if (frame_pointer_needed_indeed)
+     {
+       frame_reg_rtx = sp_reg_rtx;
+       if (DEFAULT_ABI == ABI_V4)
+@@ -33063,8 +33073,9 @@ rs6000_longcall_ref (rtx call_ref, rtx arg)
        rtx reg = gen_rtx_REG (Pmode, regno);
        rtx hi = gen_rtx_UNSPEC (Pmode, gen_rtvec (3, base, call_ref, arg),
  			       UNSPEC_PLT16_HA);
@@ -3061,7 +3408,7 @@ index 87d60078bb0..8043cbc8752 100644
        emit_insn (gen_rtx_SET (reg, hi));
        emit_insn (gen_rtx_SET (reg, lo));
        return reg;
-@@ -37399,6 +37386,7 @@ rs6000_disable_incompatible_switches (void)
+@@ -37399,6 +37410,7 @@ rs6000_disable_incompatible_switches (void)
      { OPTION_MASK_P9_VECTOR,	OTHER_P9_VECTOR_MASKS,	"power9-vector"	},
      { OPTION_MASK_P8_VECTOR,	OTHER_P8_VECTOR_MASKS,	"power8-vector"	},
      { OPTION_MASK_VSX,		OTHER_VSX_VECTOR_MASKS,	"vsx"		},
@@ -4561,10 +4908,45 @@ index 3f3583c825d..1614f346a59 100644
  /* Complain that some language-specific thing hanging off a tree
     node has been accessed improperly.  */
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index f8268e87d4d..9cc59c8ad1d 100644
+index f8268e87d4d..9ef34dd7927 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,15 @@
+@@ -1,3 +1,50 @@
++2020-05-18  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backport from mainline
++	2020-03-16  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/92216
++	* decl.cc (make_thunk): Don't set TREE_PUBLIC on thunks if the target
++	function is external to the current compilation.
++
++2020-05-17  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backport from mainline
++	2020-05-06  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/94970
++	* d-codegen.cc (force_target_expr): Move create_temporary_var
++	implementation inline here.
++	(create_temporary_var): Remove.
++	(maybe_temporary_var): Remove.
++	(bind_expr): Remove.
++	* d-convert.cc (d_array_convert): Use build_local_temp to generate
++	temporaries, and generate its assignment.
++	* d-tree.h (create_temporary_var): Remove.
++	(maybe_temporary_var): Remove.
++	(d_array_convert): Remove vars argument.
++	* expr.cc (ExprVisitor::visit (CatExp *)): Use build_local_temp to
++	generate temporaries, don't wrap them in a BIND_EXPR.
++	(ExprVisitor::visit (NewExp *)): Likewise.
++
++2020-05-16  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/95155
++	* dmd/dclass.c (ClassDeclaration::semantic): Don't prematurely
++	set done on semantic analysis.
++
 +2020-04-07  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	PR d/94240
@@ -4580,6 +4962,274 @@ index f8268e87d4d..9cc59c8ad1d 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/d/d-codegen.cc b/gcc/d/d-codegen.cc
+index 2abff92fc88..17f624b5a4f 100644
+--- a/gcc/d/d-codegen.cc
++++ b/gcc/d/d-codegen.cc
+@@ -612,7 +612,12 @@ build_target_expr (tree decl, tree exp)
+ tree
+ force_target_expr (tree exp)
+ {
+-  tree decl = create_temporary_var (TREE_TYPE (exp));
++  tree decl = build_decl (input_location, VAR_DECL, NULL_TREE,
++			  TREE_TYPE (exp));
++  DECL_CONTEXT (decl) = current_function_decl;
++  DECL_ARTIFICIAL (decl) = 1;
++  DECL_IGNORED_P (decl) = 1;
++  layout_decl (decl, 0);
+ 
+   return build_target_expr (decl, exp);
+ }
+@@ -1801,66 +1806,6 @@ array_bounds_check (void)
+     }
+ }
+ 
+-/* Return an undeclared local temporary of type TYPE
+-   for use with BIND_EXPR.  */
+-
+-tree
+-create_temporary_var (tree type)
+-{
+-  tree decl = build_decl (input_location, VAR_DECL, NULL_TREE, type);
+-
+-  DECL_CONTEXT (decl) = current_function_decl;
+-  DECL_ARTIFICIAL (decl) = 1;
+-  DECL_IGNORED_P (decl) = 1;
+-  layout_decl (decl, 0);
+-
+-  return decl;
+-}
+-
+-/* Return an undeclared local temporary OUT_VAR initialized
+-   with result of expression EXP.  */
+-
+-tree
+-maybe_temporary_var (tree exp, tree *out_var)
+-{
+-  tree t = exp;
+-
+-  /* Get the base component.  */
+-  while (TREE_CODE (t) == COMPONENT_REF)
+-    t = TREE_OPERAND (t, 0);
+-
+-  if (!DECL_P (t) && !REFERENCE_CLASS_P (t))
+-    {
+-      *out_var = create_temporary_var (TREE_TYPE (exp));
+-      DECL_INITIAL (*out_var) = exp;
+-      return *out_var;
+-    }
+-  else
+-    {
+-      *out_var = NULL_TREE;
+-      return exp;
+-    }
+-}
+-
+-/* Builds a BIND_EXPR around BODY for the variables VAR_CHAIN.  */
+-
+-tree
+-bind_expr (tree var_chain, tree body)
+-{
+-  /* Only handles one var.  */
+-  gcc_assert (TREE_CHAIN (var_chain) == NULL_TREE);
+-
+-  if (DECL_INITIAL (var_chain))
+-    {
+-      tree ini = build_assign (INIT_EXPR, var_chain, DECL_INITIAL (var_chain));
+-      DECL_INITIAL (var_chain) = NULL_TREE;
+-      body = compound_expr (ini, body);
+-    }
+-
+-  return d_save_expr (build3 (BIND_EXPR, TREE_TYPE (body),
+-			      var_chain, body, NULL_TREE));
+-}
+-
+ /* Returns the TypeFunction class for Type T.
+    Assumes T is already ->toBasetype().  */
+ 
+diff --git a/gcc/d/d-convert.cc b/gcc/d/d-convert.cc
+index e9aa457d852..761ab3c5435 100644
+--- a/gcc/d/d-convert.cc
++++ b/gcc/d/d-convert.cc
+@@ -775,21 +775,23 @@ d_array_convert (Expression *exp)
+ 
+ /* Convert EXP to a dynamic array, where ETYPE is the element type.
+    Similar to above, except that EXP is allowed to be an element of an array.
+-   Temporary variables that need some kind of BIND_EXPR are pushed to VARS.  */
++   Temporary variables are created inline if EXP is not an lvalue.  */
+ 
+ tree
+-d_array_convert (Type *etype, Expression *exp, vec<tree, va_gc> **vars)
++d_array_convert (Type *etype, Expression *exp)
+ {
+   Type *tb = exp->type->toBasetype ();
+ 
+   if ((tb->ty != Tarray && tb->ty != Tsarray) || same_type_p (tb, etype))
+     {
+       /* Convert single element to an array.  */
+-      tree var = NULL_TREE;
+-      tree expr = maybe_temporary_var (build_expr (exp), &var);
++      tree expr = build_expr (exp);
+ 
+-      if (var != NULL_TREE)
+-	vec_safe_push (*vars, var);
++      if (!exp->isLvalue ())
++	{
++	  tree var = build_local_temp (TREE_TYPE (expr));
++	  expr = compound_expr (modify_expr (var, expr), var);
++	}
+ 
+       return d_array_value (build_ctype (exp->type->arrayOf ()),
+ 			    size_int (1), build_address (expr));
+diff --git a/gcc/d/d-tree.h b/gcc/d/d-tree.h
+index a514bc3902f..7a54dfbc59e 100644
+--- a/gcc/d/d-tree.h
++++ b/gcc/d/d-tree.h
+@@ -558,8 +558,6 @@ extern tree build_array_from_val (Type *, tree);
+ extern tree void_okay_p (tree);
+ extern tree build_bounds_condition (const Loc &, tree, tree, bool);
+ extern bool array_bounds_check (void);
+-extern tree create_temporary_var (tree);
+-extern tree maybe_temporary_var (tree, tree *);
+ extern tree bind_expr (tree, tree);
+ extern TypeFunction *get_function_type (Type *);
+ extern bool call_by_alias_p (FuncDeclaration *, FuncDeclaration *);
+@@ -583,7 +581,7 @@ extern tree convert_for_assignment (tree, Type *, Type *);
+ extern tree convert_for_argument (tree, Parameter *);
+ extern tree convert_for_condition (tree, Type *);
+ extern tree d_array_convert (Expression *);
+-extern tree d_array_convert (Type *, Expression *, vec<tree, va_gc> **);
++extern tree d_array_convert (Type *, Expression *);
+ 
+ /* In d-incpath.cc.  */
+ extern void add_import_paths (const char *, const char *, bool);
+diff --git a/gcc/d/decl.cc b/gcc/d/decl.cc
+index 49723649230..d1dfce25c68 100644
+--- a/gcc/d/decl.cc
++++ b/gcc/d/decl.cc
+@@ -1803,8 +1803,11 @@ make_thunk (FuncDeclaration *decl, int offset)
+ 
+   DECL_CONTEXT (thunk) = d_decl_context (decl);
+ 
+-  /* Thunks inherit the public access of the function they are targetting.  */
+-  TREE_PUBLIC (thunk) = TREE_PUBLIC (function);
++  /* Thunks inherit the public access of the function they are targetting.
++     When the function is outside the current compilation unit however, then the
++     thunk must be kept private to not conflict.  */
++  TREE_PUBLIC (thunk) = TREE_PUBLIC (function) && !DECL_EXTERNAL (function);
++
+   DECL_EXTERNAL (thunk) = 0;
+ 
+   /* Thunks are always addressable.  */
+diff --git a/gcc/d/dmd/dclass.c b/gcc/d/dmd/dclass.c
+index 572b3e24387..66869361dcb 100644
+--- a/gcc/d/dmd/dclass.c
++++ b/gcc/d/dmd/dclass.c
+@@ -395,7 +395,6 @@ void ClassDeclaration::semantic(Scope *sc)
+     }
+     else if (symtab && !scx)
+     {
+-        semanticRun = PASSsemanticdone;
+         return;
+     }
+     semanticRun = PASSsemantic;
+diff --git a/gcc/d/expr.cc b/gcc/d/expr.cc
+index 6497619e5fd..3a2823d6e46 100644
+--- a/gcc/d/expr.cc
++++ b/gcc/d/expr.cc
+@@ -691,7 +691,6 @@ public:
+     else
+       etype = tb2->nextOf ();
+ 
+-    vec<tree, va_gc> *elemvars = NULL;
+     tree result;
+ 
+     if (e->e1->op == TOKcat)
+@@ -711,9 +710,7 @@ public:
+ 
+ 	/* Store all concatenation args to a temporary byte[][ndims] array.  */
+ 	Type *targselem = Type::tint8->arrayOf ();
+-	tree var = create_temporary_var (make_array_type (targselem, ndims));
+-	tree init = build_constructor (TREE_TYPE (var), NULL);
+-	vec_safe_push (elemvars, var);
++	tree var = build_local_temp (make_array_type (targselem, ndims));
+ 
+ 	/* Loop through each concatenation from right to left.  */
+ 	vec<constructor_elt, va_gc> *elms = NULL;
+@@ -725,7 +722,7 @@ public:
+ 	      ? (oe = ce->e1)
+ 	      : (ce = (CatExp *)ce->e1, oe = ce->e2)))
+ 	  {
+-	    tree arg = d_array_convert (etype, oe, &elemvars);
++	    tree arg = d_array_convert (etype, oe);
+ 	    tree index = size_int (dim);
+ 	    CONSTRUCTOR_APPEND_ELT (elms, index, d_save_expr (arg));
+ 
+@@ -738,8 +735,8 @@ public:
+ 
+ 	/* Check there is no logic bug in constructing byte[][] of arrays.  */
+ 	gcc_assert (dim == 0);
+-	CONSTRUCTOR_ELTS (init) = elms;
+-	DECL_INITIAL (var) = init;
++	tree init = build_constructor (TREE_TYPE (var), elms);
++	var = compound_expr (modify_expr (var, init), var);
+ 
+ 	tree arrs = d_array_value (build_ctype (targselem->arrayOf ()),
+ 				   size_int (ndims), build_address (var));
+@@ -752,13 +749,10 @@ public:
+ 	/* Handle single concatenation (a ~ b).  */
+ 	result = build_libcall (LIBCALL_ARRAYCATT, e->type, 3,
+ 				build_typeinfo (e->loc, e->type),
+-				d_array_convert (etype, e->e1, &elemvars),
+-				d_array_convert (etype, e->e2, &elemvars));
++				d_array_convert (etype, e->e1),
++				d_array_convert (etype, e->e2));
+       }
+ 
+-    for (size_t i = 0; i < vec_safe_length (elemvars); ++i)
+-      result = bind_expr ((*elemvars)[i], result);
+-
+     this->result_ = result;
+   }
+ 
+@@ -2480,12 +2474,13 @@ public:
+ 	else
+ 	  {
+ 	    /* Multidimensional array allocations.  */
+-	    vec<constructor_elt, va_gc> *elms = NULL;
+-	    Type *telem = e->newtype->toBasetype ();
+ 	    tree tarray = make_array_type (Type::tsize_t, e->arguments->dim);
+-	    tree var = create_temporary_var (tarray);
+-	    tree init = build_constructor (TREE_TYPE (var), NULL);
++	    tree var = build_local_temp (tarray);
++	    vec<constructor_elt, va_gc> *elms = NULL;
+ 
++	    /* Get the base element type for the array, generating the
++	       initializer for the dims parameter along the way.  */
++	    Type *telem = e->newtype->toBasetype ();
+ 	    for (size_t i = 0; i < e->arguments->dim; i++)
+ 	      {
+ 		Expression *arg = (*e->arguments)[i];
+@@ -2496,8 +2491,9 @@ public:
+ 		gcc_assert (telem);
+ 	      }
+ 
+-	    CONSTRUCTOR_ELTS (init) = elms;
+-	    DECL_INITIAL (var) = init;
++	    /* Initialize the temporary.  */
++	    tree init = modify_expr (var, build_constructor (tarray, elms));
++	    var = compound_expr (init, var);
+ 
+ 	    /* Generate: _d_newarraymTX(ti, dims)
+ 		     or: _d_newarraymiTX(ti, dims)  */
+@@ -2510,7 +2506,6 @@ public:
+ 				       build_address (var));
+ 
+ 	    result = build_libcall (libcall, tb, 2, tinfo, dims);
+-	    result = bind_expr (var, result);
+ 	  }
+ 
+ 	if (e->argprefix)
 diff --git a/gcc/d/typeinfo.cc b/gcc/d/typeinfo.cc
 index bbd3961181d..0b19bcf7f34 100644
 --- a/gcc/d/typeinfo.cc
@@ -4711,7 +5361,7 @@ index 65d5fcb0845..599f37ea9da 100644
  }
  
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
-index f5becf988d2..51ebb90e32d 100644
+index f5becf988d2..e231add27fd 100644
 --- a/gcc/doc/extend.texi
 +++ b/gcc/doc/extend.texi
 @@ -2760,7 +2760,7 @@ the same type as the target function.  As a result of the @code{copy}
@@ -4723,6 +5373,19 @@ index f5becf988d2..51ebb90e32d 100644
    extern __typeof__ (TargetFunc) AliasDecl  \
      __attribute__ ((alias (#TargetFunc), copy (TargetFunc)));
  
+@@ -3957,6 +3957,12 @@ Select the function scope on which branch protection will be applied.  The
+ behavior and permissible arguments are the same as for the command-line option
+ @option{-mbranch-protection=}.  The default value is @code{none}.
+ 
++@item outline-atomics
++@cindex @code{outline-atomics} function attribute, AArch64
++Enable or disable calls to out-of-line helpers to implement atomic operations.
++This corresponds to the behavior of the command line options
++@option{-moutline-atomics} and @option{-mno-outline-atomics}.
++
+ @end table
+ 
+ The above target attributes can be specified as follows:
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
 index 0ab6c9c6449..5e6d240dc5d 100644
 --- a/gcc/doc/invoke.texi
@@ -4843,6 +5506,102 @@ index fe1194ef91a..44a15dda240 100644
  the variable's decl in order to chose what to output.
  @end defmac
  
+diff --git a/gcc/dwarf2cfi.c b/gcc/dwarf2cfi.c
+index d6aed358484..3831979e26d 100644
+--- a/gcc/dwarf2cfi.c
++++ b/gcc/dwarf2cfi.c
+@@ -71,6 +71,9 @@ struct GTY(()) dw_cfi_row
+ 
+   /* True if the register window is saved.  */
+   bool window_save;
++
++  /* True if the return address is in a mangled state.  */
++  bool ra_mangled;
+ };
+ 
+ /* The caller's ORIG_REG is saved in SAVED_IN_REG.  */
+@@ -772,6 +775,9 @@ cfi_row_equal_p (dw_cfi_row *a, dw_cfi_row *b)
+   if (a->window_save != b->window_save)
+     return false;
+ 
++  if (a->ra_mangled != b->ra_mangled)
++    return false;
++
+   return true;
+ }
+ 
+@@ -1370,20 +1376,33 @@ dwarf2out_frame_debug_cfa_restore (rtx reg)
+ }
+ 
+ /* A subroutine of dwarf2out_frame_debug, process a REG_CFA_WINDOW_SAVE.
+-   FAKE is true if this is not really a window save but something else.
+ 
+    ??? Perhaps we should note in the CIE where windows are saved (instead
+    of assuming 0(cfa)) and what registers are in the window.  */
+ 
+ static void
+-dwarf2out_frame_debug_cfa_window_save (bool fake)
++dwarf2out_frame_debug_cfa_window_save (void)
+ {
+   dw_cfi_ref cfi = new_cfi ();
+ 
+   cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
+   add_cfi (cfi);
+-  if (!fake)
+-    cur_row->window_save = true;
++  cur_row->window_save = true;
++}
++
++/* A subroutine of dwarf2out_frame_debug, process a REG_CFA_TOGGLE_RA_MANGLE.
++   Note: DW_CFA_GNU_window_save dwarf opcode is reused for toggling RA mangle
++   state, this is a target specific operation on AArch64 and can only be used
++   on other targets if they don't use the window save operation otherwise.  */
++
++static void
++dwarf2out_frame_debug_cfa_toggle_ra_mangle (void)
++{
++  dw_cfi_ref cfi = new_cfi ();
++
++  cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
++  add_cfi (cfi);
++  cur_row->ra_mangled = !cur_row->ra_mangled;
+ }
+ 
+ /* Record call frame debugging information for an expression EXPR,
+@@ -2143,13 +2162,12 @@ dwarf2out_frame_debug (rtx_insn *insn)
+ 	break;
+ 
+       case REG_CFA_TOGGLE_RA_MANGLE:
+-	/* This uses the same DWARF opcode as the next operation.  */
+-	dwarf2out_frame_debug_cfa_window_save (true);
++	dwarf2out_frame_debug_cfa_toggle_ra_mangle ();
+ 	handled_one = true;
+ 	break;
+ 
+       case REG_CFA_WINDOW_SAVE:
+-	dwarf2out_frame_debug_cfa_window_save (false);
++	dwarf2out_frame_debug_cfa_window_save ();
+ 	handled_one = true;
+ 	break;
+ 
+@@ -2218,6 +2236,17 @@ change_cfi_row (dw_cfi_row *old_row, dw_cfi_row *new_row)
+     {
+       dw_cfi_ref cfi = new_cfi ();
+ 
++      gcc_assert (!old_row->ra_mangled && !new_row->ra_mangled);
++      cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
++      add_cfi (cfi);
++    }
++
++  if (old_row->ra_mangled != new_row->ra_mangled)
++    {
++      dw_cfi_ref cfi = new_cfi ();
++
++      gcc_assert (!old_row->window_save && !new_row->window_save);
++      /* DW_CFA_GNU_window_save is reused for toggling RA mangle state.  */
+       cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
+       add_cfi (cfi);
+     }
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
 index 30c4c7007ee..9ea109b3b61 100644
 --- a/gcc/dwarf2out.c
@@ -4905,10 +5664,48 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..21f8b1afa79 100644
+index 8fefea2b63d..3e7f3c76360 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,92 @@
+@@ -1,3 +1,130 @@
++2020-05-20  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/39695
++	* resolve.c (resolve_fl_procedure): Set name depending on
++	whether the result attribute is set.  For PROCEDURE/RESULT
++	conflict use the name in sym->ns->proc_name->name.
++	* symbol.c (gfc_add_type): Add check for function and result
++	attributes use sym->ns->proc_name->name if both are set.
++	Where the symbol cannot have a type use the name in
++	sym->ns->proc_name->name.
++
++2020-05-13  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master
++	2020-05-13  Steven G. Kargl  <kargl@gcc.gnu.org>
++
++	PR fortran/93497
++	* decl.c (char_len_param_value): Check whether character
++	length expression is of type EXPR_OP and if so simplify it.
++	* resolve.c (resolve_charlen): Reject length if it has a
++	rank.
++
++2020-05-11  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from mainline
++	2020-05-11  Janus Weil  <janus@gcc.gnu.org>
++		    Dominique d'Humieres  <dominiq@lps.ens.fr>
++
++	PR fortran/59107
++	* gfortran.h: Rename field resolved as resolve_symbol_called
++	and assign two 2 bits instead of 1.
++	* interface.c (gfc_find_typebound_dtio_proc): Use new field name.
++	* resolve.c (gfc_resolve_intrinsic): Replace check of the formal
++	field with resolve_symbol_called is at least 2, if it is not
++	set the field to 2.  (resolve_typebound_procedure): Use new field
++	name.  (resolve_symbol): Use new field name and check whether it
++	is at least 1, if it is not set the field to 1.
++
 +2020-05-04  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backport from mainline.
@@ -5032,7 +5829,7 @@ index 6d37bbb8fd2..adda284ef71 100644
    d = ap->next->next->expr;
    m = ap->next->next->next->expr;
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..86226b63ecc 100644
+index abff4af9f67..fd88a60307a 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -668,6 +668,10 @@ gfc_match_data (void)
@@ -5046,7 +5843,19 @@ index abff4af9f67..86226b63ecc 100644
  	  ref = e->ref;
  	  if (e->symtree->n.sym->ts.type == BT_DERIVED
  	      && e->symtree->n.sym->attr.pointer
-@@ -5339,15 +5343,19 @@ match_attr_spec (void)
+@@ -1029,6 +1033,11 @@ char_len_param_value (gfc_expr **expr, bool *deferred)
+   if (!gfc_expr_check_typed (*expr, gfc_current_ns, false))
+     return MATCH_ERROR;
+ 
++  /* If gfortran gets an EXPR_OP, try to simplifiy it.  This catches things
++     like CHARACTER(([1])).   */
++  if ((*expr)->expr_type == EXPR_OP)
++    gfc_simplify_expr (*expr, 1);
++
+   if ((*expr)->expr_type == EXPR_FUNCTION)
+     {
+       if ((*expr)->ts.type == BT_INTEGER
+@@ -5339,15 +5348,19 @@ match_attr_spec (void)
        if (d == DECL_STATIC && seen[DECL_SAVE])
  	continue;
  
@@ -5069,7 +5878,7 @@ index abff4af9f67..86226b63ecc 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5355,8 +5363,11 @@ match_attr_spec (void)
+@@ -5355,8 +5368,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_KIND)
  	    {
@@ -5083,7 +5892,7 @@ index abff4af9f67..86226b63ecc 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5379,8 +5390,11 @@ match_attr_spec (void)
+@@ -5379,8 +5395,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_LEN)
  	    {
@@ -5097,7 +5906,7 @@ index abff4af9f67..86226b63ecc 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5403,8 +5417,10 @@ match_attr_spec (void)
+@@ -5403,8 +5422,10 @@ match_attr_spec (void)
  	    }
  	  else
  	    {
@@ -5110,7 +5919,7 @@ index abff4af9f67..86226b63ecc 100644
  	      m = MATCH_ERROR;
  	      goto cleanup;
  	    }
-@@ -9602,13 +9618,20 @@ gfc_match_submod_proc (void)
+@@ -9602,13 +9623,20 @@ gfc_match_submod_proc (void)
    if (get_proc_name (name, &sym, false))
      return MATCH_ERROR;
  
@@ -5136,6 +5945,36 @@ index abff4af9f67..86226b63ecc 100644
        else
  	sym->result = sym;
      }
+diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
+index d7071ae5fcf..a3320d890cd 100644
+--- a/gcc/fortran/gfortran.h
++++ b/gcc/fortran/gfortran.h
+@@ -1602,7 +1602,10 @@ typedef struct gfc_symbol
+   /* Set if the symbol is used in a function result specification .  */
+   unsigned fn_result_spec:1;
+   /* Used to avoid multiple resolutions of a single symbol.  */
+-  unsigned resolved:1;
++  /* = 2 if this has already been resolved as an intrinsic,
++       in gfc_resolve_intrinsic,
++     = 1 if it has been resolved in resolve_symbol.  */
++  unsigned resolve_symbol_called:2;
+   /* Set if this is a module function or subroutine with the
+      abreviated declaration in a submodule.  */
+   unsigned abr_modproc_decl:1;
+diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
+index b5701b1a59a..29af409dde0 100644
+--- a/gcc/fortran/interface.c
++++ b/gcc/fortran/interface.c
+@@ -4979,7 +4979,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
+   gfc_symtree *tb_io_st = NULL;
+   bool t = false;
+ 
+-  if (!derived || !derived->resolved || derived->attr.flavor != FL_DERIVED)
++  if (!derived || !derived->resolve_symbol_called
++      || derived->attr.flavor != FL_DERIVED)
+     return NULL;
+ 
+   /* Try to find a typebound DTIO binding.  */
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
 index 088b69f8ec9..f4ae9e9dfe7 100644
 --- a/gcc/fortran/match.c
@@ -5153,10 +5992,23 @@ index 088b69f8ec9..f4ae9e9dfe7 100644
        /* If a comma appears, it is an intrinsic subprogram. */
        gfc_gobble_whitespace ();
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index a4ad26efffc..c041d8df96d 100644
+index a4ad26efffc..19f05ab884f 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
-@@ -5094,8 +5094,8 @@ gfc_resolve_substring_charlen (gfc_expr *e)
+@@ -1754,9 +1754,11 @@ gfc_resolve_intrinsic (gfc_symbol *sym, locus *loc)
+   gfc_intrinsic_sym* isym = NULL;
+   const char* symstd;
+ 
+-  if (sym->formal)
++  if (sym->resolve_symbol_called >= 2)
+     return true;
+ 
++  sym->resolve_symbol_called = 2;
++
+   /* Already resolved.  */
+   if (sym->from_intmod && sym->ts.type != BT_UNKNOWN)
+     return true;
+@@ -5094,8 +5096,8 @@ gfc_resolve_substring_charlen (gfc_expr *e)
  static bool
  resolve_ref (gfc_expr *expr)
  {
@@ -5167,7 +6019,7 @@ index a4ad26efffc..c041d8df96d 100644
    bool equal_length;
  
    for (ref = expr->ref; ref; ref = ref->next)
-@@ -5141,12 +5141,14 @@ resolve_ref (gfc_expr *expr)
+@@ -5141,12 +5143,14 @@ resolve_ref (gfc_expr *expr)
    current_part_dimension = 0;
    seen_part_dimension = 0;
    n_components = 0;
@@ -5182,7 +6034,7 @@ index a4ad26efffc..c041d8df96d 100644
  	  switch (ref->u.ar.type)
  	    {
  	    case AR_FULL:
-@@ -5162,6 +5164,7 @@ resolve_ref (gfc_expr *expr)
+@@ -5162,6 +5166,7 @@ resolve_ref (gfc_expr *expr)
  	      break;
  
  	    case AR_ELEMENT:
@@ -5190,7 +6042,7 @@ index a4ad26efffc..c041d8df96d 100644
  	      current_part_dimension = 0;
  	      break;
  
-@@ -5201,7 +5204,33 @@ resolve_ref (gfc_expr *expr)
+@@ -5201,7 +5206,33 @@ resolve_ref (gfc_expr *expr)
  	  break;
  
  	case REF_SUBSTRING:
@@ -5224,7 +6076,58 @@ index a4ad26efffc..c041d8df96d 100644
  	  break;
  	}
  
-@@ -16510,7 +16539,8 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -12000,7 +12031,7 @@ resolve_charlen (gfc_charlen *cl)
+ 	}
+ 
+       /* cl->length has been resolved.  It should have an integer type.  */
+-      if (cl->length->ts.type != BT_INTEGER)
++      if (cl->length->ts.type != BT_INTEGER || cl->length->rank != 0)
+ 	{
+ 	  gfc_error ("Scalar INTEGER expression expected at %L",
+ 		     &cl->length->where);
+@@ -12755,8 +12786,10 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+     {
+       if (sym->attr.proc_pointer)
+ 	{
++	  const char* name = (sym->attr.result ? sym->ns->proc_name->name
++					       : sym->name);
+ 	  gfc_error ("Procedure pointer %qs at %L shall not be elemental",
+-		     sym->name, &sym->declared_at);
++		     name, &sym->declared_at);
+ 	  return false;
+ 	}
+       if (sym->attr.dummy)
+@@ -12843,7 +12876,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+       if (sym->attr.subroutine && sym->attr.result)
+ 	{
+ 	  gfc_error ("PROCEDURE attribute conflicts with RESULT attribute "
+-		     "in %qs at %L", sym->name, &sym->declared_at);
++		     "in %qs at %L", sym->ns->proc_name->name, &sym->declared_at);
+ 	  return false;
+ 	}
+       if (sym->attr.external && sym->attr.function && !sym->attr.module_procedure
+@@ -13541,7 +13574,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
+     {
+       /* If proc has not been resolved at this point, proc->name may
+ 	 actually be a USE associated entity. See PR fortran/89647. */
+-      if (!proc->resolved
++      if (!proc->resolve_symbol_called
+ 	  && proc->attr.function == 0 && proc->attr.subroutine == 0)
+ 	{
+ 	  gfc_symbol *tmp;
+@@ -14791,9 +14824,9 @@ resolve_symbol (gfc_symbol *sym)
+   gfc_array_spec *as;
+   bool saved_specification_expr;
+ 
+-  if (sym->resolved)
++  if (sym->resolve_symbol_called >= 1)
+     return;
+-  sym->resolved = 1;
++  sym->resolve_symbol_called = 1;
+ 
+   /* No symbol will ever have union type; only components can be unions.
+      Union type declaration symbols have type BT_UNKNOWN but flavor FL_UNION
+@@ -16510,7 +16543,8 @@ resolve_equivalence (gfc_equiv *eq)
  	  && !gfc_notify_std (GFC_STD_GNU, msg, sym->name, &e->where))
  		continue;
  
@@ -5234,7 +6137,7 @@ index a4ad26efffc..c041d8df96d 100644
        last_ts =&sym->ts;
        last_where = &e->where;
  
-@@ -16518,8 +16548,7 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -16518,8 +16552,7 @@ resolve_equivalence (gfc_equiv *eq)
  	continue;
  
        /* Shall not be an automatic array.  */
@@ -5244,6 +6147,33 @@ index a4ad26efffc..c041d8df96d 100644
  	{
  	  gfc_error ("Array %qs at %L with non-constant bounds cannot be "
  		     "an EQUIVALENCE object", sym->name, &e->where);
+diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
+index faaeebf2c09..801a7733fef 100644
+--- a/gcc/fortran/symbol.c
++++ b/gcc/fortran/symbol.c
+@@ -2004,9 +2004,12 @@ gfc_add_type (gfc_symbol *sym, gfc_typespec *ts, locus *where)
+ 	gfc_error ("Symbol %qs at %L conflicts with symbol from module %qs, "
+ 		   "use-associated at %L", sym->name, where, sym->module,
+ 		   &sym->declared_at);
++      else if (sym->attr.function && sym->attr.result)
++	gfc_error ("Symbol %qs at %L already has basic type of %s",
++		   sym->ns->proc_name->name, where, gfc_basic_typename (type));
+       else
+ 	gfc_error ("Symbol %qs at %L already has basic type of %s", sym->name,
+-		 where, gfc_basic_typename (type));
++		   where, gfc_basic_typename (type));
+       return false;
+     }
+ 
+@@ -2024,7 +2027,7 @@ gfc_add_type (gfc_symbol *sym, gfc_typespec *ts, locus *where)
+       || (flavor == FL_PROCEDURE && sym->attr.subroutine)
+       || flavor == FL_DERIVED || flavor == FL_NAMELIST)
+     {
+-      gfc_error ("Symbol %qs at %L cannot have a type", sym->name, where);
++      gfc_error ("Symbol %qs at %L cannot have a type", sym->ns->proc_name->name, where);
+       return false;
+     }
+ 
 diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
 index 2e5eb4f468f..572455e0d59 100644
 --- a/gcc/fortran/trans-array.c
@@ -5483,10 +6413,106 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..02b5dbc6ea8 100644
+index e132f2657ef..695ffa33298 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,531 @@
+@@ -1,3 +1,627 @@
++2020-05-21  Martin Liska  <mliska@suse.cz>
++
++	* gcc.target/aarch64/target_attr_20.c: New test.
++	* gcc.target/aarch64/target_attr_21.c: New test.
++
++2020-05-20  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/39695
++	* gfortran.dg/pr39695_1.f90: New test.
++	* gfortran.dg/pr39695_2.f90: New test.
++	* gfortran.dg/pr39695_3.f90: New test.
++	* gfortran.dg/pr39695_4.f90: New test.
++
++2020-05-18  Doug Rupp  <rupp@adacore.com>
++
++	* gcc.target/powerpc/pr71763.c: Require powerpc_vsx_ok.
++
++
++2020-05-18  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backport from mainline
++	2020-03-16  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/92216
++	* gdc.dg/imports/pr92216.d: New.
++	* gdc.dg/pr92216.d: New test.
++
++2020-05-17  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backport from mainline
++	2020-05-06  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/94970
++	* gdc.dg/pr94970.d: New test.
++
++2020-05-16  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/95155
++	* gdc.test/compilable/imports/pr9471a.d: New test.
++	* gdc.test/compilable/imports/pr9471b.d: New test.
++	* gdc.test/compilable/imports/pr9471c.d: New test.
++	* gdc.test/compilable/imports/pr9471d.d: New test.
++	* gdc.test/compilable/pr9471.d: New test.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-30  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94748
++	* gcc.target/aarch64/pr94748.c: New test.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-27  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94515
++	* g++.target/aarch64/pr94515-1.C: New test.
++	* g++.target/aarch64/pr94515-2.C: New test.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-23  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94514
++	* g++.target/aarch64/pr94514.C: Require lp64.
++	* gcc.target/aarch64/pr94514.c: Likewise.
++
++	Backport from mainline.
++	2020-04-21  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94514
++	* g++.target/aarch64/pr94514.C: New test.
++	* gcc.target/aarch64/pr94514.c: New test.
++
++2020-05-13  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master
++	2020-05-13  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/93497
++	* gfortran.dg/pr88025.f90: Change in wording of error.
++	* gfortran.dg/pr93497.f90: New test.
++	* gfortran.dg/pr93714_1.f90: Change in wording of errors.
++	* gfortran.dg/pr93714_2.f90: Change in wording of errors.
++
++2020-05-11  Mark Eggleston  <markeggleston@gcc.gnu.org>
++    
++	Backported from mainline
++	2020-05-11  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/59107
++	* gfortran.dg/pr59107.f90: New test.
++
 +2020-05-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/94946
@@ -7150,6 +8176,136 @@ index 00000000000..d36c9bdc158
 +  bz<o, p>(dm, bi, be, bg, bf, bh, bj, bk);
 +}
 +} // namespace an
+diff --git a/gcc/testsuite/g++.target/aarch64/pr94514.C b/gcc/testsuite/g++.target/aarch64/pr94514.C
+new file mode 100644
+index 00000000000..ae925cafeb6
+--- /dev/null
++++ b/gcc/testsuite/g++.target/aarch64/pr94514.C
+@@ -0,0 +1,27 @@
++/* PR target/94514. Unwind across mixed pac-ret and non-pac-ret frames.  */
++/* { dg-do run } */
++/* { dg-require-effective-target lp64 } */
++
++__attribute__((noinline, target("branch-protection=pac-ret")))
++static void do_throw (void)
++{
++  throw 42;
++  __builtin_abort ();
++}
++
++__attribute__((noinline, target("branch-protection=none")))
++static void no_pac_ret (void)
++{
++  do_throw ();
++  __builtin_abort ();
++}
++
++int main ()
++{
++  try {
++    no_pac_ret ();
++  } catch (...) {
++    return 0;
++  }
++  __builtin_abort ();
++}
+diff --git a/gcc/testsuite/g++.target/aarch64/pr94515-1.C b/gcc/testsuite/g++.target/aarch64/pr94515-1.C
+new file mode 100644
+index 00000000000..20ae81215fc
+--- /dev/null
++++ b/gcc/testsuite/g++.target/aarch64/pr94515-1.C
+@@ -0,0 +1,44 @@
++/* PR target/94515. Check .cfi_window_save with multiple return paths.  */
++/* { dg-do run } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-additional-options "-O2 --save-temps" } */
++
++volatile int zero = 0;
++
++__attribute__((noinline, target("branch-protection=none")))
++void unwind (void)
++{
++  if (zero == 0)
++    throw 42;
++}
++
++__attribute__((noinline, noipa, target("branch-protection=pac-ret")))
++int test (int z)
++{
++  if (z) {
++    asm volatile ("":::"x20","x21");
++    unwind ();
++    return 1;
++  } else {
++    unwind ();
++    return 2;
++  }
++}
++
++__attribute__((target("branch-protection=none")))
++int main ()
++{
++  try {
++    test (zero);
++    __builtin_abort ();
++  } catch (...) {
++    return 0;
++  }
++  __builtin_abort ();
++}
++
++/* This check only works if there are two return paths in test and
++   cfi_window_save is used for both instead of cfi_remember_state
++   plus cfi_restore_state.  This is currently the case with -O2.  */
++
++/* { dg-final { scan-assembler-times {\t\.cfi_window_save\n} 4 } } */
+diff --git a/gcc/testsuite/g++.target/aarch64/pr94515-2.C b/gcc/testsuite/g++.target/aarch64/pr94515-2.C
+new file mode 100644
+index 00000000000..e73df499070
+--- /dev/null
++++ b/gcc/testsuite/g++.target/aarch64/pr94515-2.C
+@@ -0,0 +1,41 @@
++/* PR target/94515. Check .cfi_window_save with multiple return paths.  */
++/* { dg-do run } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-additional-options "-O2 -mbranch-protection=pac-ret" } */
++
++volatile int zero = 0;
++int global = 0;
++
++__attribute__((noinline))
++int bar(void)
++{
++  if (zero == 0) return 3;
++  return 0;
++}
++
++__attribute__((noinline, noreturn))
++void unwind (void)
++{
++  throw 42;
++}
++
++__attribute__((noinline, noipa))
++int test(int x)
++{
++  if (x==1) return 2; /* This return path may not use the stack.  */
++  int y = bar();
++  if (y > global) global=y;
++  if (y==3) unwind(); /* This return path must have RA mangle state set.  */
++  return 0;
++}
++
++int main ()
++{
++  try {
++    test (zero);
++    __builtin_abort ();
++  } catch (...) {
++    return 0;
++  }
++  __builtin_abort ();
++}
 diff --git a/gcc/testsuite/gcc.c-torture/compile/pr94488.c b/gcc/testsuite/gcc.c-torture/compile/pr94488.c
 new file mode 100644
 index 00000000000..6e20a4168de
@@ -8461,6 +9617,89 @@ index 00000000000..5713c14d5f9
 +      __sync_val_compare_and_swap (&g, -1, f);
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr94514.c b/gcc/testsuite/gcc.target/aarch64/pr94514.c
+new file mode 100644
+index 00000000000..cbc940421d2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr94514.c
+@@ -0,0 +1,77 @@
++/* PR target/94514. Unwind across mixed pac-ret and non-pac-ret frames.  */
++/* { dg-do run } */
++/* { dg-require-effective-target lp64 } */
++/* { dg-options "-fexceptions -O2" } */
++
++#include <unwind.h>
++#include <stdlib.h>
++#include <stdio.h>
++
++#define die() \
++  do { \
++    printf ("%s:%d: reached unexpectedly.\n", __FILE__, __LINE__); \
++    fflush (stdout); \
++    abort (); \
++  } while (0)
++
++static struct _Unwind_Exception exc;
++
++static _Unwind_Reason_Code
++force_unwind_stop (int version, _Unwind_Action actions,
++                   _Unwind_Exception_Class exc_class,
++                   struct _Unwind_Exception *exc_obj,
++                   struct _Unwind_Context *context,
++                   void *stop_parameter)
++{
++  printf ("%s: CFA: %p PC: %p actions: %d\n",
++	  __func__,
++	  (void *)_Unwind_GetCFA (context),
++	  (void *)_Unwind_GetIP (context),
++	  (int)actions);
++  if (actions & _UA_END_OF_STACK)
++    die ();
++  return _URC_NO_REASON;
++}
++
++static void force_unwind (void)
++{
++#ifndef __USING_SJLJ_EXCEPTIONS__
++  _Unwind_ForcedUnwind (&exc, force_unwind_stop, 0);
++#else
++  _Unwind_SjLj_ForcedUnwind (&exc, force_unwind_stop, 0);
++#endif
++}
++
++__attribute__((noinline, target("branch-protection=pac-ret")))
++static void f2_pac_ret (void)
++{
++  force_unwind ();
++  die ();
++}
++
++__attribute__((noinline, target("branch-protection=none")))
++static void f1_no_pac_ret (void)
++{
++  f2_pac_ret ();
++  die ();
++}
++
++__attribute__((noinline, target("branch-protection=pac-ret")))
++static void f0_pac_ret (void)
++{
++  f1_no_pac_ret ();
++  die ();
++}
++
++static void cleanup_handler (void *p)
++{
++  printf ("%s: Success.\n", __func__);
++  exit (0);
++}
++
++int main ()
++{
++  char dummy __attribute__((cleanup (cleanup_handler)));
++  f0_pac_ret ();
++  die ();
++}
 diff --git a/gcc/testsuite/gcc.target/aarch64/pr94530.c b/gcc/testsuite/gcc.target/aarch64/pr94530.c
 new file mode 100644
 index 00000000000..1f98201c50a
@@ -8476,6 +9715,22 @@ index 00000000000..1f98201c50a
 +  for (;;)
 +    bar("");
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr94748.c b/gcc/testsuite/gcc.target/aarch64/pr94748.c
+new file mode 100644
+index 00000000000..2a2850d2fac
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr94748.c
+@@ -0,0 +1,10 @@
++/* { dg-do compile } */
++
++__attribute__ ((target("branch-protection=bti")))
++int foo ()
++{
++label:
++  return 0;
++}
++
++/* { dg-final { scan-assembler-not {hint (36|38) // bti (j|jc)} } } */
 diff --git a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
 index e571b2f13b3..f56415f3354 100644
 --- a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
@@ -8509,6 +9764,72 @@ index c6ba1629965..6b8b2043f40 100644
  
  #include "sync-op-full.x"
  
+diff --git a/gcc/testsuite/gcc.target/aarch64/target_attr_20.c b/gcc/testsuite/gcc.target/aarch64/target_attr_20.c
+new file mode 100644
+index 00000000000..509fb039e84
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/target_attr_20.c
+@@ -0,0 +1,27 @@
++/* { dg-do compile } */
++/* { dg-options "-march=armv8-a+nolse -moutline-atomics" } */
++
++int b, c, d, e, f, h;
++short g;
++int foo (int) __attribute__ ((__const__));
++
++__attribute__ ((target ("no-outline-atomics")))
++void
++bar (void)
++{
++  while (1)
++    {
++      while (1)
++	{
++	  __atomic_load_n (&e, 0);
++	  if (foo (2))
++	    __sync_val_compare_and_swap (&c, 0, f);
++	  b = 1;
++	  if (h == e)
++	    break;
++	}
++      __sync_val_compare_and_swap (&g, -1, f);
++    }
++}
++
++/* { dg-final { scan-assembler-not "bl.*__aarch64_cas2_acq_rel" } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/target_attr_21.c b/gcc/testsuite/gcc.target/aarch64/target_attr_21.c
+new file mode 100644
+index 00000000000..acace4c8f2a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/target_attr_21.c
+@@ -0,0 +1,27 @@
++/* { dg-do compile } */
++/* { dg-options "-march=armv8-a+nolse -mno-outline-atomics" } */
++
++int b, c, d, e, f, h;
++short g;
++int foo (int) __attribute__ ((__const__));
++
++__attribute__ ((target ("outline-atomics")))
++void
++bar (void)
++{
++  while (1)
++    {
++      while (1)
++	{
++	  __atomic_load_n (&e, 0);
++	  if (foo (2))
++	    __sync_val_compare_and_swap (&c, 0, f);
++	  b = 1;
++	  if (h == e)
++	    break;
++	}
++      __sync_val_compare_and_swap (&g, -1, f);
++    }
++}
++
++/* { dg-final { scan-assembler-times "bl.*__aarch64_cas2_acq_rel" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/i386/avx2-pr94460.c b/gcc/testsuite/gcc.target/i386/avx2-pr94460.c
 new file mode 100644
 index 00000000000..75b7a7bf313
@@ -8874,6 +10195,17 @@ index 00000000000..141603e05b4
 +{
 +  return a > b ? b : a;
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr71763.c b/gcc/testsuite/gcc.target/powerpc/pr71763.c
+index b36ddfa26b0..b8888394393 100644
+--- a/gcc/testsuite/gcc.target/powerpc/pr71763.c
++++ b/gcc/testsuite/gcc.target/powerpc/pr71763.c
+@@ -1,5 +1,6 @@
+ // PR target/71763
+ // { dg-do compile }
++// { dg-require-effective-target powerpc_vsx_ok }
+ // { dg-options "-O1 -mvsx" }
+ 
+ int a, b;
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr90763.c b/gcc/testsuite/gcc.target/powerpc/pr90763.c
 new file mode 100644
 index 00000000000..55f1d461e82
@@ -9807,6 +11139,141 @@ index 00000000000..8720327f526
 +
 +# All done.
 +dg-finish
+diff --git a/gcc/testsuite/gdc.dg/imports/pr92216.d b/gcc/testsuite/gdc.dg/imports/pr92216.d
+new file mode 100644
+index 00000000000..b8c71c03420
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/imports/pr92216.d
+@@ -0,0 +1,22 @@
++module imports.pr92216;
++
++class B : I
++{
++    protected override void getStruct(){}
++    mixin A!();
++
++}
++
++mixin template A()
++{
++    public void* getS()
++    {
++        return null;
++    }
++}
++
++public interface I
++{
++    public void* getS();
++    protected void getStruct();
++}
+diff --git a/gcc/testsuite/gdc.dg/pr92216.d b/gcc/testsuite/gdc.dg/pr92216.d
+new file mode 100644
+index 00000000000..89a99e599be
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr92216.d
+@@ -0,0 +1,13 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=92216
++// { dg-options "-I $srcdir/gdc.dg" }
++// { dg-do compile }
++// { dg-final { scan-assembler "_DT(4|8|16)_D7imports7pr922161B8__mixin24getSMFZPv\[: \t\n\]" } }
++// { dg-final { scan-assembler-not "(.globl|.global)\[         \]+_DT(4|8|16)_D7imports7pr922161B8__mixin24getSMFZPv" } }
++module pr92216;
++
++private import imports.pr92216;
++
++class C : B
++{
++    protected override void getStruct() {}
++}
+diff --git a/gcc/testsuite/gdc.dg/pr94970.d b/gcc/testsuite/gdc.dg/pr94970.d
+new file mode 100644
+index 00000000000..4c3387e3d4b
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr94970.d
+@@ -0,0 +1,20 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94970
++// { dg-do compile }
++
++struct S94970
++{
++    string index() { return null; }
++    ~this() { }
++}
++
++static m() { return S94970(); }
++
++auto concat()
++{
++    return m.index ~ ' ';
++}
++
++auto newarray()
++{
++    return new int[][](m.index.length, 1);
++}
+diff --git a/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d b/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d
+new file mode 100644
+index 00000000000..79b78e1e52a
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d
+@@ -0,0 +1,2 @@
++import imports.pr9471c;
++class AggregateDeclaration : ScopeDsymbol { }
+diff --git a/gcc/testsuite/gdc.test/compilable/imports/pr9471b.d b/gcc/testsuite/gdc.test/compilable/imports/pr9471b.d
+new file mode 100644
+index 00000000000..a46a12c496f
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/compilable/imports/pr9471b.d
+@@ -0,0 +1,5 @@
++import imports.pr9471a;
++class ClassDeclaration : AggregateDeclaration
++{
++    void isBaseOf();
++}
+diff --git a/gcc/testsuite/gdc.test/compilable/imports/pr9471c.d b/gcc/testsuite/gdc.test/compilable/imports/pr9471c.d
+new file mode 100644
+index 00000000000..d80a61480ce
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/compilable/imports/pr9471c.d
+@@ -0,0 +1,18 @@
++import imports.pr9471b;
++
++struct Array(T)
++{
++    static if (is(typeof(T.opCmp))) { }
++}
++alias ClassDeclarations = Array!ClassDeclaration;
++
++class Dsymbol
++{
++    void addObjcSymbols(ClassDeclarations);
++}
++
++class ScopeDsymbol : Dsymbol
++{
++    import imports.pr9471d;
++    void importScope();
++}
+diff --git a/gcc/testsuite/gdc.test/compilable/imports/pr9471d.d b/gcc/testsuite/gdc.test/compilable/imports/pr9471d.d
+new file mode 100644
+index 00000000000..187b9083294
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/compilable/imports/pr9471d.d
+@@ -0,0 +1 @@
++// Module needs to be imported to trigger bug.
+diff --git a/gcc/testsuite/gdc.test/compilable/pr9471.d b/gcc/testsuite/gdc.test/compilable/pr9471.d
+new file mode 100644
+index 00000000000..37ff32e4957
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/compilable/pr9471.d
+@@ -0,0 +1,6 @@
++// PERMUTE_ARGS:
++// EXTRA_FILES: imports/pr9471a.d imports/pr9471b.d imports/pr9471c.d imports/pr9471d.d
++import imports.pr9471a;
++import imports.pr9471b;
++
++static assert (__traits(getVirtualIndex, ClassDeclaration.isBaseOf) == 7);
 diff --git a/gcc/testsuite/gfortran.dg/dec_structure_28.f90 b/gcc/testsuite/gfortran.dg/dec_structure_28.f90
 new file mode 100644
 index 00000000000..bab08b2d5c3
@@ -9935,6 +11402,104 @@ index 00000000000..50a83d9e5b1
 +  implicit none
 +  if (foo() /= 5) stop 1
 +end program main
+diff --git a/gcc/testsuite/gfortran.dg/pr39695_1.f90 b/gcc/testsuite/gfortran.dg/pr39695_1.f90
+new file mode 100644
+index 00000000000..4c4b3045f69
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr39695_1.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++!
++
++function f()
++  intrinsic :: sin
++  procedure(sin), pointer :: f ! { dg-error "Procedure pointer 'f'" }
++  f => sin
++end function f
+diff --git a/gcc/testsuite/gfortran.dg/pr39695_2.f90 b/gcc/testsuite/gfortran.dg/pr39695_2.f90
+new file mode 100644
+index 00000000000..8534724959a
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr39695_2.f90
+@@ -0,0 +1,12 @@
++! { dg-do compile }
++!
++
++function g()
++ interface
++    subroutine g()
++    end subroutine g
++  end interface
++  pointer g
++  real g   ! { dg-error "Symbol 'g' at .1. cannot have a type" }
++end function
++
+diff --git a/gcc/testsuite/gfortran.dg/pr39695_3.f90 b/gcc/testsuite/gfortran.dg/pr39695_3.f90
+new file mode 100644
+index 00000000000..661e2540bb3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr39695_3.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++!
++
++function g()
++ interface
++    subroutine g()   ! { dg-error "RESULT attribute in 'g'" }
++    end subroutine g
++  end interface
++  real g             ! { dg-error "Symbol 'g' at .1. cannot have a type" }
++end function
++
+diff --git a/gcc/testsuite/gfortran.dg/pr39695_4.f90 b/gcc/testsuite/gfortran.dg/pr39695_4.f90
+new file mode 100644
+index 00000000000..ecb0a43929f
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr39695_4.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++!
++
++function g()
++  implicit none
++  interface
++    function g()
++      integer g
++    end function g
++  end interface
++  pointer g
++  real g   ! { dg-error "Symbol 'g' at .1. already has basic type of INTEGER" }
++end function
++
+diff --git a/gcc/testsuite/gfortran.dg/pr59107.f90 b/gcc/testsuite/gfortran.dg/pr59107.f90
+new file mode 100644
+index 00000000000..a84328f0851
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr59107.f90
+@@ -0,0 +1,11 @@
++! { dg-compile }
++! { dg-options "-Wsurprising" }
++
++! There should be no surprising warnings
++
++program p
++  Integer :: nargs
++  intrinsic :: command_argument_count
++  nargs = command_argument_count()
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr88025.f90 b/gcc/testsuite/gfortran.dg/pr88025.f90
+index 96172fae76a..c51390f1434 100644
+--- a/gcc/testsuite/gfortran.dg/pr88025.f90
++++ b/gcc/testsuite/gfortran.dg/pr88025.f90
+@@ -2,6 +2,6 @@
+ ! PR fortran/88025
+ program p
+    type t
+-      character(('')) :: c = 'c'    ! { dg-error "must be of INTEGER type" }
++      character(('')) :: c = 'c'  ! { dg-error "Scalar INTEGER expression expected" }
+    end type
+ end
 diff --git a/gcc/testsuite/gfortran.dg/pr91913.f90 b/gcc/testsuite/gfortran.dg/pr91913.f90
 new file mode 100644
 index 00000000000..7d5477ac0c3
@@ -9991,6 +11556,20 @@ index 00000000000..4a7f4330ed9
 +  implicit none
 +  integer, parameter :: x(4) = [1,2,3,4]
 +  print *, [real(x(k))] ! { dg-error "Symbol 'k' at .1. has no IMPLICIT type" }
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr93497.f90 b/gcc/testsuite/gfortran.dg/pr93497.f90
+new file mode 100644
+index 00000000000..612b41cd8ca
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr93497.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile } 
++
++program p
++   print *, [character(((/1/))) :: 'a','b'] ! { dg-error "Scalar INTEGER expression expected" }
++   print *, [character(([1])) :: 'a','b']   ! { dg-error "Scalar INTEGER expression expected" }
++   print *, [character(1+[1]) :: 'a','b']   ! { dg-error "Scalar INTEGER expression expected" }
 +end
 +
 diff --git a/gcc/testsuite/gfortran.dg/pr93498_1.f90 b/gcc/testsuite/gfortran.dg/pr93498_1.f90
@@ -10089,6 +11668,30 @@ index 00000000000..ff3ae764ab7
 +type(t), pointer :: x
 +data x / ! { dg-error "part-ref with pointer attribute near ... is not rightmost part-ref of data-stmt-object" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr93714_1.f90 b/gcc/testsuite/gfortran.dg/pr93714_1.f90
+index 40f4a4bf89f..e55812c76de 100644
+--- a/gcc/testsuite/gfortran.dg/pr93714_1.f90
++++ b/gcc/testsuite/gfortran.dg/pr93714_1.f90
+@@ -7,5 +7,5 @@ program test
+    character, pointer :: b => a
+ end program
+ 
+-! { dg-error "must be of INTEGER type" " " { target *-*-* } 6 }
+-! { dg-error "does not have the TARGET attribute" " " { target *-*-* } 7 }
++! { dg-error "Scalar INTEGER expression expected" " " { target *-*-* } 6 }
++! { dg-error "Different types in pointer assignment" " " { target *-*-* } 7 }
+diff --git a/gcc/testsuite/gfortran.dg/pr93714_2.f90 b/gcc/testsuite/gfortran.dg/pr93714_2.f90
+index 86658f28859..23d53508f1f 100644
+--- a/gcc/testsuite/gfortran.dg/pr93714_2.f90
++++ b/gcc/testsuite/gfortran.dg/pr93714_2.f90
+@@ -7,5 +7,5 @@ program test
+    character(:), pointer :: b => a
+ end program
+ 
+-! { dg-error "must be of INTEGER type" " " { target *-*-* } 6 }
+-! { dg-error "does not have the TARGET attribute" " " { target *-*-* } 7 }
++! { dg-error "Scalar INTEGER expression expected" " " { target *-*-* } 6 }
++! { dg-error "Different types in pointer assignment" " " { target *-*-* } 7 }
 diff --git a/gcc/testsuite/gfortran.dg/pr94030_1.f90 b/gcc/testsuite/gfortran.dg/pr94030_1.f90
 new file mode 100644
 index 00000000000..e63d3cc8da4
@@ -11060,10 +12663,37 @@ index 9b8a3bd9308..b4c7edc249e 100644
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..74d3b8599c4 100644
+index a5c30516ff8..f0e8ee5d9c3 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,55 @@
+@@ -1,3 +1,82 @@
++2020-05-20  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-05-20  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/91695
++	* config/i386/cpuinfo.c (get_available_features): Fix VPCLMULQDQ
++	check.
++
++2020-05-19  H.J. Lu  <hongjiu.lu@intel.com>
++
++	Backport from master
++	2020-05-19  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/95220
++	* config/i386/cpuinfo.c (get_available_features): Fix
++	FEATURE_GFNI check.
++
++2020-05-14  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backport from mainline.
++	2020-04-21  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94514
++	* config/aarch64/aarch64-unwind.h (aarch64_frob_update_context):
++	Update context->flags accroding to the frame state.
++
 +2020-04-22  Andre Vieira  <andre.simoesdiasvieira@arm.com>
 +
 +	Backport from mainline.
@@ -11187,6 +12817,19 @@ index d634af9d949..5be5321d258 100644
  /* Number of bits in a file offset, on hosts where this is settable. */
  #undef _FILE_OFFSET_BITS
  
+diff --git a/libgcc/config/aarch64/aarch64-unwind.h b/libgcc/config/aarch64/aarch64-unwind.h
+index 223ac9157f1..c936befaeae 100644
+--- a/libgcc/config/aarch64/aarch64-unwind.h
++++ b/libgcc/config/aarch64/aarch64-unwind.h
+@@ -80,6 +80,8 @@ aarch64_frob_update_context (struct _Unwind_Context *context,
+   if (fs->regs.reg[DWARF_REGNUM_AARCH64_RA_STATE].loc.offset & 0x1)
+     /* The flag is used for re-authenticating EH handler's address.  */
+     context->flags |= RA_A_SIGNED_BIT;
++  else
++    context->flags &= ~RA_A_SIGNED_BIT;
+ 
+   return;
+ }
 diff --git a/libgcc/config/aarch64/lse-init.c b/libgcc/config/aarch64/lse-init.c
 new file mode 100644
 index 00000000000..1a8f4c55213
@@ -11572,6 +13215,35 @@ index 00000000000..fe3868dacbf
 +
 +$(LSE_OBJS): $(srcdir)/config/aarch64/lse.S
 +	$(gcc_compile) -DL_$(PAT_BASE) -DSIZE=$(PAT_N) -DMODEL=$(PAT_M) -c $<
+diff --git a/libgcc/config/i386/cpuinfo.c b/libgcc/config/i386/cpuinfo.c
+index d6cb2de6265..6a33d2e0d52 100644
+--- a/libgcc/config/i386/cpuinfo.c
++++ b/libgcc/config/i386/cpuinfo.c
+@@ -346,9 +346,13 @@ get_available_features (unsigned int ecx, unsigned int edx,
+ 	{
+ 	  if (ebx & bit_AVX2)
+ 	    set_feature (FEATURE_AVX2);
++	  if (ecx & bit_VPCLMULQDQ)
++	    set_feature (FEATURE_VPCLMULQDQ);
+ 	}
+       if (ebx & bit_BMI2)
+ 	set_feature (FEATURE_BMI2);
++      if (ecx & bit_GFNI)
++	set_feature (FEATURE_GFNI);
+       if (avx512_usable)
+ 	{
+ 	  if (ebx & bit_AVX512F)
+@@ -371,10 +375,6 @@ get_available_features (unsigned int ecx, unsigned int edx,
+ 	    set_feature (FEATURE_AVX512VBMI);
+ 	  if (ecx & bit_AVX512VBMI2)
+ 	    set_feature (FEATURE_AVX512VBMI2);
+-	  if (ecx & bit_GFNI)
+-	    set_feature (FEATURE_GFNI);
+-	  if (ecx & bit_VPCLMULQDQ)
+-	    set_feature (FEATURE_VPCLMULQDQ);
+ 	  if (ecx & bit_AVX512VNNI)
+ 	    set_feature (FEATURE_AVX512VNNI);
+ 	  if (ecx & bit_AVX512BITALG)
 diff --git a/libgcc/config/i386/sfp-exceptions.c b/libgcc/config/i386/sfp-exceptions.c
 index a6c56392acd..de4a2e06102 100644
 --- a/libgcc/config/i386/sfp-exceptions.c
@@ -13107,10 +14779,16 @@ index 00000000000..919ee02b725
 +  return 0;
 +}
 diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
-index 569a3c91ab2..67d02036def 100644
+index 569a3c91ab2..9a1f9e90723 100644
 --- a/libphobos/ChangeLog
 +++ b/libphobos/ChangeLog
-@@ -1,3 +1,15 @@
+@@ -1,3 +1,21 @@
++2020-05-16  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/90719
++	* libdruntime/core/sys/posix/sys/stat.d (Solaris): Move st_pad3 from
++	struct stat64_t to stat32_t.
++
 +2020-04-27  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	PR d/90718
@@ -13142,22 +14820,32 @@ index 327387f68ea..f1251839b16 100644
  
          socklen_t ai_addrlen;
 diff --git a/libphobos/libdruntime/core/sys/posix/sys/stat.d b/libphobos/libdruntime/core/sys/posix/sys/stat.d
-index 76e4460550d..9fc89270d48 100644
+index 76e4460550d..f394823767d 100644
 --- a/libphobos/libdruntime/core/sys/posix/sys/stat.d
 +++ b/libphobos/libdruntime/core/sys/posix/sys/stat.d
-@@ -1314,7 +1314,6 @@ else version (Solaris)
+@@ -1348,7 +1348,6 @@ else version (Solaris)
              dev_t st_rdev;
              c_long[2] st_pad2;
-             off_t st_size;
+             off64_t st_size;
 -            c_long st_pad3;
              union
              {
                  timestruc_t st_atim;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..a1d06b6fff1 100644
+index 45847172291..57dde8c5533 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,285 @@
+@@ -1,3 +1,295 @@
++2020-05-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backport from mainline
++	2020-05-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94906
++	* src/c++17/memory_resource.cc
++	(monotonic_buffer_resource::_Chunk::release): Use size_t for shift
++	operands.
++
 +2020-05-07  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* config/abi/post/sparc64-linux-gnu/baseline_symbols.txt: Update.
@@ -18942,6 +20630,21 @@ index 54bef75efd8..a6be0e03a78 100644
    const auto orig_pathlen = _M_pathname.length();
    const auto orig_type = _M_type();
    const auto orig_size = _M_cmpts.size();
+diff --git a/libstdc++-v3/src/c++17/memory_resource.cc b/libstdc++-v3/src/c++17/memory_resource.cc
+index e28526d1bfe..f39360cb4bf 100644
+--- a/libstdc++-v3/src/c++17/memory_resource.cc
++++ b/libstdc++-v3/src/c++17/memory_resource.cc
+@@ -228,8 +228,8 @@ namespace pmr
+ 	  if (__ch->_M_canary != (__ch->_M_size | __ch->_M_align))
+ 	    return; // buffer overflow detected!
+ 
+-	  size_t __size = (1u << __ch->_M_size);
+-	  size_t __align = (1u << __ch->_M_align);
++	  size_t __size = (size_t)1 << __ch->_M_size;
++	  size_t __align = (size_t)1 << __ch->_M_align;
+ 	  void* __start = (char*)(__ch + 1) - __size;
+ 	  __r->deallocate(__start, __size, __align);
+ 	}
 diff --git a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc b/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
 index 0954ac7b458..092413e6581 100644
 --- a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
