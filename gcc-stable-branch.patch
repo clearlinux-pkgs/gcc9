@@ -16,9 +16,10 @@ Andreas Krebbel (4):
 Bill Schmidt (1):
       rs6000: Fix -mpower9-vector -mno-altivec ICE (PR87560)
 
-Bin Cheng (2):
+Bin Cheng (3):
       backport PR94125: Update post order number for merged SCC.
       Add unsigned type iv_cand for iv_use with non mode-precision type
+      Add missing unit dependence vector in data dependence analysis
 
 Carl Love (3):
       rs6000: Add command line and builtin compatibility check
@@ -47,7 +48,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (70):
+GCC Administrator (74):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -119,12 +124,13 @@ GCC Administrator (70):
       Daily bump.
       Daily bump.
 
-H.J. Lu (5):
+H.J. Lu (6):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
       x86: Allow -fcf-protection with external thunk
       x86: Update GFNI check
       x86: Update VPCLMULQDQ check
+      x86: Handle -mavx512vpopcntdq for -march=native
 
 Harald Anlauf (1):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
@@ -311,8 +317,9 @@ Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
       AArch64: Fix options canonicanization for assembler
 
-Thomas Koenig (1):
+Thomas Koenig (2):
       Revert patch for PR fortran/93956.
+      Add early return for invalid STATUS for close.
 
 Thomas König (2):
       Backport from trunk of the fix for PR 94270.
@@ -373,10 +380,28 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..9b46fc9556f 100644
+index d8e53874e68..ac0ecbe906a 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,765 @@
+@@ -1,3 +1,783 @@
++2020-05-24  H.J. Lu  <hongjiu.lu@intel.com>
++
++	PR target/95258
++	* config/i386/driver-i386.c (host_detect_local_cpu): Detect
++	AVX512VPOPCNTDQ.
++
++2020-05-22  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backport from master
++	PR tree-optimization/94969
++	2020-05-13  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	* tree-data-ref.c (constant_access_functions): Rename to...
++	(invariant_access_functions): ...this.  Add parameter.  Check for
++	invariant access function, rather than constant.
++	(build_classic_dist_vector): Call above function.
++	* tree-loop-distribution.c (pg_add_dependence_edges): Add comment.
++
 +2020-05-21  Martin Liska  <mliska@suse.cz>
 +
 +	* common/config/aarch64/aarch64-common.c (aarch64_handle_option):
@@ -2724,6 +2749,46 @@ index bdb36f00959..c099a6238d8 100644
  /* Darwin profiling -- call mcount.  */
  #undef FUNCTION_PROFILER
  #define FUNCTION_PROFILER(FILE, LABELNO)				\
+diff --git a/gcc/config/i386/driver-i386.c b/gcc/config/i386/driver-i386.c
+index 75f70269517..8d97aba560a 100644
+--- a/gcc/config/i386/driver-i386.c
++++ b/gcc/config/i386/driver-i386.c
+@@ -420,6 +420,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+   unsigned int has_avx5124fmaps = 0, has_avx5124vnniw = 0;
+   unsigned int has_gfni = 0, has_avx512vbmi2 = 0;
+   unsigned int has_avx512bitalg = 0;
++  unsigned int has_avx512vpopcntdq = 0;
+   unsigned int has_shstk = 0;
+   unsigned int has_avx512vnni = 0, has_vaes = 0;
+   unsigned int has_vpclmulqdq = 0;
+@@ -523,6 +524,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+       has_vaes = ecx & bit_VAES;
+       has_vpclmulqdq = ecx & bit_VPCLMULQDQ;
+       has_avx512bitalg = ecx & bit_AVX512BITALG;
++      has_avx512vpopcntdq = ecx & bit_AVX512VPOPCNTDQ;
+       has_movdiri = ecx & bit_MOVDIRI;
+       has_movdir64b = ecx & bit_MOVDIR64B;
+       has_cldemote = ecx & bit_CLDEMOTE;
+@@ -1138,6 +1140,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+       const char *vaes = has_vaes ? " -mvaes" : " -mno-vaes";
+       const char *vpclmulqdq = has_vpclmulqdq ? " -mvpclmulqdq" : " -mno-vpclmulqdq";
+       const char *avx512bitalg = has_avx512bitalg ? " -mavx512bitalg" : " -mno-avx512bitalg";
++      const char *avx512vpopcntdq = has_avx512vpopcntdq ? " -mavx512vpopcntdq" : " -mno-avx512vpopcntdq";
+       const char *movdiri = has_movdiri ? " -mmovdiri" : " -mno-movdiri";
+       const char *movdir64b = has_movdir64b ? " -mmovdir64b" : " -mno-movdir64b";
+       const char *waitpkg = has_waitpkg ? " -mwaitpkg" : " -mno-waitpkg";
+@@ -1156,9 +1159,8 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+ 			avx512ifma, avx512vbmi, avx5124fmaps, avx5124vnniw,
+ 			clwb, mwaitx, clzero, pku, rdpid, gfni, shstk,
+ 			avx512vbmi2, avx512vnni, vaes, vpclmulqdq,
+-			avx512bitalg, movdiri, movdir64b, waitpkg, cldemote,
+-			ptwrite,
+-			NULL);
++			avx512bitalg, avx512vpopcntdq, movdiri, movdir64b,
++			waitpkg, cldemote, ptwrite, NULL);
+     }
+ 
+ done:
 diff --git a/gcc/config/i386/i386-builtin.def b/gcc/config/i386/i386-builtin.def
 index 5dedeb2d18b..2f57d19bea2 100644
 --- a/gcc/config/i386/i386-builtin.def
@@ -6413,10 +6478,26 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..695ffa33298 100644
+index e132f2657ef..9ea89656bb4 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,627 @@
+@@ -1,3 +1,643 @@
++2020-05-22  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backport from master
++	PR tree-optimization/95110
++	2020-05-13  Jakub Jelinek  <jakub@redhat.com>
++
++	* gcc.dg/tree-ssa/pr94969.c: Swap scan-tree-dump-not arguments.
++
++2020-05-22  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backport from master
++	PR tree-optimization/94969
++	2020-05-13  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	* gcc.dg/tree-ssa/pr94969.c: New test.
++
 +2020-05-21  Martin Liska  <mliska@suse.cz>
 +
 +	* gcc.target/aarch64/target_attr_20.c: New test.
@@ -9047,6 +9128,40 @@ index 00000000000..fcac9d5e439
 +
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr94969.c b/gcc/testsuite/gcc.dg/tree-ssa/pr94969.c
+new file mode 100644
+index 00000000000..f15046122ff
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr94969.c
+@@ -0,0 +1,28 @@
++/* PR tree-optimization/52267 */
++/* { dg-do run } */
++/* { dg-options "-O3 -fdump-tree-ldist-details" } */
++
++int a = 0, b = 0, c = 0;
++struct S {
++  signed m : 7;
++  signed e : 2;
++};
++struct S f[2] = {{0, 0}, {0, 0}};
++struct S g = {0, 0};
++
++void __attribute__((noinline))
++k()
++{
++  for (; c <= 1; c++) {
++    f[b] = g;
++    f[b].e ^= 1;
++  }
++}
++int main()
++{
++  k();
++  if (f[b].e != 1)
++    __builtin_abort ();
++}
++
++/* { dg-final { scan-tree-dump-not "Loop 1 distributed: split to 3 loops" "ldist" } } */
 diff --git a/gcc/testsuite/gcc.dg/ubsan/pr94423.c b/gcc/testsuite/gcc.dg/ubsan/pr94423.c
 new file mode 100644
 index 00000000000..76f831f26e2
@@ -11785,6 +11900,43 @@ index 00000000000..72f6d5c0857
 +    call meh(bar)
 +  end subroutine foo_internal
 +end subroutine foo
+diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
+index d00c1bd31e6..efd720b9609 100644
+--- a/gcc/tree-data-ref.c
++++ b/gcc/tree-data-ref.c
+@@ -4369,17 +4369,19 @@ build_classic_dist_vector_1 (struct data_dependence_relation *ddr,
+   return true;
+ }
+ 
+-/* Return true when the DDR contains only constant access functions.  */
++/* Return true when the DDR contains only invariant access functions wrto. loop
++   number LNUM.  */
+ 
+ static bool
+-constant_access_functions (const struct data_dependence_relation *ddr)
++invariant_access_functions (const struct data_dependence_relation *ddr,
++			    int lnum)
+ {
+   unsigned i;
+   subscript *sub;
+ 
+   FOR_EACH_VEC_ELT (DDR_SUBSCRIPTS (ddr), i, sub)
+-    if (!evolution_function_is_constant_p (SUB_ACCESS_FN (sub, 0))
+-	|| !evolution_function_is_constant_p (SUB_ACCESS_FN (sub, 1)))
++    if (!evolution_function_is_invariant_p (SUB_ACCESS_FN (sub, 0), lnum)
++	|| !evolution_function_is_invariant_p (SUB_ACCESS_FN (sub, 1), lnum))
+       return false;
+ 
+   return true;
+@@ -4578,7 +4580,7 @@ build_classic_dist_vector (struct data_dependence_relation *ddr,
+       dist_v = lambda_vector_new (DDR_NB_LOOPS (ddr));
+       save_dist_v (ddr, dist_v);
+ 
+-      if (constant_access_functions (ddr))
++      if (invariant_access_functions (ddr, loop_nest->num))
+ 	add_distance_for_zero_overlaps (ddr);
+ 
+       if (DDR_NB_LOOPS (ddr) > 1)
 diff --git a/gcc/tree-if-conv.c b/gcc/tree-if-conv.c
 index 2780a4b243f..699b48b8124 100644
 --- a/gcc/tree-if-conv.c
@@ -11875,7 +12027,7 @@ index d115fcb1a5b..7a41f64bcc3 100644
    return copy_decl_for_dup_finish (id, decl, copy);
  }
 diff --git a/gcc/tree-loop-distribution.c b/gcc/tree-loop-distribution.c
-index 8959f52a67b..3e9b220ffb7 100644
+index 8959f52a67b..ad54c8dc33a 100644
 --- a/gcc/tree-loop-distribution.c
 +++ b/gcc/tree-loop-distribution.c
 @@ -1004,7 +1004,7 @@ generate_memset_builtin (struct loop *loop, partition *partition)
@@ -11898,7 +12050,17 @@ index 8959f52a67b..3e9b220ffb7 100644
    if (partition->kind == PKIND_MEMCPY
        || ! ptr_derefs_may_alias_p (dest, src))
      kind = BUILT_IN_MEMCPY;
-@@ -2364,14 +2364,11 @@ break_alias_scc_partitions (struct graph *rdg,
+@@ -1949,7 +1949,8 @@ pg_add_dependence_edges (struct graph *rdg, int dir,
+ 		this_dir = -this_dir;
+ 
+ 	      /* Known dependences can still be unordered througout the
+-		 iteration space, see gcc.dg/tree-ssa/ldist-16.c.  */
++		 iteration space, see gcc.dg/tree-ssa/ldist-16.c and
++		 gcc.dg/tree-ssa/pr94969.c.  */
+ 	      if (DDR_NUM_DIST_VECTS (ddr) != 1)
+ 		this_dir = 2;
+ 	      /* If the overlap is exact preserve stmt order.  */
+@@ -2364,14 +2365,11 @@ break_alias_scc_partitions (struct graph *rdg,
  	      if (cbdata.vertices_component[k] != i)
  		continue;
  
@@ -13474,10 +13636,16 @@ index 8e96cafdf8b..61356d0721d 100644
  AC_CACHE_CHECK(for init priority support, libgcc_cv_init_priority, [
  AC_COMPILE_IFELSE([AC_LANG_PROGRAM(,
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 01aa551b914..946c9f0100b 100644
+index 01aa551b914..59e0fc522ef 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,8 @@
+@@ -1,3 +1,14 @@
++2020-05-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR libfortran/95119
++	* io/close.c (close_status): Add CLOSE_INVALID.
++	(st_close): Return early on invalid STATUS parameter.
++
 +2020-04-19  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	* config/fpu-387.h (local_feraiseexcept) [__SSE_MATH__]:
@@ -13520,11 +13688,42 @@ index a2f4281d0c5..bf4d78586c9 100644
  #else
        __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
+index 1e075ea9608..b5c855b7fb3 100644
+--- a/libgfortran/io/close.c
++++ b/libgfortran/io/close.c
+@@ -31,7 +31,7 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ #endif
+ 
+ typedef enum
+-{ CLOSE_DELETE, CLOSE_KEEP, CLOSE_UNSPECIFIED }
++{ CLOSE_INVALID = - 1, CLOSE_DELETE, CLOSE_KEEP, CLOSE_UNSPECIFIED }
+ close_status;
+ 
+ static const st_option status_opt[] = {
+@@ -61,6 +61,12 @@ st_close (st_parameter_close *clp)
+     find_option (&clp->common, clp->status, clp->status_len,
+ 		 status_opt, "Bad STATUS parameter in CLOSE statement");
+ 
++  if (status == CLOSE_INVALID)
++    {
++      library_end ();
++      return;
++    }
++
+   u = find_unit (clp->common.unit);
+ 
+   if (ASYNC_IO && u && u->au)
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 0156d5f7bc9..2926096bb7c 100644
+index 0156d5f7bc9..29d39886679 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,124 @@
+@@ -1,3 +1,129 @@
++2020-05-22  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR libfortran/95119
++	* testsuite/libgomp.fortran/close_errors_1.f90: New test.
++
 +2020-04-13  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	PR libgomp/92843
@@ -13894,6 +14093,31 @@ index 00000000000..3334bd571f6
 +  corge ();
 +  return 0;
 +}
+diff --git a/libgomp/testsuite/libgomp.fortran/close_errors_1.f90 b/libgomp/testsuite/libgomp.fortran/close_errors_1.f90
+new file mode 100644
+index 00000000000..6edb7da4116
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.fortran/close_errors_1.f90
+@@ -0,0 +1,19 @@
++! { dg-do run }
++! PR 95115 - this used to hang with -pthread.  Original test case by
++! Bill Long.
++
++program test
++  character(len=16) my_status
++  character(len=1000) :: iomsg
++  open (unit=10, file='test.dat')
++  print *,42
++  write (10, *) 'weird'
++  rewind (10)
++  read (10, *) my_status
++  close (10)
++  open (unit=10, file='test.dat')
++  close (unit=10, status=my_status, iostat=ios, iomsg=iomsg)
++  if (ios == 0) stop 1
++  if (iomsg /= "Bad STATUS parameter in CLOSE statement") stop 2
++  close (10, status='delete')
++end program test
 diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c
 new file mode 100644
 index 00000000000..8fa87777f1a
