@@ -51,7 +51,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (75):
+GCC Administrator (76):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -136,8 +137,9 @@ H.J. Lu (6):
       x86: Update VPCLMULQDQ check
       x86: Handle -mavx512vpopcntdq for -march=native
 
-Harald Anlauf (1):
+Harald Anlauf (2):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
+      PR fortran/95104 - Segfault on a legal WAIT statement
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -281,12 +283,13 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (5):
+Martin Liska (6):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
       Add outline-atomics to target attribute.
       Fix backport due to usage for x_target_flags.
+      Add new git-backport.py script.
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -325,9 +328,10 @@ Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
       AArch64: Fix options canonicanization for assembler
 
-Thomas Koenig (2):
+Thomas Koenig (3):
       Revert patch for PR fortran/93956.
       Add early return for invalid STATUS for close.
+      Fixes a hang on an invalid ID in a WAIT statement.
 
 Thomas König (2):
       Backport from trunk of the fix for PR 94270.
@@ -380,6 +384,72 @@ index 9605d767a80..0203aec84ad 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/contrib/git-backport.py b/contrib/git-backport.py
+new file mode 100755
+index 00000000000..6a115c34d40
+--- /dev/null
++++ b/contrib/git-backport.py
+@@ -0,0 +1,60 @@
++#!/usr/bin/env python3
++
++# Copyright (C) 2020 Free Software Foundation, Inc.
++#
++# This file is part of GCC.
++#
++# GCC is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3, or (at your option)
++# any later version.
++#
++# GCC is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with GCC; see the file COPYING.  If not, write to
++# the Free Software Foundation, 51 Franklin Street, Fifth Floor,
++# Boston, MA 02110-1301, USA.
++
++import argparse
++import subprocess
++
++if __name__ == '__main__':
++    parser = argparse.ArgumentParser(description='Backport a git revision and '
++                                     'stash all ChangeLog files.')
++    parser.add_argument('revision', help='Revision')
++    args = parser.parse_args()
++
++    r = subprocess.run('git cherry-pick -x %s' % args.revision, shell=True)
++    if r.returncode == 0:
++        cmd = 'git show --name-only --pretty="" -- "*ChangeLog" |' \
++              'xargs git checkout HEAD~'
++        subprocess.check_output(cmd, shell=True)
++        subprocess.check_output('git commit --amend --no-edit', shell=True)
++    else:
++        # 1) remove all ChangeLog files from conflicts
++        out = subprocess.check_output('git diff --name-only --diff-filter=U',
++                                      shell=True,
++                                      encoding='utf8')
++        conflicts = out.strip().split('\n')
++        changelogs = [c for c in conflicts if c.endswith('ChangeLog')]
++        if changelogs:
++            cmd = 'git checkout --theirs %s' % '\n'.join(changelogs)
++            subprocess.check_output(cmd, shell=True)
++        # 2) remove all ChangeLog files from index
++        cmd = 'git diff --name-only --diff-filter=M HEAD'
++        out = subprocess.check_output(cmd, shell=True, encoding='utf8')
++        out = out.strip().split('\n')
++        modified = [c for c in out if c.endswith('ChangeLog')]
++        for m in modified:
++            subprocess.check_output('git reset %s' % m, shell=True)
++            subprocess.check_output('git checkout %s' % m, shell=True)
++
++        # try to continue
++        if len(conflicts) == len(changelogs):
++            subprocess.check_output('git cherry-pick --continue', shell=True)
++        else:
++            print('Please resolve all remaining file conflicts.')
 diff --git a/gcc/BASE-VER b/gcc/BASE-VER
 index b13d146a7b0..3b74042132a 100644
 --- a/gcc/BASE-VER
@@ -388,10 +458,16 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..ac0ecbe906a 100644
+index d8e53874e68..bbad04ab543 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,783 @@
+@@ -1,3 +1,789 @@
++2020-05-26  Alexandre Oliva  <oliva@adacore.com>
++
++	PR target/94812
++	* config/rs6000/rs6000.md (rs6000_mffsl): Copy result to
++	output operand in emulation.  Don't overwrite pseudos.
++
 +2020-05-24  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	PR target/95258
@@ -6182,6 +6258,18 @@ index b5701b1a59a..29af409dde0 100644
      return NULL;
  
    /* Try to find a typebound DTIO binding.  */
+diff --git a/gcc/fortran/libgfortran.h b/gcc/fortran/libgfortran.h
+index 581b2f529db..02250fab4be 100644
+--- a/gcc/fortran/libgfortran.h
++++ b/gcc/fortran/libgfortran.h
+@@ -122,6 +122,7 @@ typedef enum
+   LIBERROR_SHORT_RECORD,
+   LIBERROR_CORRUPT_FILE,
+   LIBERROR_INQUIRE_INTERNAL_UNIT, /* Must be different from STAT_STOPPED_IMAGE.  */
++  LIBERROR_BAD_WAIT_ID,
+   LIBERROR_LAST			/* Not a real error, the last error # + 1.  */
+ }
+ libgfortran_error_codes;
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
 index 088b69f8ec9..f4ae9e9dfe7 100644
 --- a/gcc/fortran/match.c
@@ -6620,10 +6708,17 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..9ea89656bb4 100644
+index e132f2657ef..b4fa3eac47a 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,643 @@
+@@ -1,3 +1,650 @@
++2020-05-26  Alexandre Oliva  <oliva@adacore.com>
++
++	PR target/94812
++	* gcc.target/powerpc/test_mffsl.c: Call mffsl only once.
++	Reinterpret the doubles as long longs for compares.  Mask out
++	mffs bits that are not expected from mffsl.
++
 +2020-05-22  Bin Cheng  <bin.cheng@linux.alibaba.com>
 +
 +	Backport from master
@@ -12111,6 +12206,20 @@ index 00000000000..9efcf4b6524
 +    end do
 +  end do
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr95104.f90 b/gcc/testsuite/gfortran.dg/pr95104.f90
+new file mode 100644
+index 00000000000..20bdd910f46
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95104.f90
+@@ -0,0 +1,8 @@
++! { dg-do run }
++! PR libfortran/95104 - Segfault on a legal WAIT statement
++
++program test
++  wait (10, iostat=ios)
++  if (ios /= 0) stop 1
++  close (10)
++end program test
 diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
 new file mode 100644
 index 00000000000..72f6d5c0857
@@ -13918,6 +14027,24 @@ index a2f4281d0c5..bf4d78586c9 100644
  #else
        __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libgfortran/io/async.c b/libgfortran/io/async.c
+index 28b84f6613a..5af919bd71c 100644
+--- a/libgfortran/io/async.c
++++ b/libgfortran/io/async.c
+@@ -424,6 +424,13 @@ async_wait_id (st_parameter_common *cmp, async_unit *au, int i)
+     }
+ 
+   LOCK (&au->lock);
++  if (i > au->id.high)
++    {
++      generate_error_common (cmp, LIBERROR_BAD_WAIT_ID, NULL);
++      UNLOCK (&au->lock);
++      return true;
++    }
++
+   NOTE ("Waiting for id %d", i);
+   if (au->id.waiting < i)
+     au->id.waiting = i;
 diff --git a/libgfortran/io/close.c b/libgfortran/io/close.c
 index 1e075ea9608..b5c855b7fb3 100644
 --- a/libgfortran/io/close.c
@@ -13944,6 +14071,34 @@ index 1e075ea9608..b5c855b7fb3 100644
    u = find_unit (clp->common.unit);
  
    if (ASYNC_IO && u && u->au)
+diff --git a/libgfortran/io/transfer.c b/libgfortran/io/transfer.c
+index 28e403fedf2..38c2d87b34f 100644
+--- a/libgfortran/io/transfer.c
++++ b/libgfortran/io/transfer.c
+@@ -4473,7 +4473,7 @@ void
+ st_wait_async (st_parameter_wait *wtp)
+ {
+   gfc_unit *u = find_unit (wtp->common.unit);
+-  if (ASYNC_IO && u->au)
++  if (ASYNC_IO && u && u->au)
+     {
+       if (wtp->common.flags & IOPARM_WAIT_HAS_ID)
+ 	async_wait_id (&(wtp->common), u->au, *wtp->id);
+diff --git a/libgfortran/runtime/error.c b/libgfortran/runtime/error.c
+index 0335a165edc..1dea2f0e5f8 100644
+--- a/libgfortran/runtime/error.c
++++ b/libgfortran/runtime/error.c
+@@ -616,6 +616,10 @@ translate_error (int code)
+       p = "Inquire statement identifies an internal file";
+       break;
+ 
++    case LIBERROR_BAD_WAIT_ID:
++      p = "Bad ID in WAIT statement";
++      break;
++
+     default:
+       p = "Unknown error code";
+       break;
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
 index 0156d5f7bc9..29d39886679 100644
 --- a/libgomp/ChangeLog
@@ -14323,6 +14478,32 @@ index 00000000000..3334bd571f6
 +  corge ();
 +  return 0;
 +}
+diff --git a/libgomp/testsuite/libgomp.fortran/async_io_9.f90 b/libgomp/testsuite/libgomp.fortran/async_io_9.f90
+new file mode 100644
+index 00000000000..2dc111c3967
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.fortran/async_io_9.f90
+@@ -0,0 +1,20 @@
++! { dg-do run }
++! PR 95191 - this used to hang.
++! Original test case by Bill Long.
++program test
++  real a(10000)
++  integer my_id
++  integer bad_id
++  integer :: iostat
++  character (len=100) :: iomsg
++  data my_id /1/
++  data bad_id /2/
++  a = 1.
++  open (unit=10, file='test.dat', form='unformatted', &
++       &                asynchronous='yes')
++  write (unit=10, asynchronous='yes', id=my_id) a
++  iomsg = ""
++  wait (unit=10, id=bad_id, iostat=iostat, iomsg=iomsg)
++  if (iostat == 0 .or. iomsg /= "Bad ID in WAIT statement") stop 1
++  close (unit=10, status='delete')
++end program test
 diff --git a/libgomp/testsuite/libgomp.fortran/close_errors_1.f90 b/libgomp/testsuite/libgomp.fortran/close_errors_1.f90
 new file mode 100644
 index 00000000000..6edb7da4116
