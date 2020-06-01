@@ -54,7 +54,7 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (78):
+GCC Administrator (81):
       Daily bump.
       Daily bump.
       Daily bump.
@@ -133,6 +133,12 @@ GCC Administrator (78):
       Daily bump.
       Daily bump.
       Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+
+Gerald Pfeifer (1):
+      i386: Define __ILP32__ and _ILP32 for all 32-bit targets
 
 H.J. Lu (6):
       x86: Insert ENDBR if function will be called indirectly
@@ -396,10 +402,17 @@ index 9605d767a80..0203aec84ad 100644
  
  	* GCC 9.3.0 released.
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index fde2d2b76eb..f2517c5bf32 100644
+index fde2d2b76eb..0c07a4b87ed 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,14 @@
++2020-05-29  Martin Liska  <mliska@suse.cz>
++
++	* git-backport.py: The script did 'git co HEAD~' when
++	there was no modified ChangeLog file in a successful
++	git cherry pick.
++	Run cherry-pick --continue without editor.
++
 +2020-05-27  Martin Liska  <mliska@suse.cz>
 +
 +	* git-backport.py: New file.
@@ -486,10 +499,28 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..bbad04ab543 100644
+index d8e53874e68..3806622c527 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,789 @@
+@@ -1,3 +1,807 @@
++2020-05-31  Gerald Pfeifer  <gerald@pfeifer.com>
++
++	* config/i386/i386-c.c (ix86_target_macros): Define _ILP32 and
++	__ILP32__ for 32-bit targets.
++
++2020-05-29  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/94591
++	* config/aarch64/aarch64.c (aarch64_evpc_rev_local): Don't match
++	identity permutation.
++
++2020-05-29  Dong JianQiang  <dongjianqiang2@huawei.com>
++
++	PR gcov-profile/95332
++	* gcov-io.c (gcov_var::endian): Move field.
++	(from_file): Add IN_GCOV_TOOL check.
++	* gcov-io.h (gcov_magic): Ditto.
++
 +2020-05-26  Alexandre Oliva  <oliva@adacore.com>
 +
 +	PR target/94812
@@ -2924,6 +2955,19 @@ index 5dedeb2d18b..2f57d19bea2 100644
  
  /* SSE2 MMX */
  BDESC (OPTION_MASK_ISA_SSE2 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_mmx_addv1di3, "__builtin_ia32_paddq", IX86_BUILTIN_PADDQ, UNKNOWN, (int) V1DI_FTYPE_V1DI_V1DI)
+diff --git a/gcc/config/i386/i386-c.c b/gcc/config/i386/i386-c.c
+index 5e7e46fcebe..f06fea1a8a5 100644
+--- a/gcc/config/i386/i386-c.c
++++ b/gcc/config/i386/i386-c.c
+@@ -675,6 +675,8 @@ ix86_target_macros (void)
+       cpp_assert (parse_in, "cpu=i386");
+       cpp_assert (parse_in, "machine=i386");
+       builtin_define_std ("i386");
++      cpp_define (parse_in, "_ILP32");
++      cpp_define (parse_in, "__ILP32__");
+     }
+ 
+   if (!TARGET_80387)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
 index 1bca5a7eea6..ae5046ee6a0 100644
 --- a/gcc/config/i386/i386.c
@@ -6869,10 +6913,15 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..3cce7b9ede3 100644
+index e132f2657ef..a37023322e9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,667 @@
+@@ -1,3 +1,672 @@
++2020-05-29  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/94591
++	* gcc.c-torture/execute/pr94591.c: New test.
++
 +2020-05-28  Steven G. Kargl  <kargl@gcc.gnu.org>
 +	    Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
@@ -13430,10 +13479,24 @@ index 9b8a3bd9308..b4c7edc249e 100644
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..f0e8ee5d9c3 100644
+index a5c30516ff8..f7772c58273 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,82 @@
+@@ -1,3 +1,96 @@
++2020-05-29  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/lse-init.c (init_have_lse_atomics): Use __getauxval
++	instead of getauxval.
++	(AT_HWCAP): Define.
++	(HWCAP_ATOMICS): Define.
++	Guard detection on __gnu_linux__.
++
++2020-05-29  Dong JianQiang  <dongjianqiang2@huawei.com>
++
++	PR gcov-profile/95332
++	* libgcov-util.c (read_gcda_file): Call gcov_magic.
++	* libgcov.h (gcov_magic): Disable GCC poison.
++
 +2020-05-20  H.J. Lu  <hongjiu.lu@intel.com>
 +
 +	Backport from master
