@@ -54,7 +54,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (82):
+GCC Administrator (83):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -268,7 +269,7 @@ Kewen Lin (5):
       Fix PR94043 by making vect_live_op generate lc-phi
       Fix PR94443 with gsi_insert_seq_before [PR94443]
 
-Kyrylo Tkachov (11):
+Kyrylo Tkachov (12):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -280,6 +281,7 @@ Kyrylo Tkachov (11):
       aarch64: Fix up aarch64_compare_and_swaphi pattern [PR94368]
       [AArch64] PR target/94518: Fix memmodel index in aarch64_store_exclusive_pair
       [AArch64] Use __getauxval instead of getauxval in LSE detection code in libgcc
+      aarch64: Add initial support for -mcpu=zeus
 
 Marek Polacek (2):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -388,10 +390,14 @@ Zackery Spytz (1):
       doc: Fix a typo in the documentation of the copy attribute
 
 diff --git a/ChangeLog b/ChangeLog
-index 9605d767a80..0203aec84ad 100644
+index 9605d767a80..30c7aaf6cc0 100644
 --- a/ChangeLog
 +++ b/ChangeLog
-@@ -1,3 +1,13 @@
+@@ -1,3 +1,17 @@
++2020-06-02  Martin Liska  <mliska@suse.cz>
++
++	* -: Remove.
++
 +2020-04-20  Martin Liska  <mliska@suse.cz>
 +
 +	Backport from mainline
@@ -503,10 +509,16 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..3806622c527 100644
+index d8e53874e68..4dbbef0d559 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,807 @@
+@@ -1,3 +1,813 @@
++2020-06-02  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/aarch64-cores.def (zeus): Define.
++	* config/aarch64/aarch64-tune.md: Regenerate.
++	* doc/invoke.texi (AArch64 Options): Document zeus -mcpu option.
++
 +2020-05-31  Gerald Pfeifer  <gerald@pfeifer.com>
 +
 +	* config/i386/i386-c.c (ix86_target_macros): Define _ILP32 and
@@ -1955,6 +1967,20 @@ index e519a0f0ac1..7da89074ce0 100644
    timevar_pop (TV_MACH_DEP);
    return 0;
  }
+diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
+index 82d91d62519..c9be89e1a4c 100644
+--- a/gcc/config/aarch64/aarch64-cores.def
++++ b/gcc/config/aarch64/aarch64-cores.def
+@@ -109,6 +109,9 @@ AARCH64_CORE("tsv110",  tsv110, tsv110, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_
+ 
+ /* ARMv8.4-A Architecture Processors.  */
+ 
++/* ARM ('A') cores. */
++AARCH64_CORE("zeus", zeus, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversen1, 0x41, 0xd40, -1)
++
+ /* Qualcomm ('Q') cores. */
+ AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
+ 
 diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
 index c083cad5327..b9bfb281275 100644
 --- a/gcc/config/aarch64/aarch64-protos.h
@@ -2135,6 +2161,17 @@ index e3852c5d182..f413575cfc9 100644
  })
  
  
+diff --git a/gcc/config/aarch64/aarch64-tune.md b/gcc/config/aarch64/aarch64-tune.md
+index 2b1ec85ae31..b12d935342e 100644
+--- a/gcc/config/aarch64/aarch64-tune.md
++++ b/gcc/config/aarch64/aarch64-tune.md
+@@ -1,5 +1,5 @@
+ ;; -*- buffer-read-only: t -*-
+ ;; Generated automatically by gentune.sh from aarch64-cores.def
+ (define_attr "tune"
+-	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
++	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,zeus,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
+ 	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
 index b452a53af99..35b5b2fd3a6 100644
 --- a/gcc/config/aarch64/aarch64.c
@@ -5756,7 +5793,7 @@ index f5becf988d2..e231add27fd 100644
  
  The above target attributes can be specified as follows:
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..5e6d240dc5d 100644
+index 0ab6c9c6449..0f3f093a80d 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -637,7 +637,8 @@ Objective-C and Objective-C++ Dialects}.
@@ -5813,6 +5850,15 @@ index 0ab6c9c6449..5e6d240dc5d 100644
  @item -march=@var{name}
  @opindex march
  Specify the name of the target architecture and, optionally, one or
+@@ -15830,7 +15854,7 @@ performance of the code.  Permissible values for this option are:
+ @samp{phecda}, @samp{xgene1}, @samp{vulcan}, @samp{octeontx},
+ @samp{octeontx81},  @samp{octeontx83}, @samp{thunderx}, @samp{thunderxt88},
+ @samp{thunderxt88p1}, @samp{thunderxt81}, @samp{tsv110},
+-@samp{thunderxt83}, @samp{thunderx2t99},
++@samp{thunderxt83}, @samp{thunderx2t99}, @samp{zeus},
+ @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
+ @samp{cortex-a73.cortex-a35}, @samp{cortex-a73.cortex-a53},
+ @samp{cortex-a75.cortex-a55}, @samp{cortex-a76.cortex-a55}
 @@ -28711,9 +28735,9 @@ Note that @option{-mcmodel=large} is incompatible with
  @option{-mindirect-branch=thunk-extern} since the thunk function may
  not be reachable in the large code model.
