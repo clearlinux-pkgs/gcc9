@@ -153,10 +153,15 @@ H.J. Lu (7):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
 
-Harald Anlauf (3):
+Harald Anlauf (8):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
+      PR fortran/95500 - Segfault compiling extra interface on intrinsic
+      PR fortran/95530, PR fortran/95537 - Buffer overflows with long symbols
+      PR fortran/95106 - truncation of long symbol names with EQUIVALENCE
+      PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
+      PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -6373,7 +6378,7 @@ index 9117121e5fe..a8698f19cfb 100644
  
  
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..fd88a60307a 100644
+index abff4af9f67..657d7e84c99 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -668,6 +668,10 @@ gfc_match_data (void)
@@ -6399,7 +6404,30 @@ index abff4af9f67..fd88a60307a 100644
    if ((*expr)->expr_type == EXPR_FUNCTION)
      {
        if ((*expr)->ts.type == BT_INTEGER
-@@ -5339,15 +5348,19 @@ match_attr_spec (void)
+@@ -3980,7 +3989,8 @@ error_return:
+ match
+ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+ {
+-  char name[GFC_MAX_SYMBOL_LEN + 1];
++  /* Provide sufficient space to hold "pdtsymbol".  */
++  char name[GFC_MAX_SYMBOL_LEN + 1 + 3];
+   gfc_symbol *sym, *dt_sym;
+   match m;
+   char c;
+@@ -4182,7 +4192,11 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+ 	    return m;
+ 	  gcc_assert (!sym->attr.pdt_template && sym->attr.pdt_type);
+ 	  ts->u.derived = sym;
+-	  strcpy (name, gfc_dt_lower_string (sym->name));
++	  const char* lower = gfc_dt_lower_string (sym->name);
++	  size_t len = strnlen (lower, sizeof (name));
++	  gcc_assert (len < sizeof (name));
++	  memcpy (name, lower, len);
++	  name[len] = '\0';
+ 	}
+ 
+       if (sym && sym->attr.flavor == FL_STRUCT)
+@@ -5339,15 +5353,19 @@ match_attr_spec (void)
        if (d == DECL_STATIC && seen[DECL_SAVE])
  	continue;
  
@@ -6422,7 +6450,7 @@ index abff4af9f67..fd88a60307a 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5355,8 +5368,11 @@ match_attr_spec (void)
+@@ -5355,8 +5373,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_KIND)
  	    {
@@ -6436,7 +6464,7 @@ index abff4af9f67..fd88a60307a 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5379,8 +5395,11 @@ match_attr_spec (void)
+@@ -5379,8 +5400,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_LEN)
  	    {
@@ -6450,7 +6478,7 @@ index abff4af9f67..fd88a60307a 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5403,8 +5422,10 @@ match_attr_spec (void)
+@@ -5403,8 +5427,10 @@ match_attr_spec (void)
  	    }
  	  else
  	    {
@@ -6463,7 +6491,7 @@ index abff4af9f67..fd88a60307a 100644
  	      m = MATCH_ERROR;
  	      goto cleanup;
  	    }
-@@ -9602,13 +9623,20 @@ gfc_match_submod_proc (void)
+@@ -9602,13 +9628,20 @@ gfc_match_submod_proc (void)
    if (get_proc_name (name, &sym, false))
      return MATCH_ERROR;
  
@@ -6490,7 +6518,7 @@ index abff4af9f67..fd88a60307a 100644
  	sym->result = sym;
      }
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index d7071ae5fcf..fab12b9d14f 100644
+index d7071ae5fcf..84bd335b920 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -1094,7 +1094,6 @@ typedef struct gfc_component
@@ -6513,7 +6541,17 @@ index d7071ae5fcf..fab12b9d14f 100644
    /* Set if this is a module function or subroutine with the
       abreviated declaration in a submodule.  */
    unsigned abr_modproc_decl:1;
-@@ -2187,6 +2189,10 @@ typedef struct gfc_expr
+@@ -1650,7 +1652,8 @@ typedef struct gfc_common_head
+   char use_assoc, saved, threadprivate;
+   unsigned char omp_declare_target : 1;
+   unsigned char omp_declare_target_link : 1;
+-  char name[GFC_MAX_SYMBOL_LEN + 1];
++  /* Provide sufficient space to hold "symbol.eq.1234567890".  */
++  char name[GFC_MAX_SYMBOL_LEN + 1 + 14];
+   struct gfc_symbol *head;
+   const char* binding_label;
+   int is_bind_c;
+@@ -2187,6 +2190,10 @@ typedef struct gfc_expr
    /* Set this if no warning should be given somewhere in a lower level.  */
  
    unsigned int do_not_warn : 1;
@@ -6578,6 +6616,38 @@ index 088b69f8ec9..11989295b0d 100644
  	    {
  	      gfc_free_expr (e);
  	      return MATCH_NO;
+diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
+index ff93698f478..d69fdcb439f 100644
+--- a/gcc/fortran/primary.c
++++ b/gcc/fortran/primary.c
+@@ -2206,6 +2206,27 @@ gfc_match_varspec (gfc_expr *primary, int equiv_flag, bool sub_flag,
+ 	    {
+ 	      if (tmp)
+ 		{
++		  switch (tmp->u.i)
++		    {
++		    case INQUIRY_RE:
++		    case INQUIRY_IM:
++		      if (!gfc_notify_std (GFC_STD_F2008,
++					   "RE or IM part_ref at %C"))
++			return MATCH_ERROR;
++		      break;
++
++		    case INQUIRY_KIND:
++		      if (!gfc_notify_std (GFC_STD_F2003,
++					   "KIND part_ref at %C"))
++			return MATCH_ERROR;
++		      break;
++
++		    case INQUIRY_LEN:
++		      if (!gfc_notify_std (GFC_STD_F2003, "LEN part_ref at %C"))
++			return MATCH_ERROR;
++		      break;
++		    }
++
+ 		  if ((tmp->u.i == INQUIRY_RE || tmp->u.i == INQUIRY_IM)
+ 		      && primary->ts.type != BT_COMPLEX)
+ 		    {
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
 index a4ad26efffc..19f05ab884f 100644
 --- a/gcc/fortran/resolve.c
@@ -6790,6 +6860,35 @@ index 2e5eb4f468f..572455e0d59 100644
  	    default:
  	      gcc_unreachable ();
  	      break;
+diff --git a/gcc/fortran/trans-common.c b/gcc/fortran/trans-common.c
+index debdbd98ac0..38302f35ef4 100644
+--- a/gcc/fortran/trans-common.c
++++ b/gcc/fortran/trans-common.c
+@@ -242,8 +242,9 @@ static tree
+ gfc_sym_mangled_common_id (gfc_common_head *com)
+ {
+   int has_underscore;
+-  char mangled_name[GFC_MAX_MANGLED_SYMBOL_LEN + 1];
+-  char name[GFC_MAX_SYMBOL_LEN + 1];
++  /* Provide sufficient space to hold "symbol.eq.1234567890__".  */
++  char mangled_name[GFC_MAX_MANGLED_SYMBOL_LEN + 1 + 16];
++  char name[GFC_MAX_SYMBOL_LEN + 1 + 16];
+ 
+   /* Get the name out of the common block pointer.  */
+   strcpy (name, com->name);
+@@ -1252,7 +1253,11 @@ finish_equivalences (gfc_namespace *ns)
+ 	      c->where = ns->proc_name->declared_at;
+ 	    else if (ns->is_block_data)
+ 	      c->where = ns->sym_root->n.sym->declared_at;
+-	    strcpy (c->name, z->module);
++
++	    size_t len = strlen (z->module);
++	    gcc_assert (len < sizeof (c->name));
++	    memcpy (c->name, z->module, len);
++	    c->name[len] = '\0';
+ 	  }
+ 	else
+ 	  c = NULL;
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
 index 71f751de76f..5dcc8f98dee 100644
 --- a/gcc/fortran/trans-decl.c
@@ -6835,6 +6934,18 @@ index 71f751de76f..5dcc8f98dee 100644
  	    {
  	      if (warn_unused_dummy_argument)
  		gfc_warning (OPT_Wunused_dummy_argument,
+diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
+index fe10d52dd16..b34e8c6020b 100644
+--- a/gcc/fortran/trans-expr.c
++++ b/gcc/fortran/trans-expr.c
+@@ -8558,6 +8558,7 @@ gfc_conv_expr_reference (gfc_se * se, gfc_expr * expr, bool add_clobber)
+ 
+   if (expr->expr_type == EXPR_FUNCTION
+       && ((expr->value.function.esym
++	   && expr->value.function.esym->result
+ 	   && expr->value.function.esym->result->attr.pointer
+ 	   && !expr->value.function.esym->result->attr.dimension)
+ 	  || (!expr->value.function.esym && !expr->ref
 diff --git a/gcc/gcov-io.c b/gcc/gcov-io.c
 index 1f8ac375931..a906830f3c9 100644
 --- a/gcc/gcov-io.c
@@ -12199,6 +12310,24 @@ index 00000000000..bab08b2d5c3
 +end structure
 +
 +end
+diff --git a/gcc/testsuite/gfortran.dg/equiv_11.f90 b/gcc/testsuite/gfortran.dg/equiv_11.f90
+new file mode 100644
+index 00000000000..0f4a1ab5c32
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/equiv_11.f90
+@@ -0,0 +1,12 @@
++! { dg-do compile }
++! { dg-options "-fsecond-underscore" }
++! PR fortran/95106
++
++module m2345678901234567890123456789012345678901234567890123456789_123
++  implicit none
++  real :: a(4), u(3,2)
++  real :: b(4), v(4,2)
++  equivalence (a(1),u(1,1)), (b(1),v(1,1))
++end
++! { dg-final { scan-assembler {m2345678901234567890123456789012345678901234567890123456789_123.eq.0__} } }
++! { dg-final { scan-assembler {m2345678901234567890123456789012345678901234567890123456789_123.eq.1__} } }
 diff --git a/gcc/testsuite/gfortran.dg/finalize_28.f90 b/gcc/testsuite/gfortran.dg/finalize_28.f90
 index 597413b2dd3..f0c9665252f 100644
 --- a/gcc/testsuite/gfortran.dg/finalize_28.f90
@@ -12798,6 +12927,69 @@ index 00000000000..20bdd910f46
 +  if (ios /= 0) stop 1
 +  close (10)
 +end program test
+diff --git a/gcc/testsuite/gfortran.dg/pr95373_1.f90 b/gcc/testsuite/gfortran.dg/pr95373_1.f90
+new file mode 100644
+index 00000000000..59a9e7a81e0
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95373_1.f90
+@@ -0,0 +1,15 @@
++! { dg-do compile }
++! { dg-options "-std=f95" }
++! PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
++
++subroutine s (x)
++  complex, parameter :: z = 3
++  real(z% kind)      :: x       ! { dg-error "Fortran 2003: KIND part_ref" }
++  type t
++     real    :: kind
++     logical :: re
++  end type t
++  type(t) :: b
++  print *, b% kind, b% re
++  print *, z% re                ! { dg-error "Fortran 2008: RE or IM part_ref" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr95373_2.f90 b/gcc/testsuite/gfortran.dg/pr95373_2.f90
+new file mode 100644
+index 00000000000..b0f3da0a20d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95373_2.f90
+@@ -0,0 +1,15 @@
++! { dg-do compile }
++! { dg-options "-std=f2003" }
++! PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
++
++subroutine s (x)
++  complex, parameter :: z = 3
++  real(z% kind)      :: x
++  type t
++     real    :: kind
++     logical :: re
++  end type t
++  type(t) :: b
++  print *, b% kind, b% re
++  print *, z% re                ! { dg-error "Fortran 2008: RE or IM part_ref" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr95500.f90 b/gcc/testsuite/gfortran.dg/pr95500.f90
+new file mode 100644
+index 00000000000..e9eb7c65c86
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95500.f90
+@@ -0,0 +1,15 @@
++! { dg-do compile }
++! PR fortran/95500 - ICE compiling extra interface on intrinsic
++
++program test_intrinsic
++  implicit none
++  intrinsic :: alog
++  intrinsic :: dlog
++  real (4), parameter :: one = 1
++
++  interface ln
++     procedure :: alog, dlog
++  end interface ln
++
++  write (*,*) 'ln  1', ln (one)
++end program test_intrinsic
 diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
 new file mode 100644
 index 00000000000..72f6d5c0857
