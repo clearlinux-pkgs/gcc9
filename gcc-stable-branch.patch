@@ -27,10 +27,11 @@ Bin Cheng (3):
       Add unsigned type iv_cand for iv_use with non mode-precision type
       Add missing unit dependence vector in data dependence analysis
 
-Carl Love (3):
+Carl Love (4):
       rs6000: Add command line and builtin compatibility check
       rs6000: vec_rlnm fix to make builtin work according to ABI
       rs6000, Fix header comment for intrinsic function _mm_movemask_epi8
+      pr94833, fix vec_first_match_index for nulls
 
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
@@ -54,7 +55,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (85):
+GCC Administrator (88):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -518,10 +522,22 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..4dbbef0d559 100644
+index d8e53874e68..c1591ae43de 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,813 @@
+@@ -1,3 +1,825 @@
++2020-06-06  Carl Love  <cel@us.ibm.com>
++
++	PR target/94833
++	* config/rs6000/vsx.md (define_expand): Fix instruction generation for
++	first_match_index_<mode>.
++
++2020-06-05  H.J. Lu  <hjl.tools@gmail.com>
++
++	* config/i386/driver-i386.c (host_detect_local_cpu): Support
++	Intel Airmont, Tremont, Comet Lake, Ice Lake and Tiger Lake
++	processor families.
++
 +2020-06-02  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	* config/aarch64/aarch64-cores.def (zeus): Define.
@@ -3823,7 +3839,7 @@ index a768f5dd511..db7ed60a2cf 100644
  
      emit_insn (gen_rs6000_mffsl_hw (operands[0]));
 diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
-index 607c0cd33f2..43dd3cba641 100644
+index 607c0cd33f2..7e444f0122b 100644
 --- a/gcc/config/rs6000/vsx.md
 +++ b/gcc/config/rs6000/vsx.md
 @@ -3292,14 +3292,14 @@
@@ -3963,6 +3979,17 @@ index 607c0cd33f2..43dd3cba641 100644
  (define_insn_and_split "*vsx_extract_<mode>_<VS_scalar>mode_var"
    [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
  	(zero_extend:<VS_scalar>
+@@ -4794,8 +4846,8 @@
+   rtx cmp_result = gen_reg_rtx (<MODE>mode);
+   rtx not_result = gen_reg_rtx (<MODE>mode);
+ 
+-  emit_insn (gen_vcmpnez<VSX_EXTRACT_WIDTH> (cmp_result, operands[1],
+-					     operands[2]));
++  emit_insn (gen_vcmpne<VSX_EXTRACT_WIDTH> (cmp_result, operands[1],
++					    operands[2]));
+   emit_insn (gen_one_cmpl<mode>2 (not_result, cmp_result));
+ 
+   sh = GET_MODE_SIZE (GET_MODE_INNER (<MODE>mode)) / 2;
 diff --git a/gcc/config/s390/constraints.md b/gcc/config/s390/constraints.md
 index 4055cbc7c68..ec2a13499e7 100644
 --- a/gcc/config/s390/constraints.md
@@ -6148,10 +6175,46 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..463f6465b81 100644
+index 8fefea2b63d..305888b74b2 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,165 @@
+@@ -1,3 +1,201 @@
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95373
++	* primary.c (is_inquiry_ref): Move validity check of inquiry
++	references against selected Fortran standard from here...
++	(gfc_match_varspec) ...to here.
++
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95373
++	* primary.c (is_inquiry_ref): Check validity of inquiry
++	references against selected Fortran standard.
++
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95106
++	* trans-common.c (gfc_sym_mangled_common_id): Enlarge temporaries
++	for name-mangling.
++
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95530
++	PR fortran/95537
++	* decl.c (gfc_match_decl_type_spec): Enlarge buffer, and enhance
++	string copy to detect buffer overflow.
++	* gfortran.h (gfc_common_head): Enlarge buffer.
++	* trans-common.c (finish_equivalences): Enhance string copy to
++	detect buffer overflow.
++
++2020-06-05  Steven G. Kargl  <kargl@gcc.gnu.org>
++	    Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95500
++	* trans-expr.c (gfc_conv_expr_reference): Do not dereference NULL
++	pointer.
++
 +2020-06-01  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/94361
@@ -7195,10 +7258,39 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..b97d220b9a0 100644
+index e132f2657ef..5d955824dc3 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,680 @@
+@@ -1,3 +1,709 @@
++2020-06-06  Carl Love  <cel@us.ibm.com>
++
++	PR target/94833
++	* gcc.target/powerpc/builtins-8-p9-runnable.c (main): Add
++	additional test cases with zero vector elements.
++
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95373
++	* gfortran.dg/pr95373_1.f90: Adjust error messages.
++	* gfortran.dg/pr95373_2.f90: Adjust error message.
++
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95373
++	* gfortran.dg/pr95373_1.f90: New test.
++	* gfortran.dg/pr95373_2.f90: New test.
++
++2020-06-05  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95106
++	* gfortran.dg/equiv_11.f90: New test.
++
++2020-06-05  Steven G. Kargl  <kargl@gcc.gnu.org>
++	    Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95500
++	* gfortran.dg/pr95500.f90: New test.
++
 +2020-06-01  Thomas Koenig  <tkoenig@gcc.gnu.org>
 +
 +	PR fortran/94361
@@ -11137,6 +11229,156 @@ index 00000000000..34a1e069eac
 +{
 +  return __builtin_ia32_movq128 (v);  /* { dg-error "" } */
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c b/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c
+index b2f7dc855e8..19457eebfc4 100644
+--- a/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c
++++ b/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c
+@@ -103,6 +103,31 @@ int main() {
+      The element index in natural element order is returned for the
+      first match or the number of elements if there is no match.  */
+   /* char */
++  char_src1 = (vector signed char) { 0x40, 0, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40 };
++				    
++  char_src2 = (vector signed char) {0, 0, 0, 0, 0, 0, 0, 0,
++				    0, 0, 0, 0, 0, 0, 0, 0};
++  expected_result = 1;
++
++  result = vec_first_match_index (char_src1, char_src2);
++
++#ifdef DEBUG2
++  print_signed_char("src1", char_src1);
++  print_signed_char("src2", char_src2);
++  printf(" vec_first_match_index = %d\n\n", result);
++#endif
++
++  if (result != expected_result)
++#ifdef DEBUG
++    printf("Error: char first match result (%d) does not match expected result (%d)\n",
++	   result, expected_result);
++#else
++    abort();
++#endif
++
+   char_src1 = (vector signed char) {-1, 2, 3, 4, -5, 6, 7, 8,
+ 				    9, 10, 11, 12, 13, 14, 15, 16};
+   char_src2 = (vector signed char) {-1, 2, 3, 20, -5, 6, 7, 8,
+@@ -367,6 +392,50 @@ int main() {
+      The element index in BE order is returned for the first mismatch
+      or the number of elements if there is no match.   */
+   /* char */
++  char_src1 = (vector signed char) {1, 2, 0, 4, -5, 6, 7, 8,
++				    9, 10, 11, 12, 13, 14, 15, 16};
++  char_src2 = (vector signed char) {1, 2, 0, 20, -5, 6, 7, 8,
++				    9, 10, 11, 12, 13, 14, 15, 16};
++  expected_result = 3;
++
++  result = vec_first_mismatch_index (char_src1, char_src2);
++
++#ifdef DEBUG2
++  print_signed_char("src1", char_src1);
++  print_signed_char("src2", char_src2);
++  printf("vec_first_mismatch_index = %d\n\n", result);
++#endif
++
++  if (result != expected_result)
++#ifdef DEBUG
++    printf("Error: char first mismatch result (%d) does not match expected result (%d)\n",
++	   result, expected_result);
++#else
++    abort();
++#endif
++
++  char_src1 = (vector signed char) {0, 2, 3, 4, -5, 6, 7, 8,
++				    9, 10, 11, 12, 13, 14, 15, 16};
++  char_src2 = (vector signed char) {0, 2, 3, 20, -5, 6, 7, 8,
++				    9, 10, 11, 12, 13, 14, 15, 16};
++  expected_result = 3;
++
++  result = vec_first_mismatch_index (char_src1, char_src2);
++
++#ifdef DEBUG2
++  print_signed_char("src1", char_src1);
++  print_signed_char("src2", char_src2);
++  printf("vec_first_mismatch_index = %d\n\n", result);
++#endif
++
++  if (result != expected_result)
++#ifdef DEBUG
++    printf("Error: char first mismatch result (%d) does not match expected result (%d)\n",
++	   result, expected_result);
++#else
++    abort();
++#endif
++
+   char_src1 = (vector signed char) {-1, 2, 3, 4, -5, 6, 7, 8,
+ 				    9, 10, 11, 12, 13, 14, 15, 16};
+   char_src2 = (vector signed char) {-1, 2, 3, 20, -5, 6, 7, 8,
+@@ -673,6 +742,33 @@ int main() {
+      The element index in BE order is returned for the first match
+      or the number of elements if there is no match.  */
+   /* char */
++  char_src1 = (vector signed char) { 0x40, 0, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40 };
++				    
++  char_src2 = (vector signed char) { 0x41, 0, 0x43, 0x44,
++				     0x45, 0x46, 0x47, 0x40,
++				     0x40, 0x40, 0x40, 0x40,
++				     0x40, 0x40, 0x40, 0x40 };
++  expected_result = 1;
++
++  result = vec_first_match_or_eos_index (char_src1, char_src2);
++
++#ifdef DEBUG2
++  print_signed_char("src1", char_src1);
++  print_signed_char("src2", char_src2);
++  printf("vec_first_match_or_eos_index = %d\n\n", result);
++#endif
++
++  if (result != expected_result)
++#ifdef DEBUG
++    printf("Error: char first match result (%d) does not match expected result (%d)\n",
++	   result, expected_result);
++#else
++    abort();
++#endif
++
+   char_src1 = (vector signed char) {-1, 2, 3, 4, -5, 6, 7, 8,
+ 				    9, 10, 11, 12, 13, 14, 15, 16};
+   char_src2 = (vector signed char) {-1, 2, 3, 20, -5, 6, 7, 8,
+@@ -1065,6 +1161,28 @@ int main() {
+      The element index in BE order is returned for the first mismatch
+      or the number of elements if there is no match.   */
+   /* char */
++  char_src1 = (vector signed char) {1, 2, 0, 4, -5, 6, 7, 8,
++				    9, 10, 11, 12, 13, 14, 15, 16};
++  char_src2 = (vector signed char) {1, 2, 0, 20, -5, 6, 7, 8,
++				    9, 10, 11, 12, 13, 14, 15, 16};
++  expected_result = 2;
++
++  result = vec_first_mismatch_or_eos_index (char_src1, char_src2);
++
++#ifdef DEBUG2
++  print_signed_char("src1", char_src1);
++  print_signed_char("src2", char_src2);
++  printf("vec_first_mismatch_or_eos_index = %d\n\n", result);
++#endif
++
++  if (result != expected_result)
++#ifdef DEBUG
++    printf("Error: char first mismatch or EOS result (%d) does not match expected result (%d)\n",
++	   result, expected_result);
++#else
++    abort();
++#endif
++
+   char_src1 = (vector signed char) {-1, 2, 3, 4, -5, 6, 7, 8,
+ 				    9, 10, 11, 12, 13, 14, 15, 16};
+   char_src2 = (vector signed char) {-1, 2, 3, 20, -5, 6, 7, 8,
 diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
 new file mode 100644
 index 00000000000..141603e05b4
