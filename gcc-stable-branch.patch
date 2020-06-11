@@ -55,7 +55,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (88):
+GCC Administrator (91):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -157,7 +160,7 @@ H.J. Lu (7):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
 
-Harald Anlauf (8):
+Harald Anlauf (10):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -166,6 +169,8 @@ Harald Anlauf (8):
       PR fortran/95106 - truncation of long symbol names with EQUIVALENCE
       PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
       PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
+      PR fortran/95091 - Buffer overflows with submodules and long symbols
+      PR fortran/95091 - Buffer overflows with submodules and long symbols
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -6411,10 +6416,39 @@ index 6d37bbb8fd2..adda284ef71 100644
    d = ap->next->next->expr;
    m = ap->next->next->next->expr;
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
-index 9117121e5fe..a8698f19cfb 100644
+index 9117121e5fe..c49f1ae27bf 100644
 --- a/gcc/fortran/class.c
 +++ b/gcc/fortran/class.c
-@@ -911,7 +911,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+@@ -501,8 +501,11 @@ get_unique_type_string (char *string, gfc_symbol *derived)
+ static void
+ get_unique_hashed_string (char *string, gfc_symbol *derived)
+ {
+-  char tmp[2*GFC_MAX_SYMBOL_LEN+2];
++  /* Provide sufficient space to hold "symbol.symbol_symbol".  */
++  char tmp[3*GFC_MAX_SYMBOL_LEN+3];
+   get_unique_type_string (&tmp[0], derived);
++  size_t len = strnlen (tmp, sizeof (tmp));
++  gcc_assert (len < sizeof (tmp));
+   /* If string is too long, use hash value in hex representation (allow for
+      extra decoration, cf. gfc_build_class_symbol & gfc_find_derived_vtab).
+      We need space to for 15 characters "__class_" + symbol name + "_%d_%da",
+@@ -523,11 +526,13 @@ unsigned int
+ gfc_hash_value (gfc_symbol *sym)
+ {
+   unsigned int hash = 0;
+-  char c[2*(GFC_MAX_SYMBOL_LEN+1)];
++  /* Provide sufficient space to hold "symbol.symbol_symbol".  */
++  char c[3*GFC_MAX_SYMBOL_LEN+3];
+   int i, len;
+ 
+   get_unique_type_string (&c[0], sym);
+-  len = strlen (c);
++  len = strnlen (c, sizeof (c));
++  gcc_assert ((size_t) len < sizeof (c));
+ 
+   for (i = 0; i < len; i++)
+     hash = (hash << 6) + (hash << 16) - hash + c[i];
+@@ -911,7 +916,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
    if (!comp_is_finalizable (comp))
      return;
  
@@ -6423,7 +6457,7 @@ index 9117121e5fe..a8698f19cfb 100644
      return;
  
    e = gfc_copy_expr (expr);
-@@ -1002,6 +1002,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+@@ -1002,6 +1007,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
  	}
        else
  	(*code) = cond;
@@ -6431,7 +6465,7 @@ index 9117121e5fe..a8698f19cfb 100644
      }
    else if (comp->ts.type == BT_DERIVED
  	    && comp->ts.u.derived->f2k_derived
-@@ -1041,7 +1042,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+@@ -1041,7 +1047,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
  			    sub_ns);
        gfc_free_expr (e);
      }
@@ -13155,6 +13189,31 @@ index 00000000000..fda10c1a88b
 +  if (is_real8(1.0_16)) stop 3
 +#endif
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/pr95091.f90 b/gcc/testsuite/gfortran.dg/pr95091.f90
+new file mode 100644
+index 00000000000..1c48dca2f4a
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95091.f90
+@@ -0,0 +1,19 @@
++! { dg-do compile }
++! { dg-options "-fsecond-underscore" }
++! PR fortran/95091 - ICE in gfc_hash_value
++
++module m2345678901234567890123456789012345678901234567890123456789_123
++  type t2345678901234567890123456789012345678901234567890123456789_123
++  end type t2345678901234567890123456789012345678901234567890123456789_123
++  interface
++     module subroutine s2345678901234567890123456789012345678901234567890123456789_123 &
++          (x2345678901234567890123456789012345678901234567890123456789_123)
++    end
++  end interface
++end
++submodule(m2345678901234567890123456789012345678901234567890123456789_123) &
++     n2345678901234567890123456789012345678901234567890123456789_123
++  type, extends(t2345678901234567890123456789012345678901234567890123456789_123) :: &
++    u2345678901234567890123456789012345678901234567890123456789_123
++  end type
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr95104.f90 b/gcc/testsuite/gfortran.dg/pr95104.f90
 new file mode 100644
 index 00000000000..20bdd910f46
