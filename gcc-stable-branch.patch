@@ -160,7 +160,7 @@ H.J. Lu (7):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
 
-Harald Anlauf (10):
+Harald Anlauf (11):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -171,6 +171,7 @@ Harald Anlauf (10):
       PR fortran/95373 - ICE in build_reference_type, at tree.c:7942
       PR fortran/95091 - Buffer overflows with submodules and long symbols
       PR fortran/95091 - Buffer overflows with submodules and long symbols
+      PR fortran/95611 - ICE in access_attr_decl, at fortran/decl.c:9075
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -6475,7 +6476,7 @@ index 9117121e5fe..c49f1ae27bf 100644
  
  
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..657d7e84c99 100644
+index abff4af9f67..3ab4735f91b 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -668,6 +668,10 @@ gfc_match_data (void)
@@ -6588,6 +6589,15 @@ index abff4af9f67..657d7e84c99 100644
  	      m = MATCH_ERROR;
  	      goto cleanup;
  	    }
+@@ -8962,7 +8988,7 @@ access_attr_decl (gfc_statement st)
+ 	  else
+ 	    {
+ 	      gfc_error ("Access specification of the .%s. operator at %C "
+-			 "has already been specified", sym->name);
++			 "has already been specified", uop->name);
+ 	      goto done;
+ 	    }
+ 
 @@ -9602,13 +9628,20 @@ gfc_match_submod_proc (void)
    if (get_proc_name (name, &sym, false))
      return MATCH_ERROR;
@@ -13291,6 +13301,19 @@ index 00000000000..e9eb7c65c86
 +
 +  write (*,*) 'ln  1', ln (one)
 +end program test_intrinsic
+diff --git a/gcc/testsuite/gfortran.dg/pr95611.f90 b/gcc/testsuite/gfortran.dg/pr95611.f90
+new file mode 100644
+index 00000000000..b7a54514ca3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95611.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++! PR fortran/95611 - ICE in access_attr_decl, at fortran/decl.c:9075
++
++module m
++  public operator (.a.)
++  public operator (.a.) ! { dg-error "has already been specified" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
 new file mode 100644
 index 00000000000..72f6d5c0857
