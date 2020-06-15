@@ -55,7 +55,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (91):
+GCC Administrator (95):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -160,7 +164,7 @@ H.J. Lu (7):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
 
-Harald Anlauf (11):
+Harald Anlauf (12):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -172,6 +176,7 @@ Harald Anlauf (11):
       PR fortran/95091 - Buffer overflows with submodules and long symbols
       PR fortran/95091 - Buffer overflows with submodules and long symbols
       PR fortran/95611 - ICE in access_attr_decl, at fortran/decl.c:9075
+      PR fortran/95503 - Fix ICE in gfc_is_simply_contiguous, at fortran/expr.c:5844
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -184,6 +189,9 @@ Iain Buclaw (7):
 
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
+
+Ian Lance Taylor (1):
+      go.test: update issue4085b.go to version from Go 1.13
 
 Jakub Jelinek (40):
       Bump BASE-VER to 9.3.1.
@@ -301,9 +309,11 @@ Kyrylo Tkachov (12):
       [AArch64] Use __getauxval instead of getauxval in LSE detection code in libgcc
       aarch64: Add initial support for -mcpu=zeus
 
-Marek Polacek (2):
+Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
       c++: Fix bogus -Wparentheses warning with fold-expression [PR94505]
+      c++: Fix ICE in check_local_shadow with enum [PR95560]
+      c++: Fix bogus -Wparentheses warning [PR95344]
 
 Mark Eggleston (8):
       fortran: ICE using undeclared symbol in array constructor PR93484
@@ -319,7 +329,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (10):
+Martin Liska (12):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -330,6 +340,8 @@ Martin Liska (10):
       gcov-tool: Flexible endian adjustment for merging coverage data
       Remove accidentally installed file.
       Remove bad ChangeLog entry.
+      Add missing store in emission of asan_stack_free.
+      asan: fix RTX emission for ilp32
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -368,11 +380,12 @@ Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
       AArch64: Fix options canonicanization for assembler
 
-Thomas Koenig (4):
+Thomas Koenig (5):
       Revert patch for PR fortran/93956.
       Add early return for invalid STATUS for close.
       Fixes a hang on an invalid ID in a WAIT statement.
       Finalization depends on the expression, not on the component.
+      When avoiding double deallocation, look at namespace, expression and component.
 
 Thomas König (2):
       Backport from trunk of the fix for PR 94270.
@@ -528,10 +541,24 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..c1591ae43de 100644
+index d8e53874e68..248ba1c3669 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,825 @@
+@@ -1,3 +1,839 @@
++2020-06-12  Martin Liska  <mliska@suse.cz>
++	    Jakub Jelinek  <jakub@redhat.com>
++
++	PR sanitizer/95634
++	* asan.c (asan_emit_stack_protection): Fix emission for ilp32
++	by using Pmode instead of ptr_mode.
++
++2020-06-12  Martin Liska  <mliska@suse.cz>
++
++	PR sanitizer/94910
++	* asan.c (asan_emit_stack_protection): Emit
++	also **SavedFlagPtr(FakeStack, class_id) = 0 in order to release
++	a stack frame.
++
 +2020-06-06  Carl Love  <cel@us.ibm.com>
 +
 +	PR target/94833
@@ -1382,6 +1409,38 @@ index fe6464fd601..3dbf7974a67 100644
  #endif
  #include <windows.h>
  
+diff --git a/gcc/asan.c b/gcc/asan.c
+index 3b800b26b69..2baf06ffa7c 100644
+--- a/gcc/asan.c
++++ b/gcc/asan.c
+@@ -1597,8 +1597,25 @@ asan_emit_stack_protection (rtx base, rtx pbase, unsigned int alignb,
+       if (use_after_return_class < 5
+ 	  && can_store_by_pieces (sz, builtin_memset_read_str, &c,
+ 				  BITS_PER_UNIT, true))
+-	store_by_pieces (shadow_mem, sz, builtin_memset_read_str, &c,
+-			 BITS_PER_UNIT, true, RETURN_BEGIN);
++	{
++	  /* Emit:
++	       memset(ShadowBase, kAsanStackAfterReturnMagic, ShadowSize);
++	       **SavedFlagPtr(FakeStack, class_id) = 0
++	  */
++	  store_by_pieces (shadow_mem, sz, builtin_memset_read_str, &c,
++			   BITS_PER_UNIT, true, RETURN_BEGIN);
++
++	  unsigned HOST_WIDE_INT offset
++	    = (1 << (use_after_return_class + 6));
++	  offset -= GET_MODE_SIZE (ptr_mode);
++	  mem = gen_rtx_MEM (ptr_mode, base);
++	  mem = adjust_address (mem, ptr_mode, offset);
++	  rtx addr = gen_reg_rtx (ptr_mode);
++	  emit_move_insn (addr, mem);
++	  addr = convert_memory_address (Pmode, addr);
++	  mem = gen_rtx_MEM (QImode, addr);
++	  emit_move_insn (mem, const0_rtx);
++	}
+       else if (use_after_return_class >= 5
+ 	       || !set_storage_via_setmem (shadow_mem,
+ 					   GEN_INT (sz),
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index ed11f79ff0b..e8e43f53ec6 100644
 --- a/gcc/builtins.c
@@ -4423,10 +4482,23 @@ index 1ffefd5f482..9be446a862d 100644
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..87fb9c0147a 100644
+index 6441d647a54..1762b5d7ecd 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,155 @@
+@@ -1,3 +1,168 @@
++2020-06-11  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/95344
++	* cp-gimplify.c (cp_fold) <case MODIFY_EXPR>: Don't set
++	TREE_THIS_VOLATILE here.
++	(cp_fold): Set it here along with TREE_NO_WARNING.
++
++2020-06-11  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/95560
++	* name-lookup.c (check_local_shadow): Check if types are
++	non-null before calling same_type_p.
++
 +2020-05-25  Jason Merrill  <jason@redhat.com>
 +
 +	PR c++/90212
@@ -4616,7 +4688,7 @@ index bab5935a4eb..3465f1db54b 100644
  		}
  	      return false;
 diff --git a/gcc/cp/cp-gimplify.c b/gcc/cp/cp-gimplify.c
-index 4be45abca88..0e15b1c8147 100644
+index 4be45abca88..7525ee8d10f 100644
 --- a/gcc/cp/cp-gimplify.c
 +++ b/gcc/cp/cp-gimplify.c
 @@ -2192,12 +2192,17 @@ cxx_omp_finish_clause (tree c, gimple_seq *)
@@ -4643,6 +4715,19 @@ index 4be45abca88..0e15b1c8147 100644
  }
  
  /* Fold expression X which is used as an rvalue if RVAL is true.  */
+@@ -2806,6 +2811,12 @@ cp_fold (tree x)
+       return org_x;
+     }
+ 
++  if (EXPR_P (x) && TREE_CODE (x) == code)
++    {
++      TREE_THIS_VOLATILE (x) = TREE_THIS_VOLATILE (org_x);
++      TREE_NO_WARNING (x) = TREE_NO_WARNING (org_x);
++    }
++
+   fold_cache->put (org_x, x);
+   /* Prevent that we try to fold an already folded result again.  */
+   if (x != org_x)
 diff --git a/gcc/cp/cp-tree.h b/gcc/cp/cp-tree.h
 index f7c3eea4cdf..1f013c172ce 100644
 --- a/gcc/cp/cp-tree.h
@@ -4896,10 +4981,21 @@ index 6f194375261..bab9fdadfb7 100644
    /* Strip a conversion added by convert_nontype_argument.  */
    if (TREE_CODE (node) == IMPLICIT_CONV_EXPR)
 diff --git a/gcc/cp/name-lookup.c b/gcc/cp/name-lookup.c
-index 8999c5ad4a7..f5535ba50bc 100644
+index 8999c5ad4a7..b8eb21e0f97 100644
 --- a/gcc/cp/name-lookup.c
 +++ b/gcc/cp/name-lookup.c
-@@ -2988,7 +2988,8 @@ do_pushdecl (tree decl, bool is_friend)
+@@ -2751,7 +2751,9 @@ check_local_shadow (tree decl)
+       else if (warn_shadow_local)
+ 	warning_code = OPT_Wshadow_local;
+       else if (warn_shadow_compatible_local
+-	       && (same_type_p (TREE_TYPE (old), TREE_TYPE (decl))
++	       && ((TREE_TYPE (old)
++		    && TREE_TYPE (decl)
++		    && same_type_p (TREE_TYPE (old), TREE_TYPE (decl)))
+ 		   || (!dependent_type_p (TREE_TYPE (decl))
+ 		       && !dependent_type_p (TREE_TYPE (old))
+ 		       /* If the new decl uses auto, we don't yet know
+@@ -2988,7 +2990,8 @@ do_pushdecl (tree decl, bool is_friend)
    /* The binding level we will be pushing into.  During local class
       pushing, we want to push to the containing scope.  */
    cp_binding_level *level = current_binding_level;
@@ -4909,7 +5005,7 @@ index 8999c5ad4a7..f5535ba50bc 100644
      level = level->level_chain;
  
    /* An anonymous namespace has a NULL DECL_NAME, but we still want to
-@@ -7626,10 +7627,10 @@ maybe_save_operator_binding (tree e)
+@@ -7626,10 +7629,10 @@ maybe_save_operator_binding (tree e)
  
    if (!fns && (fns = op_unqualified_lookup (fnname)))
      {
@@ -6181,10 +6277,44 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..305888b74b2 100644
+index 8fefea2b63d..8ae3439cad8 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,201 @@
+@@ -1,3 +1,235 @@
++2020-06-14  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95503
++	* expr.c (gfc_check_pointer_assign): Skip contiguity check of rhs
++	of pointer assignment if lhs cannot be simply contiguous.
++
++2020-06-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/94109
++	* class.c (finalize_component): Return early if finalization has
++	already happened for expression and component within namespace.
++	* gfortran.h (gfc_was_finalized): New type.
++	(gfc_namespace): Add member was_finalzed.
++	(gfc_expr): Remove finalized.
++	* symbol.c (gfc_free_namespace): Free was_finalized.
++
++2020-06-11  Harald Anlauf  <anlauf@gmx.de>
++	    Steven G. Kargl   <kargl@gcc.gnu.org>
++
++	PR fortran/95611
++	* decl.c (access_attr_decl): Use correct symbol in error message.
++
++2020-06-11  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95091
++	* class.c (gfc_hash_value): Add cast.
++
++2020-06-11  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95091
++	* class.c (get_unique_type_string, gfc_hash_value): Enlarge
++	buffers, and check whether the strings returned by
++	get_unique_type_string() fit.
++
 +2020-06-05  Harald Anlauf  <anlauf@gmx.de>
 +
 +	PR fortran/95373
@@ -6417,7 +6547,7 @@ index 6d37bbb8fd2..adda284ef71 100644
    d = ap->next->next->expr;
    m = ap->next->next->next->expr;
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
-index 9117121e5fe..c49f1ae27bf 100644
+index 9117121e5fe..84314a089c3 100644
 --- a/gcc/fortran/class.c
 +++ b/gcc/fortran/class.c
 @@ -501,8 +501,11 @@ get_unique_type_string (char *string, gfc_symbol *derived)
@@ -6449,16 +6579,28 @@ index 9117121e5fe..c49f1ae27bf 100644
  
    for (i = 0; i < len; i++)
      hash = (hash << 6) + (hash << 16) - hash + c[i];
-@@ -911,7 +916,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+@@ -907,12 +912,18 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+ {
+   gfc_expr *e;
+   gfc_ref *ref;
++  gfc_was_finalized *f;
+ 
    if (!comp_is_finalizable (comp))
      return;
  
 -  if (comp->finalized)
-+  if (expr->finalized)
-     return;
+-    return;
++  /* If this expression with this component has been finalized
++     already in this namespace, there is nothing to do.  */
++  for (f = sub_ns->was_finalized; f; f = f->next)
++    {
++      if (f->e == expr && f->c == comp)
++	return;
++    }
  
    e = gfc_copy_expr (expr);
-@@ -1002,6 +1007,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+   if (!e->ref)
+@@ -1002,6 +1013,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
  	}
        else
  	(*code) = cond;
@@ -6466,12 +6608,18 @@ index 9117121e5fe..c49f1ae27bf 100644
      }
    else if (comp->ts.type == BT_DERIVED
  	    && comp->ts.u.derived->f2k_derived
-@@ -1041,7 +1047,7 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
+@@ -1041,7 +1053,13 @@ finalize_component (gfc_expr *expr, gfc_symbol *derived, gfc_component *comp,
  			    sub_ns);
        gfc_free_expr (e);
      }
 -  comp->finalized = true;
-+  expr->finalized = 1;
++
++  /* Record that this was finalized already in this namespace.  */
++  f = sub_ns->was_finalized;
++  sub_ns->was_finalized = XCNEW (gfc_was_finalized);
++  sub_ns->was_finalized->e = expr;
++  sub_ns->was_finalized->c = comp;
++  sub_ns->was_finalized->next = f;
  }
  
  
@@ -6624,8 +6772,23 @@ index abff4af9f67..3ab4735f91b 100644
        else
  	sym->result = sym;
      }
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index 94f9eb00f71..486e941653c 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -4300,7 +4300,9 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue,
+      contiguous.  Be lenient in the definition of what counts as
+      contiguous.  */
+ 
+-  if (lhs_attr.contiguous && !gfc_is_simply_contiguous (rvalue, false, true))
++  if (lhs_attr.contiguous
++      && lhs_attr.dimension > 0
++      && !gfc_is_simply_contiguous (rvalue, false, true))
+     gfc_warning (OPT_Wextra, "Assignment to contiguous pointer from "
+ 		 "non-contiguous target at %L", &rvalue->where);
+ 
 diff --git a/gcc/fortran/gfortran.h b/gcc/fortran/gfortran.h
-index d7071ae5fcf..84bd335b920 100644
+index d7071ae5fcf..c514b88b47f 100644
 --- a/gcc/fortran/gfortran.h
 +++ b/gcc/fortran/gfortran.h
 @@ -1094,7 +1094,6 @@ typedef struct gfc_component
@@ -6658,13 +6821,39 @@ index d7071ae5fcf..84bd335b920 100644
    struct gfc_symbol *head;
    const char* binding_label;
    int is_bind_c;
-@@ -2187,6 +2190,10 @@ typedef struct gfc_expr
+@@ -1746,6 +1749,16 @@ gfc_oacc_routine_name;
+ 
+ #define gfc_get_oacc_routine_name() XCNEW (gfc_oacc_routine_name)
+ 
++/* Node in linked list to see what has already been finalized
++   earlier.  */
++
++typedef struct gfc_was_finalized {
++  gfc_expr *e;
++  gfc_component *c;
++  struct gfc_was_finalized *next;
++}
++gfc_was_finalized;
++
+ /* A namespace describes the contents of procedure, module, interface block
+    or BLOCK construct.  */
+ /* ??? Anything else use these?  */
+@@ -1838,6 +1851,11 @@ typedef struct gfc_namespace
+   /* Linked list of !$omp declare simd constructs.  */
+   struct gfc_omp_declare_simd *omp_declare_simd;
+ 
++  /* A hash set for the the gfc expressions that have already
++     been finalized in this namespace.  */
++
++  gfc_was_finalized *was_finalized;
++
+   /* Set to 1 if namespace is a BLOCK DATA program unit.  */
+   unsigned is_block_data:1;
+ 
+@@ -2187,6 +2205,7 @@ typedef struct gfc_expr
    /* Set this if no warning should be given somewhere in a lower level.  */
  
    unsigned int do_not_warn : 1;
-+
-+  /* Set this if the expression has already been finalized.  */
-+  unsigned int finalized : 1;
 +
    /* If an expression comes from a Hollerith constant or compile-time
       evaluation of a transfer statement, it may have a prescribed target-
@@ -6912,7 +7101,7 @@ index a4ad26efffc..19f05ab884f 100644
  	  gfc_error ("Array %qs at %L with non-constant bounds cannot be "
  		     "an EQUIVALENCE object", sym->name, &e->where);
 diff --git a/gcc/fortran/symbol.c b/gcc/fortran/symbol.c
-index faaeebf2c09..801a7733fef 100644
+index faaeebf2c09..ecdb50887ed 100644
 --- a/gcc/fortran/symbol.c
 +++ b/gcc/fortran/symbol.c
 @@ -2004,9 +2004,12 @@ gfc_add_type (gfc_symbol *sym, gfc_typespec *ts, locus *where)
@@ -6937,6 +7126,32 @@ index faaeebf2c09..801a7733fef 100644
 +      gfc_error ("Symbol %qs at %L cannot have a type", sym->ns->proc_name->name, where);
        return false;
      }
+ 
+@@ -4030,6 +4033,7 @@ gfc_free_namespace (gfc_namespace *ns)
+ {
+   gfc_namespace *p, *q;
+   int i;
++  gfc_was_finalized *f;
+ 
+   if (ns == NULL)
+     return;
+@@ -4062,6 +4066,17 @@ gfc_free_namespace (gfc_namespace *ns)
+     gfc_free_interface (ns->op[i]);
+ 
+   gfc_free_data (ns->data);
++
++  /* Free all the expr + component combinations that have been
++     finalized.  */
++  f = ns->was_finalized;
++  while (f)
++    {
++      gfc_was_finalized* current = f;
++      f = f->next;
++      free (current);
++    }
++
+   p = ns->contained;
+   free (ns);
  
 diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
 index 2e5eb4f468f..572455e0d59 100644
@@ -7302,10 +7517,42 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..5d955824dc3 100644
+index e132f2657ef..a57311a98b5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,709 @@
+@@ -1,3 +1,741 @@
++2020-06-14  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95503
++	* gfortran.dg/pr95503.f90: New test.
++
++2020-06-14  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/94109
++	* gfortran.dg/finalize_34.f90: Adjust free counts.
++	* gfortran.dg/finalize_36.f90: New test.
++
++2020-06-11  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/95344
++	* c-c++-common/Wparentheses-2.c: New test.
++
++2020-06-11  Marek Polacek  <polacek@redhat.com>
++
++	PR c++/95560
++	* g++.dg/warn/Wshadow-compatible-local-3.C: New test.
++
++2020-06-11  Harald Anlauf  <anlauf@gmx.de>
++	    Steven G. Kargl   <kargl@gcc.gnu.org>
++
++	PR fortran/95611
++	* gfortran.dg/pr95611.f90: New file.
++
++2020-06-11  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95091
++	* gfortran.dg/pr95091.f90: New file.
++
 +2020-06-06  Carl Love  <cel@us.ibm.com>
 +
 +	PR target/94833
@@ -8015,6 +8262,30 @@ index e132f2657ef..5d955824dc3 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/testsuite/c-c++-common/Wparentheses-2.c b/gcc/testsuite/c-c++-common/Wparentheses-2.c
+new file mode 100644
+index 00000000000..1aa5d314ae7
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/Wparentheses-2.c
+@@ -0,0 +1,18 @@
++// PR c++/95344 - bogus -Wparentheses warning.
++// { dg-do compile }
++// { dg-options "-Wparentheses" }
++
++#ifndef __cplusplus
++# define bool _Bool
++# define true 1
++# define false 0
++#endif
++
++void
++f (int i)
++{
++  bool b = false;
++  if (i == 99 ? (b = true) : false) // { dg-bogus "suggest parentheses" }
++    {
++    }
++}
 diff --git a/gcc/testsuite/c-c++-common/pr94385.c b/gcc/testsuite/c-c++-common/pr94385.c
 new file mode 100644
 index 00000000000..0611921295c
@@ -9007,6 +9278,20 @@ index 00000000000..45b90a2249d
 +main ()
 +{
 +  a[2].foo ();
++}
+diff --git a/gcc/testsuite/g++.dg/warn/Wshadow-compatible-local-3.C b/gcc/testsuite/g++.dg/warn/Wshadow-compatible-local-3.C
+new file mode 100644
+index 00000000000..045dc75563e
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wshadow-compatible-local-3.C
+@@ -0,0 +1,8 @@
++// PR c++/95560
++// { dg-do compile { target c++11 } }
++// { dg-options "-Wshadow=compatible-local" }
++
++template <typename> void fn1() {
++  bool ready;
++  enum class State { ready };
 +}
 diff --git a/gcc/testsuite/g++.dg/warn/Wunused-var-26.C b/gcc/testsuite/g++.dg/warn/Wunused-var-26.C
 index b3e020b6007..89c53de88a4 100644
@@ -12635,7 +12920,7 @@ index 2205f9eed7f..3857e4485ee 100644
 -! { dg-final { scan-tree-dump-times "__builtin_free" 19 "original" } }
 +! { dg-final { scan-tree-dump-times "__builtin_free" 20 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/finalize_34.f90 b/gcc/testsuite/gfortran.dg/finalize_34.f90
-index e2f02a5c51c..fef7dac6d89 100644
+index e2f02a5c51c..8fb801d4235 100644
 --- a/gcc/testsuite/gfortran.dg/finalize_34.f90
 +++ b/gcc/testsuite/gfortran.dg/finalize_34.f90
 @@ -22,4 +22,4 @@ program main
@@ -12643,7 +12928,7 @@ index e2f02a5c51c..fef7dac6d89 100644
    type(evtlist_type), dimension(10) :: a
  end program main
 -! { dg-final  { scan-tree-dump-times "__builtin_free" 8 "original" } }
-+! { dg-final  { scan-tree-dump-times "__builtin_free" 12 "original" } }
++! { dg-final  { scan-tree-dump-times "__builtin_free" 24 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/finalize_35.f90 b/gcc/testsuite/gfortran.dg/finalize_35.f90
 new file mode 100644
 index 00000000000..66435c43ecc
@@ -12698,6 +12983,51 @@ index 00000000000..66435c43ecc
 +
 +end program run
 +! { dg-final  { scan-tree-dump-times "__builtin_free\\ \\(ptr2" 2 "original" } }
+diff --git a/gcc/testsuite/gfortran.dg/finalize_36.f90 b/gcc/testsuite/gfortran.dg/finalize_36.f90
+new file mode 100644
+index 00000000000..432f5472aeb
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/finalize_36.f90
+@@ -0,0 +1,39 @@
++! { dg-do run }
++! { dg-additional-options "-fdump-tree-original" }
++! PR 94109
++! This used to leak memory.  Test case by Antony Lewis.
++    module debug
++    implicit none
++
++    Type Tester
++        real, dimension(:), allocatable :: Dat, Dat2
++    end Type
++
++    Type TestType2
++        Type(Tester) :: T
++    end type TestType2
++
++    contains
++
++    subroutine Leaker
++    class(TestType2), pointer :: ActiveState
++    Type(Tester) :: Temp
++
++    allocate(Temp%Dat2(10000))
++
++    allocate(TestType2::ActiveState)
++    ActiveState%T = Temp
++    deallocate(ActiveState)
++
++    end subroutine
++
++    end module
++
++
++    program run
++    use debug
++
++    call Leaker()
++
++    end program
++! { dg-final { scan-tree-dump-times "__builtin_free\\ \\(ptr2" 4 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/graphite/vect-pr94043.f90 b/gcc/testsuite/gfortran.dg/graphite/vect-pr94043.f90
 new file mode 100644
 index 00000000000..744c0f3042e
@@ -13301,6 +13631,19 @@ index 00000000000..e9eb7c65c86
 +
 +  write (*,*) 'ln  1', ln (one)
 +end program test_intrinsic
+diff --git a/gcc/testsuite/gfortran.dg/pr95503.f90 b/gcc/testsuite/gfortran.dg/pr95503.f90
+new file mode 100644
+index 00000000000..4a202b405c4
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95503.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++! PR fortran/95503 - ICE in gfc_is_simply_contiguous
++
++program p
++  complex, target :: a
++  real, pointer, contiguous :: b => a%re ! { dg-error "not an array pointer" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr95611.f90 b/gcc/testsuite/gfortran.dg/pr95611.f90
 new file mode 100644
 index 00000000000..b7a54514ca3
@@ -13333,6 +13676,23 @@ index 00000000000..72f6d5c0857
 +    call meh(bar)
 +  end subroutine foo_internal
 +end subroutine foo
+diff --git a/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go b/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go
+index 6bf315fcc2f..6304ce073aa 100644
+--- a/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go
++++ b/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go
+@@ -21,9 +21,11 @@ func main() {
+ 	shouldPanic("cap out of range", func() { _ = make(T, 0, int64(n)) })
+ 	var t *byte
+ 	if unsafe.Sizeof(t) == 8 {
+-		var n2 int64 = 1 << 50
++		// Test mem > maxAlloc
++		var n2 int64 = 1 << 59
+ 		shouldPanic("len out of range", func() { _ = make(T, int(n2)) })
+ 		shouldPanic("cap out of range", func() { _ = make(T, 0, int(n2)) })
++		// Test elem.size*cap overflow
+ 		n2 = 1<<63 - 1
+ 		shouldPanic("len out of range", func() { _ = make(T, int(n2)) })
+ 		shouldPanic("cap out of range", func() { _ = make(T, 0, int(n2)) })
 diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
 index d00c1bd31e6..efd720b9609 100644
 --- a/gcc/tree-data-ref.c
