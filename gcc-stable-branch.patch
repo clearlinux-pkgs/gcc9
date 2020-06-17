@@ -55,7 +55,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (95):
+GCC Administrator (96):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -357,6 +358,9 @@ Michael Meissner (2):
 Nathan Sidwell (2):
       c++: Fix ICE popping local scope [pr84733]
       c++: QT overload regression with attribute [PR94946]
+
+Patrick Palka (1):
+      c++: zero_init_expr_p of dependent expression [PR95678]
 
 Rainer Orth (1):
       libstdc++: Update Solaris baselines for GCC 9.4
@@ -5362,7 +5366,7 @@ index 4bfb5d15293..559e38dbc14 100644
  
    if (code == LABEL_EXPR || code == CASE_LABEL_EXPR)
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
-index 3f3583c825d..1614f346a59 100644
+index 3f3583c825d..7c68706640c 100644
 --- a/gcc/cp/tree.c
 +++ b/gcc/cp/tree.c
 @@ -2402,6 +2402,8 @@ is_overloaded_fn (tree x)
@@ -5412,7 +5416,7 @@ index 3f3583c825d..1614f346a59 100644
 +zero_init_expr_p (tree t)
 +{
 +  tree type = TREE_TYPE (t);
-+  if (!type || dependent_type_p (type))
++  if (!type || uses_template_parms (type))
 +    return false;
 +  if (zero_init_p (type))
 +    return initializer_zerop (t);
@@ -8398,6 +8402,40 @@ index 00000000000..f2661997a33
 +void af() { v<f>(); }
 +
 +// { dg-final { scan-assembler "_Z1vI1fE1xIXplLi0EsrT_1dEEv" } }
+diff --git a/gcc/testsuite/g++.dg/cpp0x/dependent3.C b/gcc/testsuite/g++.dg/cpp0x/dependent3.C
+new file mode 100644
+index 00000000000..caf7e1cd4a4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp0x/dependent3.C
+@@ -0,0 +1,28 @@
++// { dg-do compile { target c++11 } }
++
++template<typename c>
++struct d
++{
++  using e = c;
++};
++
++template<class f>
++struct g
++{
++  using h = typename d<f>::e;
++
++  template<class i, class j>
++  auto operator()(i, j k) -> decltype(h{k});
++};
++
++template<class l>
++void m()
++{
++  int a[1];
++  l{}(a, a);
++}
++
++int main()
++{
++  m<g<int *>>();
++}
 diff --git a/gcc/testsuite/g++.dg/cpp0x/enum40.C b/gcc/testsuite/g++.dg/cpp0x/enum40.C
 new file mode 100644
 index 00000000000..cfdf2a4a18a
