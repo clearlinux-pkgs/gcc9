@@ -45,17 +45,23 @@ David Edelsohn (1):
 Douglas Rupp (1):
       Require powerpc_vsx_ok in gcc.target/powerpc/pr71763.c
 
-Eric Botcazou (4):
+Eric Botcazou (5):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
       Fix Ada bootstrap on Cygwin64
       Update the baseline symbols for SPARC64/Linux
+      Fix memory corruption with vector and variant record
 
 Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (98):
+GCC Administrator (103):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -318,7 +324,7 @@ Marek Polacek (4):
       c++: Fix ICE in check_local_shadow with enum [PR95560]
       c++: Fix bogus -Wparentheses warning [PR95344]
 
-Mark Eggleston (8):
+Mark Eggleston (9):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
@@ -327,6 +333,7 @@ Mark Eggleston (8):
       Fortran  : ProcPtr function results: 'ppr@' in error message PR39695
       Fortran  : ICE in gfc_trans_label_assign PR50392
       Fortran  : "type is( real(kind(1.)) )" spurious syntax error PR94397
+      Fortran  : ICE in resolve_fl_procedure PR95708
 
 Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
@@ -1415,6 +1422,48 @@ index a819f57a2bf..41ba2db6a07 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/ada/gcc-interface/trans.c b/gcc/ada/gcc-interface/trans.c
+index 2581b71d6fa..c3a435464c4 100644
+--- a/gcc/ada/gcc-interface/trans.c
++++ b/gcc/ada/gcc-interface/trans.c
+@@ -7636,9 +7636,8 @@ gnat_to_gnu (Node_Id gnat_node)
+ 
+     case N_Allocator:
+       {
+-	tree gnu_init = NULL_TREE;
+-	tree gnu_type;
+-	bool ignore_init_type = false;
++	tree gnu_type, gnu_init;
++	bool ignore_init_type;
+ 
+ 	gnat_temp = Expression (gnat_node);
+ 
+@@ -7648,15 +7647,22 @@ gnat_to_gnu (Node_Id gnat_node)
+ 	   initial value for the object.  */
+ 	if (Nkind (gnat_temp) == N_Identifier
+ 	    || Nkind (gnat_temp) == N_Expanded_Name)
+-	  gnu_type = gnat_to_gnu_type (Entity (gnat_temp));
++	  {
++	    ignore_init_type = false;
++	    gnu_init = NULL_TREE;
++	    gnu_type = gnat_to_gnu_type (Entity (gnat_temp));
++	  }
++
+ 	else if (Nkind (gnat_temp) == N_Qualified_Expression)
+ 	  {
+ 	    Entity_Id gnat_desig_type
+ 	      = Designated_Type (Underlying_Type (Etype (gnat_node)));
+ 
+-	    ignore_init_type = Has_Constrained_Partial_View (gnat_desig_type);
+-	    gnu_init = gnat_to_gnu (Expression (gnat_temp));
++	    /* The flag is effectively only set on the base types.  */
++	    ignore_init_type
++	      = Has_Constrained_Partial_View (Base_Type (gnat_desig_type));
+ 
++	    gnu_init = gnat_to_gnu (Expression (gnat_temp));
+ 	    gnu_init = maybe_unconstrained_array (gnu_init);
+ 	    if (Do_Range_Check (Expression (gnat_temp)))
+ 	      gnu_init
 diff --git a/gcc/ada/mingw32.h b/gcc/ada/mingw32.h
 index fe6464fd601..3dbf7974a67 100644
 --- a/gcc/ada/mingw32.h
@@ -6896,6 +6945,30 @@ index b5701b1a59a..29af409dde0 100644
      return NULL;
  
    /* Try to find a typebound DTIO binding.  */
+diff --git a/gcc/fortran/intrinsic.c b/gcc/fortran/intrinsic.c
+index 357a35052eb..d1da044f8f1 100644
+--- a/gcc/fortran/intrinsic.c
++++ b/gcc/fortran/intrinsic.c
+@@ -2700,8 +2700,8 @@ add_functions (void)
+ 
+   make_generic ("null", GFC_ISYM_NULL, GFC_STD_F95);
+ 
+-  add_sym_2 ("num_images", GFC_ISYM_NUM_IMAGES, CLASS_INQUIRY, ACTUAL_NO,
+-	     BT_INTEGER, di, GFC_STD_F2008,
++  add_sym_2 ("num_images", GFC_ISYM_NUM_IMAGES, CLASS_TRANSFORMATIONAL,
++	     ACTUAL_NO, BT_INTEGER, di, GFC_STD_F2008,
+ 	     gfc_check_num_images, gfc_simplify_num_images, NULL,
+ 	     dist, BT_INTEGER, di, OPTIONAL,
+ 	     failed, BT_LOGICAL, dl, OPTIONAL);
+@@ -3133,7 +3133,7 @@ add_functions (void)
+   make_generic ("tanh", GFC_ISYM_TANH, GFC_STD_F77);
+ 
+   add_sym_1 ("team_number", GFC_ISYM_TEAM_NUMBER, CLASS_TRANSFORMATIONAL,
+-	     ACTUAL_YES, BT_INTEGER, di, GFC_STD_F2018,
++	     ACTUAL_NO, BT_INTEGER, di, GFC_STD_F2018,
+ 	     gfc_check_team_number, NULL, gfc_resolve_team_number,
+ 	     team, BT_DERIVED, di, OPTIONAL);
+ 
 diff --git a/gcc/fortran/libgfortran.h b/gcc/fortran/libgfortran.h
 index 581b2f529db..02250fab4be 100644
 --- a/gcc/fortran/libgfortran.h
@@ -6969,7 +7042,7 @@ index ff93698f478..d69fdcb439f 100644
  		      && primary->ts.type != BT_COMPLEX)
  		    {
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index a4ad26efffc..19f05ab884f 100644
+index a4ad26efffc..f53c2c334bd 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -1754,9 +1754,11 @@ gfc_resolve_intrinsic (gfc_symbol *sym, locus *loc)
@@ -7062,7 +7135,15 @@ index a4ad26efffc..19f05ab884f 100644
  	{
  	  gfc_error ("Scalar INTEGER expression expected at %L",
  		     &cl->length->where);
-@@ -12755,8 +12786,10 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+@@ -12629,6 +12660,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+ 	{
+ 	  if (arg->sym
+ 	      && arg->sym->ts.type == BT_DERIVED
++	      && arg->sym->ts.u.derived
+ 	      && !arg->sym->ts.u.derived->attr.use_assoc
+ 	      && !gfc_check_symbol_access (arg->sym->ts.u.derived)
+ 	      && !gfc_notify_std (GFC_STD_F2003, "%qs is of a PRIVATE type "
+@@ -12755,8 +12787,10 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
      {
        if (sym->attr.proc_pointer)
  	{
@@ -7074,7 +7155,7 @@ index a4ad26efffc..19f05ab884f 100644
  	  return false;
  	}
        if (sym->attr.dummy)
-@@ -12843,7 +12876,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+@@ -12843,7 +12877,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
        if (sym->attr.subroutine && sym->attr.result)
  	{
  	  gfc_error ("PROCEDURE attribute conflicts with RESULT attribute "
@@ -7083,7 +7164,7 @@ index a4ad26efffc..19f05ab884f 100644
  	  return false;
  	}
        if (sym->attr.external && sym->attr.function && !sym->attr.module_procedure
-@@ -13541,7 +13574,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
+@@ -13541,7 +13575,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
      {
        /* If proc has not been resolved at this point, proc->name may
  	 actually be a USE associated entity. See PR fortran/89647. */
@@ -7092,7 +7173,7 @@ index a4ad26efffc..19f05ab884f 100644
  	  && proc->attr.function == 0 && proc->attr.subroutine == 0)
  	{
  	  gfc_symbol *tmp;
-@@ -14791,9 +14824,9 @@ resolve_symbol (gfc_symbol *sym)
+@@ -14791,9 +14825,9 @@ resolve_symbol (gfc_symbol *sym)
    gfc_array_spec *as;
    bool saved_specification_expr;
  
@@ -7104,7 +7185,7 @@ index a4ad26efffc..19f05ab884f 100644
  
    /* No symbol will ever have union type; only components can be unions.
       Union type declaration symbols have type BT_UNKNOWN but flavor FL_UNION
-@@ -16510,7 +16543,8 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -16510,7 +16544,8 @@ resolve_equivalence (gfc_equiv *eq)
  	  && !gfc_notify_std (GFC_STD_GNU, msg, sym->name, &e->where))
  		continue;
  
@@ -7114,7 +7195,7 @@ index a4ad26efffc..19f05ab884f 100644
        last_ts =&sym->ts;
        last_where = &e->where;
  
-@@ -16518,8 +16552,7 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -16518,8 +16553,7 @@ resolve_equivalence (gfc_equiv *eq)
  	continue;
  
        /* Shall not be an automatic array.  */
@@ -13784,6 +13865,18 @@ index 00000000000..b7a54514ca3
 +  public operator (.a.)
 +  public operator (.a.) ! { dg-error "has already been specified" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr95708.f90 b/gcc/testsuite/gfortran.dg/pr95708.f90
+new file mode 100644
+index 00000000000..32bd324ce15
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95708.f90
+@@ -0,0 +1,6 @@
++! { dg-do compile }
++!
++
++program test
++  procedure(team_num) :: g ! { dg-error "must be explicit" }
++end program
 diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
 new file mode 100644
 index 00000000000..72f6d5c0857
