@@ -173,7 +173,7 @@ H.J. Lu (7):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
 
-Harald Anlauf (12):
+Harald Anlauf (14):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -186,6 +186,8 @@ Harald Anlauf (12):
       PR fortran/95091 - Buffer overflows with submodules and long symbols
       PR fortran/95611 - ICE in access_attr_decl, at fortran/decl.c:9075
       PR fortran/95503 - Fix ICE in gfc_is_simply_contiguous, at fortran/expr.c:5844
+      PR fortran/95587 - ICE in gfc_target_encode_expr, at fortran/target-memory.c:362
+      PR fortran/95689 - ICE in check_sym_interfaces, at fortran/interface.c:2015
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -6932,10 +6934,29 @@ index d7071ae5fcf..c514b88b47f 100644
       evaluation of a transfer statement, it may have a prescribed target-
       memory representation, and these cannot always be backformed from
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index b5701b1a59a..29af409dde0 100644
+index b5701b1a59a..698160a7860 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
-@@ -4979,7 +4979,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
+@@ -1972,7 +1972,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
+ static void
+ check_sym_interfaces (gfc_symbol *sym)
+ {
+-  char interface_name[GFC_MAX_SYMBOL_LEN + sizeof("generic interface ''")];
++  /* Provide sufficient space to hold "generic interface 'symbol.symbol'".  */
++  char interface_name[2*GFC_MAX_SYMBOL_LEN+2 + sizeof("generic interface ''")];
+   gfc_interface *p;
+ 
+   if (sym->ns != gfc_current_ns)
+@@ -1980,6 +1981,8 @@ check_sym_interfaces (gfc_symbol *sym)
+ 
+   if (sym->generic != NULL)
+     {
++      size_t len = strlen (sym->name) + sizeof("generic interface ''");
++      gcc_assert (len < sizeof (interface_name));
+       sprintf (interface_name, "generic interface '%s'", sym->name);
+       if (check_interface0 (sym->generic, interface_name))
+ 	return;
+@@ -4979,7 +4982,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
    gfc_symtree *tb_io_st = NULL;
    bool t = false;
  
@@ -6982,7 +7003,7 @@ index 581b2f529db..02250fab4be 100644
  }
  libgfortran_error_codes;
 diff --git a/gcc/fortran/match.c b/gcc/fortran/match.c
-index 088b69f8ec9..11989295b0d 100644
+index 088b69f8ec9..9cd5b5b9606 100644
 --- a/gcc/fortran/match.c
 +++ b/gcc/fortran/match.c
 @@ -2200,9 +2200,9 @@ gfc_match_type_spec (gfc_typespec *ts)
@@ -7009,6 +7030,18 @@ index 088b69f8ec9..11989295b0d 100644
  	    {
  	      gfc_free_expr (e);
  	      return MATCH_NO;
+@@ -5575,6 +5578,11 @@ gfc_match_equivalence (void)
+ 
+ 	  if (!gfc_add_in_equivalence (&sym->attr, sym->name, NULL))
+ 	    goto cleanup;
++	  if (sym->ts.type == BT_CLASS
++	      && CLASS_DATA (sym)
++	      && !gfc_add_in_equivalence (&CLASS_DATA (sym)->attr,
++					  sym->name, NULL))
++	    goto cleanup;
+ 
+ 	  if (sym->attr.in_common)
+ 	    {
 diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
 index ff93698f478..d69fdcb439f 100644
 --- a/gcc/fortran/primary.c
@@ -13852,6 +13885,25 @@ index 00000000000..4a202b405c4
 +  complex, target :: a
 +  real, pointer, contiguous :: b => a%re ! { dg-error "not an array pointer" }
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr95587.f90 b/gcc/testsuite/gfortran.dg/pr95587.f90
+new file mode 100644
+index 00000000000..a543fb92a18
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95587.f90
+@@ -0,0 +1,13 @@
++! { dg-do compile }
++! PR fortran/95587 - ICE in gfc_target_encode_expr, at fortran/target-memory.c:362
++
++program p
++  type t
++  end type t
++  class(*), allocatable :: x, y
++  class(t), allocatable :: u, v
++  class(t),    pointer  :: c, d
++  equivalence (x, y) ! { dg-error "conflicts with ALLOCATABLE" }
++  equivalence (u, v) ! { dg-error "conflicts with ALLOCATABLE" }
++  equivalence (c, d) ! { dg-error "conflicts with POINTER" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr95611.f90 b/gcc/testsuite/gfortran.dg/pr95611.f90
 new file mode 100644
 index 00000000000..b7a54514ca3
@@ -13864,6 +13916,28 @@ index 00000000000..b7a54514ca3
 +module m
 +  public operator (.a.)
 +  public operator (.a.) ! { dg-error "has already been specified" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr95689.f90 b/gcc/testsuite/gfortran.dg/pr95689.f90
+new file mode 100644
+index 00000000000..287ae50b0cb
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95689.f90
+@@ -0,0 +1,16 @@
++! { dg-do compile }
++! { dg-options "-fsecond-underscore" }
++! PR fortran/95689 - ICE in check_sym_interfaces, at fortran/interface.c:2015
++
++module m2345678901234567890123456789012345678901234567890123456789_123
++  type t2345678901234567890123456789012345678901234567890123456789_123
++   end type
++   interface
++      module subroutine s2345678901234567890123456789012345678901234567890123456789_123 &
++                       (x2345678901234567890123456789012345678901234567890123456789_123)
++      end
++   end interface
++end
++submodule(m2345678901234567890123456789012345678901234567890123456789_123) &
++          t2345678901234567890123456789012345678901234567890123456789_123
 +end
 diff --git a/gcc/testsuite/gfortran.dg/pr95708.f90 b/gcc/testsuite/gfortran.dg/pr95708.f90
 new file mode 100644
