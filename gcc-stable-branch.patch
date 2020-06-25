@@ -56,7 +56,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (104):
+GCC Administrator (105):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -165,7 +166,7 @@ GCC Administrator (104):
 Gerald Pfeifer (1):
       i386: Define __ILP32__ and _ILP32 for all 32-bit targets
 
-H.J. Lu (7):
+H.J. Lu (8):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
       x86: Allow -fcf-protection with external thunk
@@ -173,8 +174,9 @@ H.J. Lu (7):
       x86: Update VPCLMULQDQ check
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
+      x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
 
-Harald Anlauf (14):
+Harald Anlauf (15):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -189,6 +191,7 @@ Harald Anlauf (14):
       PR fortran/95503 - Fix ICE in gfc_is_simply_contiguous, at fortran/expr.c:5844
       PR fortran/95587 - ICE in gfc_target_encode_expr, at fortran/target-memory.c:362
       PR fortran/95689 - ICE in check_sym_interfaces, at fortran/interface.c:2015
+      Revert "PR fortran/95689 - ICE in check_sym_interfaces, at fortran/interface.c:2015"
 
 Iain Buclaw (7):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -267,7 +270,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (25):
+Jonathan Wakely (26):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -293,6 +296,7 @@ Jonathan Wakely (25):
       libstdc++: Fix broken link to SGI STL FAQ
       libstdc++: Document library versioning for 9.[123] and 10.1
       libstdc++: Fix incorrect size calculation in PMR resource  (PR 94906)
+      libstdc++: Fix std::from_chars to ignore leading zeros in base 2
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -3386,7 +3390,7 @@ index 1bca5a7eea6..ae5046ee6a0 100644
  	    }
  	}
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 14e5a392f62..441213eebb8 100644
+index 14e5a392f62..ad1949b2371 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
 @@ -2232,11 +2232,10 @@ extern int const svr4_dbx_register_map[FIRST_PSEUDO_REGISTER];
@@ -3403,6 +3407,18 @@ index 14e5a392f62..441213eebb8 100644
  
  /* Switch to init or fini section via SECTION_OP, emit a call to FUNC,
     and switch back.  For x86 we do this only to save a few bytes that
+@@ -2405,9 +2404,9 @@ const wide_int_bitmask PTA_CANNONLAKE = PTA_SKYLAKE | PTA_AVX512F
+   | PTA_AVX512VBMI | PTA_AVX512IFMA | PTA_SHA;
+ const wide_int_bitmask PTA_ICELAKE_CLIENT = PTA_CANNONLAKE | PTA_AVX512VNNI
+   | PTA_GFNI | PTA_VAES | PTA_AVX512VBMI2 | PTA_VPCLMULQDQ | PTA_AVX512BITALG
+-  | PTA_RDPID | PTA_CLWB | PTA_AVX512VPOPCNTDQ;
++  | PTA_RDPID | PTA_AVX512VPOPCNTDQ;
+ const wide_int_bitmask PTA_ICELAKE_SERVER = PTA_ICELAKE_CLIENT | PTA_PCONFIG
+-  | PTA_WBNOINVD;
++  | PTA_WBNOINVD | PTA_CLWB;
+ const wide_int_bitmask PTA_KNL = PTA_BROADWELL | PTA_AVX512PF | PTA_AVX512ER
+   | PTA_AVX512F | PTA_AVX512CD;
+ const wide_int_bitmask PTA_BONNELL = PTA_CORE2 | PTA_MOVBE;
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index 18cc39ae521..cbcbe3846ca 100644
 --- a/gcc/config/i386/sse.md
@@ -6358,10 +6374,16 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..980122d1609 100644
+index 8fefea2b63d..3e002069a4e 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,267 @@
+@@ -1,3 +1,273 @@
++2020-06-24  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95689
++	* interface.c (check_sym_interfaces): Enlarge temporary buffer,
++	and add check on length on mangled name to prevent overflow.
++
 +2020-06-23  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -6972,29 +6994,10 @@ index d7071ae5fcf..c514b88b47f 100644
       evaluation of a transfer statement, it may have a prescribed target-
       memory representation, and these cannot always be backformed from
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index b5701b1a59a..698160a7860 100644
+index b5701b1a59a..29af409dde0 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
-@@ -1972,7 +1972,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
- static void
- check_sym_interfaces (gfc_symbol *sym)
- {
--  char interface_name[GFC_MAX_SYMBOL_LEN + sizeof("generic interface ''")];
-+  /* Provide sufficient space to hold "generic interface 'symbol.symbol'".  */
-+  char interface_name[2*GFC_MAX_SYMBOL_LEN+2 + sizeof("generic interface ''")];
-   gfc_interface *p;
- 
-   if (sym->ns != gfc_current_ns)
-@@ -1980,6 +1981,8 @@ check_sym_interfaces (gfc_symbol *sym)
- 
-   if (sym->generic != NULL)
-     {
-+      size_t len = strlen (sym->name) + sizeof("generic interface ''");
-+      gcc_assert (len < sizeof (interface_name));
-       sprintf (interface_name, "generic interface '%s'", sym->name);
-       if (check_interface0 (sym->generic, interface_name))
- 	return;
-@@ -4979,7 +4982,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
+@@ -4979,7 +4979,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
    gfc_symtree *tb_io_st = NULL;
    bool t = false;
  
@@ -7720,10 +7723,16 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..3d34d0480b6 100644
+index e132f2657ef..56543686929 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,777 @@
+@@ -1,3 +1,783 @@
++2020-06-24  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/95689
++	* gfortran.dg/pr95689.f90: New test.
++	(reverts the cherry-pick from commit 62c0c0ea7bfb6f8f6b8d767b05120cafb6823da6)
++
 +2020-06-23  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -13979,28 +13988,6 @@ index 00000000000..b7a54514ca3
 +  public operator (.a.)
 +  public operator (.a.) ! { dg-error "has already been specified" }
 +end
-diff --git a/gcc/testsuite/gfortran.dg/pr95689.f90 b/gcc/testsuite/gfortran.dg/pr95689.f90
-new file mode 100644
-index 00000000000..287ae50b0cb
---- /dev/null
-+++ b/gcc/testsuite/gfortran.dg/pr95689.f90
-@@ -0,0 +1,16 @@
-+! { dg-do compile }
-+! { dg-options "-fsecond-underscore" }
-+! PR fortran/95689 - ICE in check_sym_interfaces, at fortran/interface.c:2015
-+
-+module m2345678901234567890123456789012345678901234567890123456789_123
-+  type t2345678901234567890123456789012345678901234567890123456789_123
-+   end type
-+   interface
-+      module subroutine s2345678901234567890123456789012345678901234567890123456789_123 &
-+                       (x2345678901234567890123456789012345678901234567890123456789_123)
-+      end
-+   end interface
-+end
-+submodule(m2345678901234567890123456789012345678901234567890123456789_123) &
-+          t2345678901234567890123456789012345678901234567890123456789_123
-+end
 diff --git a/gcc/testsuite/gfortran.dg/pr95708.f90 b/gcc/testsuite/gfortran.dg/pr95708.f90
 new file mode 100644
 index 00000000000..32bd324ce15
@@ -17612,10 +17599,20 @@ index 76e4460550d..f394823767d 100644
              {
                  timestruc_t st_atim;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..57dde8c5533 100644
+index 45847172291..066b9afbe86 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,295 @@
+@@ -1,3 +1,305 @@
++2020-06-24  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-06-24  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/std/charconv (__from_chars_binary): Ignore leading zeros.
++	* testsuite/20_util/from_chars/1.cc: Check "0x1" for all bases,
++	not just 10 and 16.
++	* testsuite/20_util/from_chars/3.cc: New test.
++
 +2020-05-12  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backport from mainline
@@ -22960,6 +22957,32 @@ index c753e39b64a..c4af1cfcb4d 100644
    template<typename _Tp>
      constexpr _If_is_unsigned_integer<_Tp, bool>
      ispow2(_Tp __x) noexcept
+diff --git a/libstdc++-v3/include/std/charconv b/libstdc++-v3/include/std/charconv
+index 9f01d4c0889..a6a3ceb3ce9 100644
+--- a/libstdc++-v3/include/std/charconv
++++ b/libstdc++-v3/include/std/charconv
+@@ -425,7 +425,11 @@ namespace __detail
+       static_assert(is_unsigned<_Tp>::value, "implementation bug");
+ 
+       const ptrdiff_t __len = __last - __first;
+-      int __i = 0;
++      ptrdiff_t __i = 0;
++      while (__i < __len && __first[__i] == '0')
++	++__i;
++      const ptrdiff_t __leading_zeroes = __i;
++
+       while (__i < __len)
+ 	{
+ 	  const unsigned char __c = (unsigned)__first[__i] - '0';
+@@ -436,7 +440,7 @@ namespace __detail
+ 	  __i++;
+ 	}
+       __first += __i;
+-      return __i <= (sizeof(_Tp) * __CHAR_BIT__);
++      return (__i - __leading_zeroes) <= (sizeof(_Tp) * __CHAR_BIT__);
+     }
+ 
+   /// std::from_chars implementation for integers in bases 3 to 10.
 diff --git a/libstdc++-v3/include/std/complex b/libstdc++-v3/include/std/complex
 index 45450e8ca01..d156d3249a7 100644
 --- a/libstdc++-v3/include/std/complex
@@ -23425,6 +23448,128 @@ index e28526d1bfe..f39360cb4bf 100644
  	  void* __start = (char*)(__ch + 1) - __size;
  	  __r->deallocate(__start, __size, __align);
  	}
+diff --git a/libstdc++-v3/testsuite/20_util/from_chars/1.cc b/libstdc++-v3/testsuite/20_util/from_chars/1.cc
+index a352dc87ed4..ee9f5f773e0 100644
+--- a/libstdc++-v3/testsuite/20_util/from_chars/1.cc
++++ b/libstdc++-v3/testsuite/20_util/from_chars/1.cc
+@@ -29,7 +29,8 @@ check_from_chars(I expected, std::string_view s, int base = 0, char term = '\0')
+   std::from_chars_result r = base == 0
+     ? std::from_chars(s.begin(), s.end(), val)
+     : std::from_chars(s.begin(), s.end(), val, base);
+-  return r.ec == std::errc{} && (r.ptr == s.end() || *r.ptr == term) && val == expected;
++  return r.ec == std::errc{} && (r.ptr == s.end() || *r.ptr == term)
++    && val == expected;
+ }
+ 
+ #include <climits>
+@@ -50,10 +51,18 @@ void
+ test02()
+ {
+   // "0x" parsed as "0" not as hex prefix:
+-  VERIFY( check_from_chars(0, "0x1", 10, 'x') );
+-  VERIFY( check_from_chars(0, "0X1", 10, 'X') );
+-  VERIFY( check_from_chars(0, "0x1", 16, 'x') );
+-  VERIFY( check_from_chars(0, "0X1", 16, 'X') );
++  for (int base = 2; base < 34; ++base)
++  {
++    VERIFY( check_from_chars(0, "0x1", base, 'x') );
++    VERIFY( check_from_chars(0, "0X1", base, 'X') );
++  }
++
++  VERIFY( check_from_chars(1123, "0x1", 34) );
++  VERIFY( check_from_chars(1123, "0X1", 34) );
++  VERIFY( check_from_chars(1156, "0x1", 35) );
++  VERIFY( check_from_chars(1156, "0X1", 35) );
++  VERIFY( check_from_chars(1189, "0x1", 36) );
++  VERIFY( check_from_chars(1189, "0X1", 36) );
+ 
+   VERIFY( check_from_chars(1155, "xx", 34) );
+   VERIFY( check_from_chars(1155, "XX", 34) );
+diff --git a/libstdc++-v3/testsuite/20_util/from_chars/3.cc b/libstdc++-v3/testsuite/20_util/from_chars/3.cc
+new file mode 100644
+index 00000000000..9d4a77f5c31
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/from_chars/3.cc
+@@ -0,0 +1,79 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do run { target c++14 } }
++
++#include <charconv>
++#include <string>
++#include <testsuite_hooks.h>
++
++#ifdef DEBUG
++#include <stdio.h>
++#endif
++
++long long
++read(const char* first, const char* last, int base)
++{
++  long long val = 0;
++  long long place = 1;
++  while (last > first)
++  {
++    val += (*--last - '0') * place;
++    place *= base;
++  }
++  return val;
++}
++
++void
++test01()
++{
++  std::from_chars_result res;
++  long long val;
++  for (auto s : { "10001", "10010", "10011", "10101", "10110", "10111",
++		  "11001", "11010", "11011", "11101", "11110", "11111" })
++  {
++    std::string ss[2] = { s, std::string(64, '0') + s };
++    for (const auto& str : ss)
++    {
++      const char* first = str.data();
++      for (int base = 2; base < 37; ++base)
++      {
++	const char* last = str.data() + str.length();
++	for (size_t n = 0; n < ss[0].length(); ++n)
++	{
++#ifdef DEBUG
++	  printf("Parsing \"%.*s\" in base %d\n", int(last - first), first,
++		 base);
++#endif
++	  res = std::from_chars(first, last, val, base);
++	  VERIFY( res.ptr == last );
++	  VERIFY( res.ec == std::errc{} );
++	  VERIFY( val == read(first, last, base) );
++	  // Test again with shorter string to check from_chars doesn't read
++	  // the digits past the last pointer.
++	  --last;
++	}
++      }
++    }
++  }
++}
++
++int
++main()
++{
++  test01();
++}
 diff --git a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc b/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
 index 0954ac7b458..092413e6581 100644
 --- a/libstdc++-v3/testsuite/20_util/to_address/1_neg.cc
