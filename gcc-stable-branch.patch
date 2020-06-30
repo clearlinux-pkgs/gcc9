@@ -1,8 +1,9 @@
 Alan Modra (1):
       [RS6000] PR94145, make PLT loads volatile
 
-Alex Coplan (1):
+Alex Coplan (2):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
+      arm: Don't generate invalid LDRD insns
 
 Alexandre Oliva (1):
       [rs6000] fix mffsl emulation
@@ -56,7 +57,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (109):
+GCC Administrator (110):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -410,12 +412,13 @@ Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
       AArch64: Fix options canonicanization for assembler
 
-Thomas Koenig (5):
+Thomas Koenig (6):
       Revert patch for PR fortran/93956.
       Add early return for invalid STATUS for close.
       Fixes a hang on an invalid ID in a WAIT statement.
       Finalization depends on the expression, not on the component.
       When avoiding double deallocation, look at namespace, expression and component.
+      Do not generate recursion check for compiler-generated procedures.
 
 Thomas König (2):
       Backport from trunk of the fix for PR 94270.
@@ -3078,6 +3081,126 @@ index 270ca907d87..7d07adc4257 100644
  #define UCLIBC_DYNAMIC_LINKER  "/lib/ld-uClibc.so.0"
  
  /* Note that the default is to link against dynamic libraries, if they are
+diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+index cdfc0f9e72f..d4e2ad2a317 100644
+--- a/gcc/config/arm/arm.c
++++ b/gcc/config/arm/arm.c
+@@ -18408,6 +18408,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+   if (code0 == REG)
+     {
+       unsigned int reg0 = REGNO (operands[0]);
++      const bool can_ldrd = TARGET_LDRD && (TARGET_THUMB2 || (reg0 % 2 == 0));
+ 
+       otherops[0] = gen_rtx_REG (SImode, 1 + reg0);
+ 
+@@ -18419,7 +18420,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 
+ 	  if (emit)
+ 	    {
+-	      if (TARGET_LDRD
++	      if (can_ldrd
+ 		  && !(fix_cm3_ldrd && reg0 == REGNO(XEXP (operands[1], 0))))
+ 		output_asm_insn ("ldrd%?\t%0, [%m1]", operands);
+ 	      else
+@@ -18428,7 +18429,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	  break;
+ 
+ 	case PRE_INC:
+-	  gcc_assert (TARGET_LDRD);
++	  gcc_assert (can_ldrd);
+ 	  if (emit)
+ 	    output_asm_insn ("ldrd%?\t%0, [%m1, #8]!", operands);
+ 	  break;
+@@ -18436,7 +18437,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	case PRE_DEC:
+ 	  if (emit)
+ 	    {
+-	      if (TARGET_LDRD)
++	      if (can_ldrd)
+ 		output_asm_insn ("ldrd%?\t%0, [%m1, #-8]!", operands);
+ 	      else
+ 		output_asm_insn ("ldmdb%?\t%m1!, %M0", operands);
+@@ -18446,7 +18447,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	case POST_INC:
+ 	  if (emit)
+ 	    {
+-	      if (TARGET_LDRD)
++	      if (can_ldrd)
+ 		output_asm_insn ("ldrd%?\t%0, [%m1], #8", operands);
+ 	      else
+ 		output_asm_insn ("ldmia%?\t%m1!, %M0", operands);
+@@ -18454,7 +18455,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	  break;
+ 
+ 	case POST_DEC:
+-	  gcc_assert (TARGET_LDRD);
++	  gcc_assert (can_ldrd);
+ 	  if (emit)
+ 	    output_asm_insn ("ldrd%?\t%0, [%m1], #-8", operands);
+ 	  break;
+@@ -18476,6 +18477,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 		  /* Registers overlap so split out the increment.  */
+ 		  if (emit)
+ 		    {
++		      gcc_assert (can_ldrd);
+ 		      output_asm_insn ("add%?\t%1, %1, %2", otherops);
+ 		      output_asm_insn ("ldrd%?\t%0, [%1] @split", otherops);
+ 		    }
+@@ -18487,10 +18489,11 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 		  /* Use a single insn if we can.
+ 		     FIXME: IWMMXT allows offsets larger than ldrd can
+ 		     handle, fix these up with a pair of ldr.  */
+-		  if (TARGET_THUMB2
++		  if (can_ldrd
++		      && (TARGET_THUMB2
+ 		      || !CONST_INT_P (otherops[2])
+ 		      || (INTVAL (otherops[2]) > -256
+-			  && INTVAL (otherops[2]) < 256))
++			  && INTVAL (otherops[2]) < 256)))
+ 		    {
+ 		      if (emit)
+ 			output_asm_insn ("ldrd%?\t%0, [%1, %2]!", otherops);
+@@ -18513,10 +18516,11 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	      /* Use a single insn if we can.
+ 		 FIXME: IWMMXT allows offsets larger than ldrd can handle,
+ 		 fix these up with a pair of ldr.  */
+-	      if (TARGET_THUMB2
++	      if (can_ldrd
++		  && (TARGET_THUMB2
+ 		  || !CONST_INT_P (otherops[2])
+ 		  || (INTVAL (otherops[2]) > -256
+-		      && INTVAL (otherops[2]) < 256))
++		      && INTVAL (otherops[2]) < 256)))
+ 		{
+ 		  if (emit)
+ 		    output_asm_insn ("ldrd%?\t%0, [%1], %2", otherops);
+@@ -18547,7 +18551,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	  operands[1] = otherops[0];
+ 	  if (emit)
+ 	    {
+-	      if (TARGET_LDRD)
++	      if (can_ldrd)
+ 		output_asm_insn ("ldrd%?\t%0, [%1]", operands);
+ 	      else
+ 		output_asm_insn ("ldmia%?\t%1, %M0", operands);
+@@ -18592,7 +18596,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 		    }
+ 		  otherops[0] = gen_rtx_REG(SImode, REGNO(operands[0]) + 1);
+ 		  operands[1] = otherops[0];
+-		  if (TARGET_LDRD
++		  if (can_ldrd
+ 		      && (REG_P (otherops[2])
+ 			  || TARGET_THUMB2
+ 			  || (CONST_INT_P (otherops[2])
+@@ -18653,7 +18657,7 @@ output_move_double (rtx *operands, bool emit, int *count)
+ 	      if (count)
+ 		*count = 2;
+ 
+-	      if (TARGET_LDRD)
++	      if (can_ldrd)
+ 		return "ldrd%?\t%0, [%1]";
+ 
+ 	      return "ldmia%?\t%1, %M0";
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
 index 53e54874c12..bfb03f1b96d 100644
 --- a/gcc/config/arm/arm.md
@@ -7474,7 +7597,7 @@ index debdbd98ac0..38302f35ef4 100644
  	else
  	  c = NULL;
 diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
-index 71f751de76f..5dcc8f98dee 100644
+index 71f751de76f..77e05b8019e 100644
 --- a/gcc/fortran/trans-decl.c
 +++ b/gcc/fortran/trans-decl.c
 @@ -1658,9 +1658,7 @@ gfc_get_symbol_decl (gfc_symbol * sym)
@@ -7518,6 +7641,15 @@ index 71f751de76f..5dcc8f98dee 100644
  	    {
  	      if (warn_unused_dummy_argument)
  		gfc_warning (OPT_Wunused_dummy_argument,
+@@ -6723,7 +6728,7 @@ gfc_generate_function_code (gfc_namespace * ns)
+ 		 || (sym->attr.entry_master
+ 		     && sym->ns->entries->sym->attr.recursive);
+   if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION)
+-      && !is_recursive && !flag_recursive)
++      && !is_recursive && !flag_recursive && !sym->attr.artificial)
+     {
+       char * msg;
+ 
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
 index fe10d52dd16..b34e8c6020b 100644
 --- a/gcc/fortran/trans-expr.c
@@ -10039,6 +10171,23 @@ index 00000000000..e73df499070
 +  }
 +  __builtin_abort ();
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/packed-aligned-1.c b/gcc/testsuite/gcc.c-torture/compile/packed-aligned-1.c
+new file mode 100644
+index 00000000000..9f0923e29ee
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/packed-aligned-1.c
+@@ -0,0 +1,11 @@
++struct c {
++  double a;
++} __attribute((packed)) __attribute((aligned));
++
++void f(struct c *, struct c);
++
++void g(struct c *ptr)
++{
++  ptr++;
++  f(ptr, *ptr);
++}
 diff --git a/gcc/testsuite/gcc.c-torture/compile/pr94488.c b/gcc/testsuite/gcc.c-torture/compile/pr94488.c
 new file mode 100644
 index 00000000000..6e20a4168de
@@ -10066,6 +10215,40 @@ index 00000000000..6e20a4168de
 +baz (W *x, unsigned long y)
 +{
 +  *x = *x >> (unsigned int) y;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c b/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c
+new file mode 100644
+index 00000000000..f768af0ab02
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c
+@@ -0,0 +1,28 @@
++struct c {
++  double a;
++} __attribute((packed)) __attribute((aligned));
++
++extern void abort(void);
++
++double g_expect = 32.25;
++
++void f(unsigned x, struct c y)
++{
++  if (x != 0)
++    abort();
++
++  if (y.a != g_expect)
++    abort();
++}
++
++struct c e = { 64.25 };
++
++int main(void)
++{
++  struct c d = { 32.25 };
++  f(0, d);
++
++  g_expect = 64.25;
++  f(0, e);
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94130.c b/gcc/testsuite/gcc.c-torture/execute/pr94130.c
 new file mode 100644
@@ -14164,6 +14347,37 @@ index 00000000000..9f171764948
 +  class(t) :: x     ! { dg-error "must be dummy, allocatable or pointer" }
 +  allocate (x%a[*])
 +end
+diff --git a/gcc/testsuite/gfortran.dg/recursive_check_16.f90 b/gcc/testsuite/gfortran.dg/recursive_check_16.f90
+new file mode 100644
+index 00000000000..d8e9d69ea7b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/recursive_check_16.f90
+@@ -0,0 +1,25 @@
++! { dg-do  run }
++! ! { dg-options "-fcheck=recursion" }
++! PR 95743 - this used cause a runtime error.
++! Test case by Antoine Lemoine
++
++program test_recursive_call
++   implicit none
++
++   type t_tree_node
++      type(t_tree_node), dimension(:), allocatable :: child
++   end type
++
++   type t_tree
++      type(t_tree_node), allocatable :: root
++   end type
++
++   type(t_tree), allocatable :: tree
++
++   allocate(tree)
++   allocate(tree%root)
++   allocate(tree%root%child(1))
++   ! If the line below is removed, the code works fine.
++   allocate(tree%root%child(1)%child(1))
++   deallocate(tree)
++end program
 diff --git a/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90 b/gcc/testsuite/gfortran.dg/warn_unused_dummy_argument_6.f90
 new file mode 100644
 index 00000000000..72f6d5c0857
