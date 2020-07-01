@@ -57,7 +57,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (110):
+GCC Administrator (111):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -340,7 +341,7 @@ Marek Polacek (4):
       c++: Fix ICE in check_local_shadow with enum [PR95560]
       c++: Fix bogus -Wparentheses warning [PR95344]
 
-Mark Eggleston (9):
+Mark Eggleston (10):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
@@ -350,6 +351,7 @@ Mark Eggleston (9):
       Fortran  : ICE in gfc_trans_label_assign PR50392
       Fortran  : "type is( real(kind(1.)) )" spurious syntax error PR94397
       Fortran  : ICE in resolve_fl_procedure PR95708
+      Fortran  : Bogus error with additional blanks in type(*) PR95829
 
 Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
@@ -575,10 +577,18 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..5b5d53bf42e 100644
+index d8e53874e68..91dc7396c7c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,856 @@
+@@ -1,3 +1,864 @@
++2020-06-30  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2020-05-18  Alex Coplan  <alex.coplan@arm.com>
++
++	* config/arm/arm.c (output_move_double): Fix codegen when loading into
++	a register pair with an odd base register.
++
 +2020-06-25  H.J. Lu  <hjl.tools@gmail.com>
 +
 +	Backported from master:
@@ -6564,10 +6574,19 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..fc79b2468f3 100644
+index 8fefea2b63d..7dd36b502e6 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,281 @@
+@@ -1,3 +1,290 @@
++2020-06-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backported from master:
++	2020-06-29  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/95743
++	* trans-decl.c (gfc_generate_function_code): Do not generate
++	recursion check for compiler-generated procedures.
++
 +2020-06-27  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -6957,7 +6976,7 @@ index 9117121e5fe..84314a089c3 100644
  
  
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..3ab4735f91b 100644
+index abff4af9f67..1b75ba3949a 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -668,6 +668,10 @@ gfc_match_data (void)
@@ -6993,6 +7012,15 @@ index abff4af9f67..3ab4735f91b 100644
    gfc_symbol *sym, *dt_sym;
    match m;
    char c;
+@@ -4025,7 +4035,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+       gfc_gobble_whitespace ();
+       if (gfc_peek_ascii_char () == '*')
+ 	{
+-	  if ((m = gfc_match ("*)")) != MATCH_YES)
++	  if ((m = gfc_match ("* ) ")) != MATCH_YES)
+ 	    return m;
+ 	  if (gfc_comp_struct (gfc_current_state ()))
+ 	    {
 @@ -4182,7 +4192,11 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	    return m;
  	  gcc_assert (!sym->attr.pdt_template && sym->attr.pdt_type);
@@ -7938,10 +7966,26 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..d42dc26f272 100644
+index e132f2657ef..37ee548b334 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,807 @@
+@@ -1,3 +1,823 @@
++2020-06-30  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2020-05-18  Alex Coplan  <alex.coplan@arm.com>
++
++	* gcc.c-torture/compile/packed-aligned-1.c: New test.
++	* gcc.c-torture/execute/packed-aligned.c: New test.
++
++2020-06-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backported from master:
++	2020-06-29  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/95743
++	* gfortran.dg/recursive_check_16.f90: New file.
++
 +2020-06-27  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -14330,6 +14374,26 @@ index 00000000000..32bd324ce15
 +program test
 +  procedure(team_num) :: g ! { dg-error "must be explicit" }
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/pr95829.f90 b/gcc/testsuite/gfortran.dg/pr95829.f90
+new file mode 100644
+index 00000000000..081d647c7c0
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95829.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++!
++! Declaration of b used to be a bogus failure.
++
++subroutine s (a, b, c, d, e, f, g)
++  type(*) :: a
++  type(* ) :: b
++  type( *) :: c
++  type( * ) :: d
++  type(*  ) :: e
++  type(  *) :: f
++  type(  *  ) :: g
++end
++
 diff --git a/gcc/testsuite/gfortran.dg/pr95881.f90 b/gcc/testsuite/gfortran.dg/pr95881.f90
 new file mode 100644
 index 00000000000..9f171764948
