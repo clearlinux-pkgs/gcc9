@@ -57,7 +57,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (112):
+GCC Administrator (116):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -184,7 +188,7 @@ H.J. Lu (8):
       x86: Update Intel processor detection
       x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
 
-Harald Anlauf (18):
+Harald Anlauf (19):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -203,6 +207,7 @@ Harald Anlauf (18):
       PR fortran/95881 - ICE in resolve_symbol, at fortran/resolve.c:15175
       PR fortran/95880 - ICE in gfc_add_type, at fortran/symbol.c:2030
       PR fortran/71706 - ICE on using sync images with -fcheck=bounds
+      PR fortran/88379 - ICE with allocatable coarray, class and associate
 
 Iain Buclaw (9):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -452,6 +457,9 @@ Uros Bizjak (5):
       i386: Remove unneeded assignments when triggering SSE exceptions
       alpha: Implement the PR94780 fix for alpha.
 
+Ville Voutilainen (1):
+      PR libstdc++/91807
+
 Will Schmidt (2):
       backport PR90763: PowerPC vec_xl_len should take const argument.
       rs6000 pragma fix backport from mainline to gcc-9
@@ -485,10 +493,20 @@ index 9605d767a80..30c7aaf6cc0 100644
  
  	* GCC 9.3.0 released.
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index fde2d2b76eb..0c07a4b87ed 100644
+index fde2d2b76eb..91ec3acaa65 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,14 @@
+@@ -1,3 +1,24 @@
++2020-07-02  Martin Liska  <mliska@suse.cz>
++
++	* gcc-changelog/git_check_commit.py: New file.
++	* gcc-changelog/git_commit.py: New file.
++	* gcc-changelog/git_email.py: New file.
++	* gcc-changelog/git_repository.py: New file.
++	* gcc-changelog/git_update_version.py: New file.
++	* gcc-changelog/test_email.py: New file.
++	* gcc-changelog/test_patches.txt: New file.
++
 +2020-05-29  Martin Liska  <mliska@suse.cz>
 +
 +	* git-backport.py: The script did 'git co HEAD~' when
@@ -11201,10 +11219,18 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..81c416f8846 100644
+index 8fefea2b63d..66a418e16ce 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,318 @@
+@@ -1,3 +1,326 @@
++2020-07-05  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-06-30  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/88379
++	* resolve.c (resolve_assoc_var): Avoid NULL pointer dereference.
++
 +2020-07-01  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -11997,7 +12023,7 @@ index ff93698f478..d69fdcb439f 100644
  		      && primary->ts.type != BT_COMPLEX)
  		    {
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index a4ad26efffc..ee7e6154cc0 100644
+index a4ad26efffc..35f09e01f87 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -1754,9 +1754,11 @@ gfc_resolve_intrinsic (gfc_symbol *sym, locus *loc)
@@ -12081,6 +12107,15 @@ index a4ad26efffc..ee7e6154cc0 100644
  	  break;
  	}
  
+@@ -8870,7 +8901,7 @@ resolve_assoc_var (gfc_symbol* sym, bool resolve_target)
+ 	  as = NULL;
+ 	  sym->ts = *ts;
+ 	  sym->ts.type = BT_CLASS;
+-	  attr = CLASS_DATA (sym)->attr;
++	  attr = CLASS_DATA (sym) ? CLASS_DATA (sym)->attr : sym->attr;
+ 	  attr.class_ok = 0;
+ 	  attr.associate_var = 1;
+ 	  attr.dimension = attr.codimension = 0;
 @@ -12000,7 +12031,7 @@ resolve_charlen (gfc_charlen *cl)
  	}
  
@@ -12654,10 +12689,18 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..cbb05fe4137 100644
+index e132f2657ef..06e0768d1eb 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,847 @@
+@@ -1,3 +1,855 @@
++2020-07-05  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-06-30  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/88379
++	* gfortran.dg/pr88379.f90: New file.
++
 +2020-07-01  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -18645,6 +18688,23 @@ index 96172fae76a..c51390f1434 100644
 +      character(('')) :: c = 'c'  ! { dg-error "Scalar INTEGER expression expected" }
     end type
  end
+diff --git a/gcc/testsuite/gfortran.dg/pr88379.f90 b/gcc/testsuite/gfortran.dg/pr88379.f90
+new file mode 100644
+index 00000000000..48a23af50c5
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr88379.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! { dg-options "-fcoarray=single" }
++! PR fortran/88379 - ICE with allocatable coarray, class and associate
++
++program p
++  type t
++  end type t
++  class(t), allocatable :: x[:]
++  associate (y => x)
++  end associate
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr91913.f90 b/gcc/testsuite/gfortran.dg/pr91913.f90
 new file mode 100644
 index 00000000000..7d5477ac0c3
@@ -22784,10 +22844,22 @@ index 76e4460550d..f394823767d 100644
              {
                  timestruc_t st_atim;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..c6aa0a338bb 100644
+index 45847172291..4131684f8ae 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,315 @@
+@@ -1,3 +1,327 @@
++2020-07-02  Ville Voutilainen  <ville.voutilainen@gmail.com>
++
++	Backported from master:
++	2020-07-02  Ville Voutilainen  <ville.voutilainen@gmail.com>
++
++	PR libstdc++/91807
++	* include/std/variant
++	(_Copy_assign_base::operator=(const _Copy_assign_base&):
++	Do the move-assignment from a temporary so that the temporary
++	is constructed with an explicit index.
++	* testsuite/20_util/variant/91807.cc: New.
++
 +2020-07-01  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -28375,6 +28447,20 @@ index 9bad55829ce..18bcac824c3 100644
    /// Unwrap a reference_wrapper
    template<typename _Tp>
      struct unwrap_reference { using type = _Tp; };
+diff --git a/libstdc++-v3/include/std/variant b/libstdc++-v3/include/std/variant
+index 75fb0dc164a..e1882b36700 100644
+--- a/libstdc++-v3/include/std/variant
++++ b/libstdc++-v3/include/std/variant
+@@ -606,7 +606,8 @@ namespace __variant
+ 		      this->_M_destructive_copy(__rhs_index, __rhs_mem);
+ 		    else
+ 		      __variant_cast<_Types...>(*this)
+-			= variant<_Types...>(__rhs_mem);
++			= variant<_Types...>(std::in_place_index<__rhs_index>,
++					     __rhs_mem);
+ 		  }
+ 	      }
+ 	    else
 diff --git a/libstdc++-v3/include/std/vector b/libstdc++-v3/include/std/vector
 index e5e13ab3ef7..1c1e2fd60e7 100644
 --- a/libstdc++-v3/include/std/vector
@@ -28892,6 +28978,47 @@ index 00000000000..3ea9cd18a05
 +#elif __cpp_lib_unwrap_ref != 201811L
 +# error "Feature-test macro for unwrap_reference has wrong value in <version>"
 +#endif
+diff --git a/libstdc++-v3/testsuite/20_util/variant/91807.cc b/libstdc++-v3/testsuite/20_util/variant/91807.cc
+new file mode 100644
+index 00000000000..04bb5d7c807
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/variant/91807.cc
+@@ -0,0 +1,35 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <variant>
++
++struct me_data {
++  me_data() = default;
++
++  me_data(const me_data &) {};
++  me_data(me_data &&) noexcept {};
++  me_data& operator=(const me_data &) = default;
++};
++
++int main() {
++  std::variant<me_data, me_data> v1, v2;
++
++  v2 = v1;
++}
 diff --git a/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc b/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
 index 873dd0cbf0f..a00faf94180 100644
 --- a/libstdc++-v3/testsuite/21_strings/basic_string/erasure.cc
