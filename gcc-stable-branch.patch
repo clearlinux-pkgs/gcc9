@@ -57,7 +57,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (116):
+GCC Administrator (117):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -460,9 +461,10 @@ Uros Bizjak (5):
 Ville Voutilainen (1):
       PR libstdc++/91807
 
-Will Schmidt (2):
+Will Schmidt (3):
       backport PR90763: PowerPC vec_xl_len should take const argument.
       rs6000 pragma fix backport from mainline to gcc-9
+      Backport to gcc-9
 
 Xionghu Luo (1):
       rs6000: Don't use HARD_FRAME_POINTER_REGNUM if it's not live in pro_and_epilogue (PR91518)
@@ -5222,10 +5224,23 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..91dc7396c7c 100644
+index d8e53874e68..473845d5235 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,864 @@
+@@ -1,3 +1,877 @@
++2020-07-06  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	PR target/94954
++	* config/rs6000/altivec.h (vec_pack_to_short_fp32): Update.
++	* config/rs6000/altivec.md (UNSPEC_CONVERT_4F32_8F16): New unspec.
++	(convert_4f32_8f16): New define_expand
++	* config/rs6000/rs6000-builtin.def (convert_4f32_8f16): New builtin define
++	and overload.
++	* config/rs6000/rs6000-c.c (P9V_BUILTIN_VEC_CONVERT_4F32_8F16): New
++	overloaded builtin entry.
++	* config/rs6000/vsx.md (UNSPEC_VSX_XVCVSPHP): New unspec.
++	(vsx_xvcvsphp): New define_insn.
++
 +2020-06-30  Alex Coplan  <alex.coplan@arm.com>
 +
 +	Backported from master:
@@ -8408,7 +8423,7 @@ index 065e1ebeadc..5f533228fc1 100644
  
  #undef LINK_SPEC
 diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
-index d66ae7ca2c7..dbe5b7a1909 100644
+index d66ae7ca2c7..a9405339984 100644
 --- a/gcc/config/rs6000/altivec.h
 +++ b/gcc/config/rs6000/altivec.h
 @@ -180,7 +180,7 @@
@@ -8420,6 +8435,65 @@ index d66ae7ca2c7..dbe5b7a1909 100644
  #define vec_rsqrt __builtin_vec_rsqrt
  #define vec_rsqrte __builtin_vec_rsqrte
  #define vec_signed __builtin_vec_vsigned
+@@ -431,7 +431,7 @@
+ #define vec_first_match_or_eos_index __builtin_vec_first_match_or_eos_index
+ #define vec_first_mismatch_index __builtin_vec_first_mismatch_index
+ #define vec_first_mismatch_or_eos_index __builtin_vec_first_mismatch_or_eos_index
+-#define vec_pack_to_short_fp32 __builtin_vec_convert_4f32_8i16
++#define vec_pack_to_short_fp32 __builtin_vec_convert_4f32_8f16
+ #define vec_parity_lsbb __builtin_vec_vparity_lsbb
+ #define vec_vctz __builtin_vec_vctz
+ #define vec_cnttz __builtin_vec_vctz
+diff --git a/gcc/config/rs6000/altivec.md b/gcc/config/rs6000/altivec.md
+index 654d756647c..611d2693c59 100644
+--- a/gcc/config/rs6000/altivec.md
++++ b/gcc/config/rs6000/altivec.md
+@@ -80,6 +80,7 @@
+    UNSPEC_VUPKHPX
+    UNSPEC_VUPKLPX
+    UNSPEC_CONVERT_4F32_8I16
++   UNSPEC_CONVERT_4F32_8F16
+    UNSPEC_DST
+    UNSPEC_DSTT
+    UNSPEC_DSTST
+@@ -3042,6 +3043,37 @@
+   DONE;
+ })
+ 
++;; Convert two vector F32 to packed vector F16.
++;; This builtin packs 32-bit floating-point values into a packed
++;; 16-bit floating point values (stored in 16bit integer type).
++;; (vector unsigned short r = vec_pack_to_short_fp32 (a, b);
++;; The expected codegen for this builtin is
++;;    xvcvsphp t, a
++;;    xvcvsphp u, b
++;;    if (little endian)
++;;      vpkuwum r, t, u
++;;    else
++;;      vpkuwum r, u, t
++
++(define_expand "convert_4f32_8f16"
++  [(set (match_operand:V8HI 0 "register_operand" "=v")
++	(unspec:V8HI [(match_operand:V4SF 1 "register_operand" "v")
++		      (match_operand:V4SF 2 "register_operand" "v")]
++		     UNSPEC_CONVERT_4F32_8F16))]
++  "TARGET_P9_VECTOR"
++{
++  rtx rtx_tmp_hi = gen_reg_rtx (V4SImode);
++  rtx rtx_tmp_lo = gen_reg_rtx (V4SImode);
++
++  emit_insn (gen_vsx_xvcvsphp (rtx_tmp_hi, operands[1]));
++  emit_insn (gen_vsx_xvcvsphp (rtx_tmp_lo, operands[2]));
++  if (!BYTES_BIG_ENDIAN)
++    emit_insn (gen_altivec_vpkuwum (operands[0], rtx_tmp_hi, rtx_tmp_lo));
++  else
++    emit_insn (gen_altivec_vpkuwum (operands[0], rtx_tmp_lo, rtx_tmp_hi));
++  DONE;
++})
++
+ ;; Generate
+ ;;    xxlxor/vxor SCRATCH0,SCRATCH0,SCRATCH0
+ ;;    vsubu?m SCRATCH2,SCRATCH1,%1
 diff --git a/gcc/config/rs6000/emmintrin.h b/gcc/config/rs6000/emmintrin.h
 index 30975090a2d..32c5fa0cb08 100644
 --- a/gcc/config/rs6000/emmintrin.h
@@ -8434,11 +8508,40 @@ index 30975090a2d..32c5fa0cb08 100644
  extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
  _mm_movemask_epi8 (__m128i __A)
  {
+diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
+index 0feee7cafca..320dc218cd6 100644
+--- a/gcc/config/rs6000/rs6000-builtin.def
++++ b/gcc/config/rs6000/rs6000-builtin.def
+@@ -2032,6 +2032,7 @@ BU_P8V_OVERLOAD_3 (VPERMXOR,   "vpermxor")
+ BU_P9V_AV_2 (VSLV,		"vslv",			CONST, vslv)
+ BU_P9V_AV_2 (VSRV,		"vsrv",			CONST, vsrv)
+ BU_P9V_AV_2 (CONVERT_4F32_8I16, "convert_4f32_8i16", CONST, convert_4f32_8i16)
++BU_P9V_AV_2 (CONVERT_4F32_8F16, "convert_4f32_8f16", CONST, convert_4f32_8f16)
+ 
+ BU_P9V_AV_2 (VFIRSTMATCHINDEX_V16QI, "first_match_index_v16qi",
+ 	     CONST, first_match_index_v16qi)
+@@ -2062,6 +2063,7 @@ BU_P9V_AV_2 (VFIRSTMISMATCHOREOSINDEX_V4SI, "first_mismatch_or_eos_index_v4si",
+ BU_P9V_OVERLOAD_2 (VSLV,	"vslv")
+ BU_P9V_OVERLOAD_2 (VSRV,	"vsrv")
+ BU_P9V_OVERLOAD_2 (CONVERT_4F32_8I16, "convert_4f32_8i16")
++BU_P9V_OVERLOAD_2 (CONVERT_4F32_8F16, "convert_4f32_8f16")
+ 
+ /* 2 argument vector functions added in ISA 3.0 (power9). */
+ BU_P9V_AV_2 (VADUB,		"vadub",		CONST,  vaduv16qi3)
 diff --git a/gcc/config/rs6000/rs6000-c.c b/gcc/config/rs6000/rs6000-c.c
-index 7c28d4d8176..1ec38db0908 100644
+index 7c28d4d8176..3a10e843cfb 100644
 --- a/gcc/config/rs6000/rs6000-c.c
 +++ b/gcc/config/rs6000/rs6000-c.c
-@@ -6853,6 +6853,19 @@ altivec_resolve_overloaded_builtin (location_t loc, tree fndecl,
+@@ -2452,6 +2452,8 @@ const struct altivec_builtin_types altivec_overloaded_builtins[] = {
+ 
+   { P9V_BUILTIN_VEC_CONVERT_4F32_8I16, P9V_BUILTIN_CONVERT_4F32_8I16,
+     RS6000_BTI_unsigned_V8HI, RS6000_BTI_V4SF, RS6000_BTI_V4SF, 0 },
++  { P9V_BUILTIN_VEC_CONVERT_4F32_8F16, P9V_BUILTIN_CONVERT_4F32_8F16,
++    RS6000_BTI_unsigned_V8HI, RS6000_BTI_V4SF, RS6000_BTI_V4SF, 0 },
+ 
+   { P9V_BUILTIN_VEC_VFIRSTMATCHINDEX, P9V_BUILTIN_VFIRSTMATCHINDEX_V16QI,
+     RS6000_BTI_UINTSI, RS6000_BTI_V16QI, RS6000_BTI_V16QI, 0 },
+@@ -6853,6 +6855,19 @@ altivec_resolve_overloaded_builtin (location_t loc, tree fndecl,
  	  arg = fold_convert (type, arg);
  	}
  
@@ -8789,10 +8892,34 @@ index a768f5dd511..db7ed60a2cf 100644
  
      emit_insn (gen_rs6000_mffsl_hw (operands[0]));
 diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
-index 607c0cd33f2..7e444f0122b 100644
+index 607c0cd33f2..2e998a3a990 100644
 --- a/gcc/config/rs6000/vsx.md
 +++ b/gcc/config/rs6000/vsx.md
-@@ -3292,14 +3292,14 @@
+@@ -386,6 +386,7 @@
+    UNSPEC_VSX_SIGN_EXTEND
+    UNSPEC_VSX_XVCVSPSXWS
+    UNSPEC_VSX_XVCVSPSXDS
++   UNSPEC_VSX_XVCVSPHP
+    UNSPEC_VSX_VSLO
+    UNSPEC_VSX_EXTRACT
+    UNSPEC_VSX_SXEXPDP
+@@ -2223,6 +2224,15 @@
+   "xvcvhpsp %x0,%x1"
+   [(set_attr "type" "vecfloat")])
+ 
++;; Generate xvcvsphp
++(define_insn "vsx_xvcvsphp"
++  [(set (match_operand:V4SI 0 "register_operand" "=wa")
++	(unspec:V4SI [(match_operand:V4SF 1 "vsx_register_operand" "wa")]
++		     UNSPEC_VSX_XVCVSPHP))]
++  "TARGET_P9_VECTOR"
++  "xvcvsphp %x0,%x1"
++[(set_attr "type" "vecfloat")])
++
+ ;; xscvdpsp used for splat'ing a scalar to V4SF, knowing that the internal SF
+ ;; format of scalars is actually DF.
+ (define_insn "vsx_xscvdpsp_scalar"
+@@ -3292,14 +3302,14 @@
    "vslo %0,%1,%2"
    [(set_attr "type" "vecperm")])
  
@@ -8813,7 +8940,7 @@ index 607c0cd33f2..7e444f0122b 100644
    "VECTOR_MEM_VSX_P (<MODE>mode) && TARGET_DIRECT_MOVE_64BIT"
    "#"
    "&& reload_completed"
-@@ -3310,6 +3310,23 @@
+@@ -3310,6 +3320,23 @@
    DONE;
  })
  
@@ -8837,7 +8964,7 @@ index 607c0cd33f2..7e444f0122b 100644
  ;; Extract a SF element from V4SF
  (define_insn_and_split "vsx_extract_v4sf"
    [(set (match_operand:SF 0 "vsx_register_operand" "=ww")
-@@ -3361,14 +3378,14 @@
+@@ -3361,14 +3388,14 @@
    [(set_attr "type" "fpload,fpload,fpload,load")
     (set_attr "length" "8")])
  
@@ -8858,7 +8985,7 @@ index 607c0cd33f2..7e444f0122b 100644
    "VECTOR_MEM_VSX_P (V4SFmode) && TARGET_DIRECT_MOVE_64BIT"
    "#"
    "&& reload_completed"
-@@ -3379,6 +3396,23 @@
+@@ -3379,6 +3406,23 @@
    DONE;
  })
  
@@ -8882,7 +9009,7 @@ index 607c0cd33f2..7e444f0122b 100644
  ;; Expand the builtin form of xxpermdi to canonical rtl.
  (define_expand "vsx_xxpermdi_<mode>"
    [(match_operand:VSX_L 0 "vsx_register_operand")
-@@ -3720,15 +3754,15 @@
+@@ -3720,15 +3764,15 @@
    [(set_attr "type" "load")
     (set_attr "length" "8")])
  
@@ -8904,7 +9031,7 @@ index 607c0cd33f2..7e444f0122b 100644
    "VECTOR_MEM_VSX_P (<MODE>mode) && TARGET_DIRECT_MOVE_64BIT"
    "#"
    "&& reload_completed"
-@@ -3739,6 +3773,24 @@
+@@ -3739,6 +3783,24 @@
    DONE;
  })
  
@@ -8929,7 +9056,7 @@ index 607c0cd33f2..7e444f0122b 100644
  (define_insn_and_split "*vsx_extract_<mode>_<VS_scalar>mode_var"
    [(set (match_operand:<VS_scalar> 0 "gpc_reg_operand" "=r,r,r")
  	(zero_extend:<VS_scalar>
-@@ -4794,8 +4846,8 @@
+@@ -4794,8 +4856,8 @@
    rtx cmp_result = gen_reg_rtx (<MODE>mode);
    rtx not_result = gen_reg_rtx (<MODE>mode);
  
@@ -12689,10 +12816,15 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..06e0768d1eb 100644
+index e132f2657ef..a303dbec656 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,855 @@
+@@ -1,3 +1,860 @@
++2020-07-06  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	PR target/94954
++	* gcc.target/powerpc/builtins-1-p9-runnable.c: Update.
++
 +2020-07-05  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -16959,6 +17091,70 @@ index 00000000000..34a1e069eac
 +{
 +  return __builtin_ia32_movq128 (v);  /* { dg-error "" } */
 +}
+diff --git a/gcc/testsuite/gcc.target/powerpc/builtins-1-p9-runnable.c b/gcc/testsuite/gcc.target/powerpc/builtins-1-p9-runnable.c
+index 0e4ab48f555..0e6eeff4b7e 100644
+--- a/gcc/testsuite/gcc.target/powerpc/builtins-1-p9-runnable.c
++++ b/gcc/testsuite/gcc.target/powerpc/builtins-1-p9-runnable.c
+@@ -1,25 +1,50 @@
+-/* { dg-do run { target { powerpc*-*-linux* && { lp64 && p9vector_hw } } } } */
+-/* { dg-require-effective-target powerpc_p9vector_ok } */
++/* { dg-do run { target { powerpc*-*-linux* && p9vector_hw } } } */
++/* { dg-require-effective-target p9vector_hw } */
+ /* { dg-options "-O2 -mdejagnu-cpu=power9" } */
+ 
+ #include <altivec.h>
++#include <stdio.h>
+ 
+ void abort (void);
+ 
+ int main() {
+   int i;
+   vector float vfa, vfb;
+-  vector unsigned short vur, vuexpt;
++  vector unsigned short vresult, vexpected;
+ 
+-  vfa = (vector float){3.4, 5.0, 20.0, 50.9 };
+-  vfb = (vector float){10.0, 40.0, 70.0, 100.0 };
+-  vuexpt = (vector unsigned short){ 3, 5, 20, 50,
+-                                    10, 40, 70, 100};
++  vfa = (vector float){0.4, 1.6, 20.0, 99.9 };
++  vfb = (vector float){10.0, -2.0, 70.0, 999.0 };
+ 
+-  vur = vec_pack_to_short_fp32 (vfa, vfb);
++  /* Expected results.  */
++  vexpected = (vector unsigned short) { 0x3666, 0x3e66, 0x4d00, 0x563e,
++					0x4900, 0xc000, 0x5460, 0x63ce};
++
++/*
++     vresult = vec_pack_to_short_fp32 (vfa, vfb);
++  This built-in converts a pair of vector floats into a single vector of
++  packed half-precision (F16) values.  The result type is a vector of
++  signed shorts.
++  The expected codegen for this builtin is
++    xvcvsphp t, vfa
++    xvcvsphp u, vfb
++    if (little endian)
++      vpkuwum vresult, t, u
++    else
++      vpkuwum vresult, u, t
++*/
++
++  vresult = vec_pack_to_short_fp32 (vfa, vfb);
++
++#ifdef DEBUG
++  for(i = 0; i< 4; i++) { printf("i=[%d] %f  \n",i,vfa[i]); }
++  for(i = 0; i< 4; i++) { printf("i=[%d] %f  \n",i+4,vfb[i]); }
++  for(i = 0; i< 8; i++) { printf("i=[%d] %d  \n",i,vresult[i]); }
++#endif
+ 
+   for(i = 0; i< 8; i++) {
+-    if (vur[i] != vuexpt[i])
++    if (vresult[i] != vexpected[i]) {
++	printf("i=[%d] 0x%x != 0x%x \n",i,vresult[i],vexpected[i]);
+       abort();
++    }
+   }
+ }
 diff --git a/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c b/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c
 index b2f7dc855e8..19457eebfc4 100644
 --- a/gcc/testsuite/gcc.target/powerpc/builtins-8-p9-runnable.c
