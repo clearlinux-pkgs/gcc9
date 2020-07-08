@@ -191,7 +191,7 @@ H.J. Lu (8):
       x86: Update Intel processor detection
       x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
 
-Harald Anlauf (20):
+Harald Anlauf (21):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -212,6 +212,7 @@ Harald Anlauf (20):
       PR fortran/71706 - ICE on using sync images with -fcheck=bounds
       PR fortran/88379 - ICE with allocatable coarray, class and associate
       PR fortran/93337 - ICE in gfc_dt_upper_string, at fortran/module.c:441
+      PR fortran/95709 - ICE in gfc_resolve_code, at fortran/resolve.c:11807
 
 Iain Buclaw (9):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -12210,7 +12211,7 @@ index ff93698f478..d69fdcb439f 100644
  		      && primary->ts.type != BT_COMPLEX)
  		    {
 diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
-index a4ad26efffc..35f09e01f87 100644
+index a4ad26efffc..11bb65c41e5 100644
 --- a/gcc/fortran/resolve.c
 +++ b/gcc/fortran/resolve.c
 @@ -1754,9 +1754,11 @@ gfc_resolve_intrinsic (gfc_symbol *sym, locus *loc)
@@ -12303,7 +12304,30 @@ index a4ad26efffc..35f09e01f87 100644
  	  attr.class_ok = 0;
  	  attr.associate_var = 1;
  	  attr.dimension = attr.codimension = 0;
-@@ -12000,7 +12031,7 @@ resolve_charlen (gfc_charlen *cl)
+@@ -11449,10 +11480,18 @@ start:
+ 	case EXEC_GOTO:
+ 	  if (code->expr1 != NULL)
+ 	    {
+-	      if (code->expr1->ts.type != BT_INTEGER)
+-		gfc_error ("ASSIGNED GOTO statement at %L requires an "
+-			   "INTEGER variable", &code->expr1->where);
+-	      else if (code->expr1->symtree->n.sym->attr.assign != 1)
++	      if (code->expr1->expr_type != EXPR_VARIABLE
++		  || code->expr1->ts.type != BT_INTEGER
++		  || (code->expr1->ref
++		      && code->expr1->ref->type == REF_ARRAY)
++		  || code->expr1->symtree == NULL
++		  || (code->expr1->symtree->n.sym
++		      && (code->expr1->symtree->n.sym->attr.flavor
++			  == FL_PARAMETER)))
++		gfc_error ("ASSIGNED GOTO statement at %L requires a "
++			   "scalar INTEGER variable", &code->expr1->where);
++	      else if (code->expr1->symtree->n.sym
++		       && code->expr1->symtree->n.sym->attr.assign != 1)
+ 		gfc_error ("Variable %qs has not been assigned a target "
+ 			   "label at %L", code->expr1->symtree->n.sym->name,
+ 			   &code->expr1->where);
+@@ -12000,7 +12039,7 @@ resolve_charlen (gfc_charlen *cl)
  	}
  
        /* cl->length has been resolved.  It should have an integer type.  */
@@ -12312,7 +12336,7 @@ index a4ad26efffc..35f09e01f87 100644
  	{
  	  gfc_error ("Scalar INTEGER expression expected at %L",
  		     &cl->length->where);
-@@ -12629,6 +12660,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+@@ -12629,6 +12668,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
  	{
  	  if (arg->sym
  	      && arg->sym->ts.type == BT_DERIVED
@@ -12320,7 +12344,7 @@ index a4ad26efffc..35f09e01f87 100644
  	      && !arg->sym->ts.u.derived->attr.use_assoc
  	      && !gfc_check_symbol_access (arg->sym->ts.u.derived)
  	      && !gfc_notify_std (GFC_STD_F2003, "%qs is of a PRIVATE type "
-@@ -12755,8 +12787,10 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+@@ -12755,8 +12795,10 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
      {
        if (sym->attr.proc_pointer)
  	{
@@ -12332,7 +12356,7 @@ index a4ad26efffc..35f09e01f87 100644
  	  return false;
  	}
        if (sym->attr.dummy)
-@@ -12843,7 +12877,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
+@@ -12843,7 +12885,7 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
        if (sym->attr.subroutine && sym->attr.result)
  	{
  	  gfc_error ("PROCEDURE attribute conflicts with RESULT attribute "
@@ -12341,7 +12365,7 @@ index a4ad26efffc..35f09e01f87 100644
  	  return false;
  	}
        if (sym->attr.external && sym->attr.function && !sym->attr.module_procedure
-@@ -13541,7 +13575,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
+@@ -13541,7 +13583,7 @@ resolve_typebound_procedure (gfc_symtree* stree)
      {
        /* If proc has not been resolved at this point, proc->name may
  	 actually be a USE associated entity. See PR fortran/89647. */
@@ -12350,7 +12374,7 @@ index a4ad26efffc..35f09e01f87 100644
  	  && proc->attr.function == 0 && proc->attr.subroutine == 0)
  	{
  	  gfc_symbol *tmp;
-@@ -14791,9 +14825,9 @@ resolve_symbol (gfc_symbol *sym)
+@@ -14791,9 +14833,9 @@ resolve_symbol (gfc_symbol *sym)
    gfc_array_spec *as;
    bool saved_specification_expr;
  
@@ -12362,7 +12386,7 @@ index a4ad26efffc..35f09e01f87 100644
  
    /* No symbol will ever have union type; only components can be unions.
       Union type declaration symbols have type BT_UNKNOWN but flavor FL_UNION
-@@ -14805,6 +14839,7 @@ resolve_symbol (gfc_symbol *sym)
+@@ -14805,6 +14847,7 @@ resolve_symbol (gfc_symbol *sym)
    if (flag_coarray == GFC_FCOARRAY_LIB && sym->ts.type == BT_CLASS
        && sym->ts.u.derived && CLASS_DATA (sym)
        && CLASS_DATA (sym)->attr.codimension
@@ -12370,7 +12394,7 @@ index a4ad26efffc..35f09e01f87 100644
        && (CLASS_DATA (sym)->ts.u.derived->attr.alloc_comp
  	  || CLASS_DATA (sym)->ts.u.derived->attr.pointer_comp))
      {
-@@ -16510,7 +16545,8 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -16510,7 +16553,8 @@ resolve_equivalence (gfc_equiv *eq)
  	  && !gfc_notify_std (GFC_STD_GNU, msg, sym->name, &e->where))
  		continue;
  
@@ -12380,7 +12404,7 @@ index a4ad26efffc..35f09e01f87 100644
        last_ts =&sym->ts;
        last_where = &e->where;
  
-@@ -16518,8 +16554,7 @@ resolve_equivalence (gfc_equiv *eq)
+@@ -16518,8 +16562,7 @@ resolve_equivalence (gfc_equiv *eq)
  	continue;
  
        /* Shall not be an automatic array.  */
@@ -19442,6 +19466,24 @@ index 00000000000..32bd324ce15
 +program test
 +  procedure(team_num) :: g ! { dg-error "must be explicit" }
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/pr95709.f90 b/gcc/testsuite/gfortran.dg/pr95709.f90
+new file mode 100644
+index 00000000000..04f2da81988
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95709.f90
+@@ -0,0 +1,12 @@
++! { dg-do compile }
++! { dg-options "-std=legacy" }
++! PR fortran/95709 - ICE in gfc_resolve_code, at fortran/resolve.c:11807
++
++program p
++  integer, parameter :: j    = 1
++  integer            :: k(1) = 1
++  goto j           ! { dg-error "requires a scalar INTEGER variable" }
++  goto k(1)        ! { dg-error "requires a scalar INTEGER variable" }
++  goto k%kind, (1) ! { dg-error "requires a scalar INTEGER variable" }
++1 continue
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr95829.f90 b/gcc/testsuite/gfortran.dg/pr95829.f90
 new file mode 100644
 index 00000000000..081d647c7c0
