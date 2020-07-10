@@ -469,10 +469,11 @@ Uros Bizjak (5):
 Ville Voutilainen (1):
       PR libstdc++/91807
 
-Will Schmidt (3):
+Will Schmidt (4):
       backport PR90763: PowerPC vec_xl_len should take const argument.
       rs6000 pragma fix backport from mainline to gcc-9
       Backport to gcc-9
+      Add support to enable vmsumudm behind vec_msum builtin.
 
 Xionghu Luo (1):
       rs6000: Don't use HARD_FRAME_POINTER_REGNUM if it's not live in pro_and_epilogue (PR91518)
@@ -8480,10 +8481,18 @@ index 065e1ebeadc..5f533228fc1 100644
  
  #undef LINK_SPEC
 diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
-index d66ae7ca2c7..a9405339984 100644
+index d66ae7ca2c7..cb887eba521 100644
 --- a/gcc/config/rs6000/altivec.h
 +++ b/gcc/config/rs6000/altivec.h
-@@ -180,7 +180,7 @@
+@@ -159,6 +159,7 @@
+ #define vec_vmsumubm __builtin_vec_vmsumubm
+ #define vec_vmsumshs __builtin_vec_vmsumshs
+ #define vec_vmsumuhs __builtin_vec_vmsumuhs
++#define vec_vmsumudm __builtin_vec_vmsumudm
+ #define vec_vmulesb __builtin_vec_vmulesb
+ #define vec_vmulesh __builtin_vec_vmulesh
+ #define vec_vmuleuh __builtin_vec_vmuleuh
+@@ -180,7 +181,7 @@
  #define vec_recipdiv __builtin_vec_recipdiv
  #define vec_rlmi __builtin_vec_rlmi
  #define vec_vrlnm __builtin_vec_rlnm
@@ -8492,7 +8501,7 @@ index d66ae7ca2c7..a9405339984 100644
  #define vec_rsqrt __builtin_vec_rsqrt
  #define vec_rsqrte __builtin_vec_rsqrte
  #define vec_signed __builtin_vec_vsigned
-@@ -431,7 +431,7 @@
+@@ -431,7 +432,7 @@
  #define vec_first_match_or_eos_index __builtin_vec_first_match_or_eos_index
  #define vec_first_mismatch_index __builtin_vec_first_mismatch_index
  #define vec_first_mismatch_or_eos_index __builtin_vec_first_mismatch_or_eos_index
@@ -8502,10 +8511,18 @@ index d66ae7ca2c7..a9405339984 100644
  #define vec_vctz __builtin_vec_vctz
  #define vec_cnttz __builtin_vec_vctz
 diff --git a/gcc/config/rs6000/altivec.md b/gcc/config/rs6000/altivec.md
-index 654d756647c..611d2693c59 100644
+index 654d756647c..a84c12ff5ed 100644
 --- a/gcc/config/rs6000/altivec.md
 +++ b/gcc/config/rs6000/altivec.md
-@@ -80,6 +80,7 @@
+@@ -21,6 +21,7 @@
+ (define_c_enum "unspec"
+   [UNSPEC_VCMPBFP
+    UNSPEC_VMSUMU
++   UNSPEC_VMSUMUDM
+    UNSPEC_VMSUMM
+    UNSPEC_VMSUMSHM
+    UNSPEC_VMSUMUHS
+@@ -80,6 +81,7 @@
     UNSPEC_VUPKHPX
     UNSPEC_VUPKLPX
     UNSPEC_CONVERT_4F32_8I16
@@ -8513,7 +8530,24 @@ index 654d756647c..611d2693c59 100644
     UNSPEC_DST
     UNSPEC_DSTT
     UNSPEC_DSTST
-@@ -3042,6 +3043,37 @@
+@@ -795,6 +797,16 @@
+   "vmsumu<VI_char>m %0,%1,%2,%3"
+   [(set_attr "type" "veccomplex")])
+ 
++(define_insn "altivec_vmsumudm"
++  [(set (match_operand:V1TI 0 "register_operand" "=v")
++	(unspec:V1TI [(match_operand:V2DI 1 "register_operand" "v")
++		      (match_operand:V2DI 2 "register_operand" "v")
++		      (match_operand:V1TI 3 "register_operand" "v")]
++		     UNSPEC_VMSUMUDM))]
++  "TARGET_P8_VECTOR"
++  "vmsumudm %0,%1,%2,%3"
++  [(set_attr "type" "veccomplex")])
++
+ (define_insn "altivec_vmsumm<VI_char>m"
+   [(set (match_operand:V4SI 0 "register_operand" "=v")
+         (unspec:V4SI [(match_operand:VIshort 1 "register_operand" "v")
+@@ -3042,6 +3054,37 @@
    DONE;
  })
  
@@ -8566,10 +8600,26 @@ index 30975090a2d..32c5fa0cb08 100644
  _mm_movemask_epi8 (__m128i __A)
  {
 diff --git a/gcc/config/rs6000/rs6000-builtin.def b/gcc/config/rs6000/rs6000-builtin.def
-index 0feee7cafca..320dc218cd6 100644
+index 0feee7cafca..554316d35ad 100644
 --- a/gcc/config/rs6000/rs6000-builtin.def
 +++ b/gcc/config/rs6000/rs6000-builtin.def
-@@ -2032,6 +2032,7 @@ BU_P8V_OVERLOAD_3 (VPERMXOR,   "vpermxor")
+@@ -947,6 +947,7 @@ BU_ALTIVEC_3 (VMLADDUHM,      "vmladduhm",      CONST, 	fmav8hi4)
+ BU_ALTIVEC_3 (VMSUMUBM,       "vmsumubm",       CONST, 	altivec_vmsumubm)
+ BU_ALTIVEC_3 (VMSUMMBM,       "vmsummbm",       CONST, 	altivec_vmsummbm)
+ BU_ALTIVEC_3 (VMSUMUHM,       "vmsumuhm",       CONST, 	altivec_vmsumuhm)
++BU_ALTIVEC_3 (VMSUMUDM,       "vmsumudm",       CONST, 	altivec_vmsumudm)
+ BU_ALTIVEC_3 (VMSUMSHM,       "vmsumshm",       CONST, 	altivec_vmsumshm)
+ BU_ALTIVEC_3 (VMSUMUHS,       "vmsumuhs",       SAT,   	altivec_vmsumuhs)
+ BU_ALTIVEC_3 (VMSUMSHS,       "vmsumshs",       SAT,   	altivec_vmsumshs)
+@@ -1257,6 +1258,7 @@ BU_ALTIVEC_OVERLOAD_3 (VMSUMSHM,   "vmsumshm")
+ BU_ALTIVEC_OVERLOAD_3 (VMSUMSHS,   "vmsumshs")
+ BU_ALTIVEC_OVERLOAD_3 (VMSUMUBM,   "vmsumubm")
+ BU_ALTIVEC_OVERLOAD_3 (VMSUMUHM,   "vmsumuhm")
++BU_ALTIVEC_OVERLOAD_3 (VMSUMUDM,   "vmsumudm")
+ BU_ALTIVEC_OVERLOAD_3 (VMSUMUHS,   "vmsumuhs")
+ 
+ /* Altivec DST overloaded builtins.  */
+@@ -2032,6 +2034,7 @@ BU_P8V_OVERLOAD_3 (VPERMXOR,   "vpermxor")
  BU_P9V_AV_2 (VSLV,		"vslv",			CONST, vslv)
  BU_P9V_AV_2 (VSRV,		"vsrv",			CONST, vsrv)
  BU_P9V_AV_2 (CONVERT_4F32_8I16, "convert_4f32_8i16", CONST, convert_4f32_8i16)
@@ -8577,7 +8627,7 @@ index 0feee7cafca..320dc218cd6 100644
  
  BU_P9V_AV_2 (VFIRSTMATCHINDEX_V16QI, "first_match_index_v16qi",
  	     CONST, first_match_index_v16qi)
-@@ -2062,6 +2063,7 @@ BU_P9V_AV_2 (VFIRSTMISMATCHOREOSINDEX_V4SI, "first_mismatch_or_eos_index_v4si",
+@@ -2062,6 +2065,7 @@ BU_P9V_AV_2 (VFIRSTMISMATCHOREOSINDEX_V4SI, "first_mismatch_or_eos_index_v4si",
  BU_P9V_OVERLOAD_2 (VSLV,	"vslv")
  BU_P9V_OVERLOAD_2 (VSRV,	"vsrv")
  BU_P9V_OVERLOAD_2 (CONVERT_4F32_8I16, "convert_4f32_8i16")
@@ -8586,7 +8636,7 @@ index 0feee7cafca..320dc218cd6 100644
  /* 2 argument vector functions added in ISA 3.0 (power9). */
  BU_P9V_AV_2 (VADUB,		"vadub",		CONST,  vaduv16qi3)
 diff --git a/gcc/config/rs6000/rs6000-c.c b/gcc/config/rs6000/rs6000-c.c
-index 7c28d4d8176..3a10e843cfb 100644
+index 7c28d4d8176..cf4341da8f2 100644
 --- a/gcc/config/rs6000/rs6000-c.c
 +++ b/gcc/config/rs6000/rs6000-c.c
 @@ -2452,6 +2452,8 @@ const struct altivec_builtin_types altivec_overloaded_builtins[] = {
@@ -8598,7 +8648,20 @@ index 7c28d4d8176..3a10e843cfb 100644
  
    { P9V_BUILTIN_VEC_VFIRSTMATCHINDEX, P9V_BUILTIN_VFIRSTMATCHINDEX_V16QI,
      RS6000_BTI_UINTSI, RS6000_BTI_V16QI, RS6000_BTI_V16QI, 0 },
-@@ -6853,6 +6855,19 @@ altivec_resolve_overloaded_builtin (location_t loc, tree fndecl,
+@@ -3547,6 +3549,12 @@ const struct altivec_builtin_types altivec_overloaded_builtins[] = {
+     RS6000_BTI_unsigned_V4SI, RS6000_BTI_unsigned_V8HI, RS6000_BTI_unsigned_V8HI, RS6000_BTI_unsigned_V4SI },
+   { ALTIVEC_BUILTIN_VEC_MSUM, ALTIVEC_BUILTIN_VMSUMSHM,
+     RS6000_BTI_V4SI, RS6000_BTI_V8HI, RS6000_BTI_V8HI, RS6000_BTI_V4SI },
++
++  { ALTIVEC_BUILTIN_VEC_MSUM, ALTIVEC_BUILTIN_VMSUMUDM,
++    RS6000_BTI_V1TI, RS6000_BTI_V2DI, RS6000_BTI_V2DI, RS6000_BTI_V1TI },
++  { ALTIVEC_BUILTIN_VEC_MSUM, ALTIVEC_BUILTIN_VMSUMUDM,
++    RS6000_BTI_unsigned_V1TI, RS6000_BTI_unsigned_V2DI, RS6000_BTI_unsigned_V2DI, RS6000_BTI_unsigned_V1TI },
++
+   { ALTIVEC_BUILTIN_VEC_VMSUMSHM, ALTIVEC_BUILTIN_VMSUMSHM,
+     RS6000_BTI_V4SI, RS6000_BTI_V8HI, RS6000_BTI_V8HI, RS6000_BTI_V4SI },
+   { ALTIVEC_BUILTIN_VEC_VMSUMUHM, ALTIVEC_BUILTIN_VMSUMUHM,
+@@ -6853,6 +6861,19 @@ altivec_resolve_overloaded_builtin (location_t loc, tree fndecl,
  	  arg = fold_convert (type, arg);
  	}
  
@@ -11091,7 +11154,7 @@ index 65d5fcb0845..599f37ea9da 100644
  }
  
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
-index f5becf988d2..e231add27fd 100644
+index f5becf988d2..a581e9d959b 100644
 --- a/gcc/doc/extend.texi
 +++ b/gcc/doc/extend.texi
 @@ -2760,7 +2760,7 @@ the same type as the target function.  As a result of the @code{copy}
@@ -11116,6 +11179,30 @@ index f5becf988d2..e231add27fd 100644
  @end table
  
  The above target attributes can be specified as follows:
+@@ -19722,6 +19728,13 @@ bool scalar_test_data_class (__ieee128 source, const int condition);
+ bool scalar_test_neg (float source);
+ bool scalar_test_neg (double source);
+ bool scalar_test_neg (__ieee128 source);
++
++vector _uint128_t vec_msum (vector unsigned long long,
++			    vector unsigned long long,
++			    vector _uint128_t);
++vector _int128_t vec_msum (vector signed long long,
++			   vector signed long long,
++			   vector _int128_t);
+ @end smallexample
+ 
+ The @code{scalar_extract_exp} and @code{scalar_extract_sig}
+@@ -19741,6 +19754,9 @@ Note that the sign of the significand is not represented in the result
+ returned from the @code{scalar_extract_sig} function.  Use the
+ @code{scalar_test_neg} function to test the sign of its @code{double}
+ argument.
++The @code{vec_msum} functions perform a vector multiply-sum, returning
++the result of arg1*arg2+arg3.  ISA 3.0 adds support for vec_msum returning
++a vector int128 result.
+ 
+ The @code{scalar_insert_exp}
+ functions require a 64-bit environment supporting ISA 3.0 or later.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
 index 0ab6c9c6449..0f3f093a80d 100644
 --- a/gcc/doc/invoke.texi
@@ -17608,6 +17695,86 @@ index b2f7dc855e8..19457eebfc4 100644
    char_src1 = (vector signed char) {-1, 2, 3, 4, -5, 6, 7, 8,
  				    9, 10, 11, 12, 13, 14, 15, 16};
    char_src2 = (vector signed char) {-1, 2, 3, 20, -5, 6, 7, 8,
+diff --git a/gcc/testsuite/gcc.target/powerpc/builtins-msum-runnable.c b/gcc/testsuite/gcc.target/powerpc/builtins-msum-runnable.c
+new file mode 100644
+index 00000000000..0fa5c319b6d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/builtins-msum-runnable.c
+@@ -0,0 +1,74 @@
++/* { dg-do run { target { p9vector_hw } } } */
++/* { dg-options "-mdejagnu-cpu=power9 -O2" } */
++
++#include <altivec.h>
++
++#ifdef DEBUG
++#include <stdio.h>
++#endif
++
++void abort (void);
++
++int
++main()
++{
++  vector __uint128_t arg_uint128, result_uint128, expected_uint128;
++  vector __int128_t arg_int128, result_int128, expected_int128;
++
++  arg_uint128[0] = 0x1627384950617243;
++  arg_uint128[0] = arg_uint128[0] << 64;
++  arg_uint128[0] |= 0x9405182930415263;
++  expected_uint128[0] = 0x1627384950617243;
++  expected_uint128[0] = expected_uint128[0] << 64;
++  expected_uint128[0] |= 0xb6b07e42a570e5fe;
++  vector unsigned long long arg_vull2 = {0x12345678,0x44445555};
++  vector unsigned long long arg_vull3 = {0x6789abcd,0x66667777};
++  result_uint128 = vec_msum (arg_vull2, arg_vull3, arg_uint128);
++
++  if (result_uint128[0] != expected_uint128[0])
++    {
++#ifdef DEBUG
++       printf("result_uint128[0] doesn't match expected_u128[0]\n");
++       printf("arg_vull2  %llx %llx \n",  arg_vull2[0], arg_vull2[1]);
++       printf("arg_vull3  %llx %llx \n",  arg_vull3[0], arg_vull3[1]);
++       printf("arg_uint128[0] =  %llx ", arg_uint128[0] >> 64);
++       printf(" %llx\n",	 arg_uint128[0] & 0xFFFFFFFFFFFFFFFF);
++
++       printf("result_uint128[0] =  %llx ", result_uint128[0] >> 64);
++       printf(" %llx\n", result_uint128[0] & 0xFFFFFFFFFFFFFFFF);
++
++       printf("expected_uint128[0] =  %llx ", expected_uint128[0] >> 64);
++       printf(" %llx\n", expected_uint128[0] & 0xFFFFFFFFFFFFFFFF);
++#else
++       abort();
++#endif
++    }
++
++  arg_int128[0] = 0x1627384950617283;
++  arg_int128[0] = arg_int128[0] << 64;
++  arg_int128[0] |= 0x9405182930415263;
++  expected_int128[0] = 0x1627384950617283;
++  expected_int128[0] = expected_int128[0] << 64;
++  expected_int128[0] |= 0xd99f35969c11cbfa;
++  vector signed long long arg_vll2 = { 0x567890ab, 0x1233456 };
++  vector signed long long arg_vll3 = { 0xcdef0123, 0x9873451 };
++  result_int128 = vec_msum (arg_vll2, arg_vll3, arg_int128);
++
++  if (result_int128[0] != expected_int128[0])
++    {
++#ifdef DEBUG
++       printf("result_int128[0] doesn't match expected128[0]\n");
++       printf("arg_int128[0] =  %llx ", arg_int128[0] >> 64);
++       printf(" %llx\n",	 arg_int128[0] & 0xFFFFFFFFFFFFFFFF);
++
++       printf("result_int128[0] =  %llx ", result_int128[0] >> 64);
++       printf(" %llx\n", result_int128[0] & 0xFFFFFFFFFFFFFFFF);
++
++       printf("expected_int128[0] =  %llx ", expected_int128[0] >> 64);
++       printf(" %llx\n", expected_int128[0] & 0xFFFFFFFFFFFFFFFF);
++#else
++       abort();
++#endif
++    }
++}
++
 diff --git a/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c b/gcc/testsuite/gcc.target/powerpc/p9-minmax-3.c
 new file mode 100644
 index 00000000000..141603e05b4
@@ -18051,6 +18218,38 @@ index 9fdbd5f9840..757acd93110 100644
 +  return __builtin_vec_vcmpnez_p (__CR6_LT_REV, arg_1, arg_2);
 +  /* { dg-error "'__builtin_altivec_vcmpnezw_p' requires the '-mcpu=power9' option" "" { target *-*-* } .-1 } */
  }
+diff --git a/gcc/testsuite/gcc.target/powerpc/vsx-builtin-msum.c b/gcc/testsuite/gcc.target/powerpc/vsx-builtin-msum.c
+new file mode 100644
+index 00000000000..058ca0b0fe4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/vsx-builtin-msum.c
+@@ -0,0 +1,26 @@
++/* Verify that overloaded built-ins for vec_msum with __int128
++   inputs generate the proper code.  */
++
++/* { dg-do compile } */
++/* { dg-require-effective-target powerpc_p9vector_ok } */
++/* { dg-require-effective-target int128 } */
++/* { dg-options "-mdejagnu-cpu=power9  -O3" } */
++
++#include <altivec.h>
++
++vector signed __int128
++test_msum_si (vector signed long long vsll_1, vector signed long long vsll_2,
++	   vector signed __int128 vsi128)
++{
++  return vec_msum (vsll_1, vsll_2, vsi128);
++}
++
++vector unsigned __int128
++test_msum_ui (vector unsigned long long vull_1, vector unsigned long long vull_2,
++	   vector unsigned __int128 vui128)
++{
++  return vec_msum (vull_1, vull_2, vui128);
++}
++
++/* { dg_final { scan_assembler_times "vmsumudm" 2 } } */
++
 diff --git a/gcc/testsuite/gcc.target/s390/zvector/pr94613.c b/gcc/testsuite/gcc.target/s390/zvector/pr94613.c
 new file mode 100644
 index 00000000000..c3581d82ede
