@@ -60,7 +60,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (120):
+GCC Administrator (123):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5282,10 +5285,40 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..473845d5235 100644
+index d8e53874e68..5add120235c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,877 @@
+@@ -1,3 +1,907 @@
++2020-07-10  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	* config/rs6000/altivec.h (vec_vmsumudm): New define.
++	* config/rs6000/altivec.md (UNSPEC_VMSUMUDM): New unspec.
++	  (altivec_vmsumudm): New define_insn.
++	* config/rs6000/rs6000-builtin.def (altivec_vmsumudm): New BU_ALTIVEC_3
++	  entry. (vmsumudm): New BU_ALTIVEC_OVERLOAD_3 entry.
++	* config/rs6000/rs6000-c.c (altivec_overloaded_builtins): Add
++	  entries for ALTIVEC_BUILTIN_VMSUMUDM variants of vec_msum.
++	* doc/extend.texi: Add document for vmsumudm behind vmsum.
++
++2020-07-10  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backported from master:
++	2020-07-09  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/95804
++	* tree-loop-distribution.c (break_alias_scc_partitions): Force
++	negative post order to reduction partition.
++
++2020-07-10  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backported from master:
++	2020-06-20  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/95638
++	* tree-loop-distribution.c (pg_edge_callback_data): New field.
++	(loop_distribution::break_alias_scc_partitions): Record and restore
++	postorder information.  Fix memory leak.
++
 +2020-07-06  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	PR target/94954
@@ -13010,10 +13043,33 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..046f61a446d 100644
+index e132f2657ef..4682d9ff36f 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,876 @@
+@@ -1,3 +1,899 @@
++2020-07-10  Will Schmidt  <will_schmidt@vnet.ibm.com>
++
++	* gcc.target/powerpc/builtins-msum-runnable.c: New test.
++	* gcc.target/powerpc/vsx-builtin-msum.c: New test.
++	Modified from ...
++	(cherry picked from commit c1a57681a64150d2fc336ba8e055c5f82e3737e8)
++
++2020-07-10  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backported from master:
++	2020-07-09  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/95804
++	* gcc.dg/tree-ssa/pr95804.c: New test.
++
++2020-07-10  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	Backported from master:
++	2020-06-20  Bin Cheng  <bin.cheng@linux.alibaba.com>
++
++	PR tree-optimization/95638
++	* g++.dg/tree-ssa/pr95638.C: New test.
++
 +2020-07-08  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
