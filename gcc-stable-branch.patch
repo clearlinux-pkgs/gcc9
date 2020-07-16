@@ -60,7 +60,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (123):
+GCC Administrator (126):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -426,11 +429,23 @@ Richard Earnshaw (1):
 Samuel Thibault (1):
       hurd: libgcc unwinding support over signal trampolines
 
-Szabolcs Nagy (4):
+Stefan Schulze Frielinghaus (1):
+      S/390: Emit vector alignment hints for z13 if AS accepts them
+
+Szabolcs Nagy (13):
       aarch64, libgcc: Fix unwinding from pac-ret to normal frames [PR94514]
       aarch64: Fix .cfi_window_save with pac-ret [PR94515]
       aarch64: ensure bti c is emitted at function start [PR94697]
       aarch64: don't emit bti j after NOTE_INSN_DELETED_LABEL [PR94748]
+      aarch64: Fix noexecstack note in libitm
+      aarch64: Fix noexecstack note in libgcc
+      aarch64: Fix BTI support in libgcc [PR96001]
+      aarch64: Fix BTI support in libitm
+      aarch64: fix return address access with pac [PR94891][PR94791]
+      aarch64: fix __builtin_eh_return with pac-ret [PR94891]
+      libgcc: fix the handling of return address mangling [PR94891]
+      doc: Clarify __builtin_return_address [PR94891]
+      aarch64: Add missing ACLE support for PAC-RET
 
 Tamar Christina (2):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
@@ -6849,6 +6864,24 @@ index bab3ab3fa36..bc59d646a4c 100644
  	isa_flag_bits |= opt->flag_canonical;
        }
      }
+diff --git a/gcc/config.in b/gcc/config.in
+index a718ceaf3da..bfef2340339 100644
+--- a/gcc/config.in
++++ b/gcc/config.in
+@@ -676,6 +676,13 @@
+ #endif
+ 
+ 
++/* Define if your assembler supports vl/vst/vlm/vstm with an optional
++   alignment hint argument on z13. */
++#ifndef USED_FOR_TARGET
++#undef HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS_ON_Z13
++#endif
++
++
+ /* Define if your assembler supports VSX instructions. */
+ #ifndef USED_FOR_TARGET
+ #undef HAVE_AS_VSX
 diff --git a/gcc/config/aarch64/aarch64-bti-insert.c b/gcc/config/aarch64/aarch64-bti-insert.c
 index e519a0f0ac1..7da89074ce0 100644
 --- a/gcc/config/aarch64/aarch64-bti-insert.c
@@ -6916,6 +6949,29 @@ index e519a0f0ac1..7da89074ce0 100644
    timevar_pop (TV_MACH_DEP);
    return 0;
  }
+diff --git a/gcc/config/aarch64/aarch64-c.c b/gcc/config/aarch64/aarch64-c.c
+index 6d5acb02fc6..f22ad437548 100644
+--- a/gcc/config/aarch64/aarch64-c.c
++++ b/gcc/config/aarch64/aarch64-c.c
+@@ -156,6 +156,18 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
+   aarch64_def_or_undef (TARGET_SM4, "__ARM_FEATURE_SM4", pfile);
+   aarch64_def_or_undef (TARGET_F16FML, "__ARM_FEATURE_FP16_FML", pfile);
+ 
++  aarch64_def_or_undef (aarch64_bti_enabled (),
++			"__ARM_FEATURE_BTI_DEFAULT", pfile);
++
++  cpp_undef (pfile, "__ARM_FEATURE_PAC_DEFAULT");
++  if (aarch64_ra_sign_scope != AARCH64_FUNCTION_NONE)
++    {
++      int v = 1;
++      if (aarch64_ra_sign_scope == AARCH64_FUNCTION_ALL)
++	v |= 4;
++      builtin_define_with_int_value ("__ARM_FEATURE_PAC_DEFAULT", v);
++    }
++
+   /* Not for ACLE, but required to keep "float.h" correct if we switch
+      target between implementations that do or do not support ARMv8.2-A
+      16-bit floating-point extensions.  */
 diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
 index 82d91d62519..c9be89e1a4c 100644
 --- a/gcc/config/aarch64/aarch64-cores.def
@@ -6931,10 +6987,18 @@ index 82d91d62519..c9be89e1a4c 100644
  AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
  
 diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
-index c083cad5327..b9bfb281275 100644
+index c083cad5327..af2a17f0bf3 100644
 --- a/gcc/config/aarch64/aarch64-protos.h
 +++ b/gcc/config/aarch64/aarch64-protos.h
-@@ -644,4 +644,17 @@ poly_uint64 aarch64_regmode_natural_size (machine_mode);
+@@ -492,6 +492,7 @@ int aarch64_vec_fpconst_pow_of_2 (rtx);
+ rtx aarch64_eh_return_handler_rtx (void);
+ rtx aarch64_mask_from_zextract_ops (rtx, rtx);
+ const char *aarch64_output_move_struct (rtx *operands);
++rtx aarch64_return_addr_rtx (void);
+ rtx aarch64_return_addr (int, rtx);
+ rtx aarch64_simd_gen_const_vector_dup (machine_mode, HOST_WIDE_INT);
+ bool aarch64_simd_mem_operand_p (rtx);
+@@ -644,4 +645,17 @@ poly_uint64 aarch64_regmode_natural_size (machine_mode);
  
  bool aarch64_high_bits_all_ones_p (HOST_WIDE_INT);
  
@@ -7122,7 +7186,7 @@ index 2b1ec85ae31..b12d935342e 100644
 +	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,zeus,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..35b5b2fd3a6 100644
+index b452a53af99..1b6e67ccd53 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -1879,10 +1879,33 @@ emit_set_insn (rtx x, rtx y)
@@ -7193,7 +7257,25 @@ index b452a53af99..35b5b2fd3a6 100644
      }
    insn = emit_insn (offset < 0
  		    ? gen_sub3_insn (dest, src, temp1)
-@@ -7541,7 +7568,7 @@ sizetochar (int size)
+@@ -4854,6 +4881,17 @@ aarch64_return_address_signing_enabled (void)
+   /* This function should only be called after frame laid out.   */
+   gcc_assert (cfun->machine->frame.laid_out);
+ 
++  /* Turn return address signing off in any function that uses
++     __builtin_eh_return.  The address passed to __builtin_eh_return
++     is not signed so either it has to be signed (with original sp)
++     or the code path that uses it has to avoid authenticating it.
++     Currently eh return introduces a return to anywhere gadget, no
++     matter what we do here since it uses ret with user provided
++     address. An ideal fix for that is to use indirect branch which
++     can be protected with BTI j (to some extent).  */
++  if (crtl->calls_eh_return)
++    return false;
++
+   /* If signing scope is AARCH64_FUNCTION_NON_LEAF, we only sign a leaf function
+      if it's LR is pushed onto stack.  */
+   return (aarch64_ra_sign_scope == AARCH64_FUNCTION_ALL
+@@ -7541,7 +7579,7 @@ sizetochar (int size)
       'S/T/U/V':		Print a FP/SIMD register name for a register list.
  			The register printed is the FP/SIMD register name
  			of X + 0/1/2/3 for S/T/U/V.
@@ -7202,7 +7284,7 @@ index b452a53af99..35b5b2fd3a6 100644
       'X':		Print bottom 16 bits of integer constant in hex.
       'w/x':		Print a general register name or the zero register
  			(32-bit or 64-bit).
-@@ -7733,12 +7760,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
+@@ -7733,12 +7771,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
        break;
  
      case 'R':
@@ -7222,7 +7304,41 @@ index b452a53af99..35b5b2fd3a6 100644
        break;
  
      case 'X':
-@@ -12517,6 +12545,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
+@@ -8397,6 +8436,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
+   return cfun->machine->frame.frame_size;
+ }
+ 
++
++/* Get return address without mangling.  */
++
++rtx
++aarch64_return_addr_rtx (void)
++{
++  rtx val = get_hard_reg_initial_val (Pmode, LR_REGNUM);
++  /* Note: aarch64_return_address_signing_enabled only
++     works after cfun->machine->frame.laid_out is set,
++     so here we don't know if the return address will
++     be signed or not.  */
++  rtx lr = gen_rtx_REG (Pmode, LR_REGNUM);
++  emit_move_insn (lr, val);
++  emit_insn (GEN_FCN (CODE_FOR_xpaclri) ());
++  return lr;
++}
++
++
+ /* Implement RETURN_ADDR_RTX.  We do not support moving back to a
+    previous frame.  */
+ 
+@@ -8405,7 +8462,7 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
+ {
+   if (count != 0)
+     return const0_rtx;
+-  return get_hard_reg_initial_val (Pmode, LR_REGNUM);
++  return aarch64_return_addr_rtx ();
+ }
+ 
+ 
+@@ -12517,6 +12574,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
       aarch64_handle_attr_branch_protection, OPT_mbranch_protection_ },
    { "sign-return-address", aarch64_attr_enum, false, NULL,
       OPT_msign_return_address_ },
@@ -7231,7 +7347,7 @@ index b452a53af99..35b5b2fd3a6 100644
    { NULL, aarch64_attr_custom, false, NULL, OPT____ }
  };
  
-@@ -15426,16 +15456,26 @@ static void
+@@ -15426,16 +15485,26 @@ static void
  aarch64_emit_load_exclusive (machine_mode mode, rtx rval,
  			     rtx mem, rtx model_rtx)
  {
@@ -7261,7 +7377,7 @@ index b452a53af99..35b5b2fd3a6 100644
  }
  
  /* Mark the previous jump instruction as unlikely.  */
-@@ -15447,6 +15487,82 @@ aarch64_emit_unlikely_jump (rtx insn)
+@@ -15447,6 +15516,82 @@ aarch64_emit_unlikely_jump (rtx insn)
    add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
  }
  
@@ -7344,7 +7460,7 @@ index b452a53af99..35b5b2fd3a6 100644
  /* Expand a compare and swap pattern.  */
  
  void
-@@ -15493,6 +15609,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
+@@ -15493,6 +15638,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
  						   newval, mod_s));
        cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
      }
@@ -7362,7 +7478,7 @@ index b452a53af99..35b5b2fd3a6 100644
    else
      {
        /* The oldval predicate varies by mode.  Test it and force to reg.  */
-@@ -15538,13 +15665,11 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15538,13 +15694,11 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* Split after prolog/epilog to avoid interactions with shrinkwrapping.  */
    gcc_assert (epilogue_completed);
  
@@ -7377,7 +7493,7 @@ index b452a53af99..35b5b2fd3a6 100644
  
    rval = operands[0];
    mem = operands[1];
-@@ -15565,7 +15690,8 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15565,7 +15719,8 @@ aarch64_split_compare_and_swap (rtx operands[])
  	CBNZ	scratch, .label1
      .label2:
  	CMP	rval, 0.  */
@@ -7387,7 +7503,7 @@ index b452a53af99..35b5b2fd3a6 100644
  
    label1 = NULL;
    if (!is_weak)
-@@ -15578,35 +15704,20 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15578,35 +15733,20 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* The initial load can be relaxed for a __sync operation since a final
       barrier will be emitted to stop code hoisting.  */
    if (is_mm_sync (model))
@@ -7430,7 +7546,7 @@ index b452a53af99..35b5b2fd3a6 100644
  
    aarch64_emit_store_exclusive (mode, scratch, mem, newval, model_rtx);
  
-@@ -15627,22 +15738,16 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15627,22 +15767,16 @@ aarch64_split_compare_and_swap (rtx operands[])
        aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
      }
    else
@@ -7457,7 +7573,7 @@ index b452a53af99..35b5b2fd3a6 100644
    /* Emit any final barrier needed for a __sync operation.  */
    if (is_mm_sync (model))
      aarch64_emit_post_barrier (model);
-@@ -16415,7 +16520,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
+@@ -16415,7 +16549,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
  
    if (d->vec_flags == VEC_SVE_PRED
        || !d->one_vector_p
@@ -7467,6 +7583,19 @@ index b452a53af99..35b5b2fd3a6 100644
      return false;
  
    size = (diff + 1) * GET_MODE_UNIT_SIZE (d->vmode);
+diff --git a/gcc/config/aarch64/aarch64.h b/gcc/config/aarch64/aarch64.h
+index 772a9729688..0e9b79e23f0 100644
+--- a/gcc/config/aarch64/aarch64.h
++++ b/gcc/config/aarch64/aarch64.h
+@@ -968,7 +968,7 @@ typedef struct
+ #define PROFILE_HOOK(LABEL)						\
+   {									\
+     rtx fun, lr;							\
+-    lr = get_hard_reg_initial_val (Pmode, LR_REGNUM);			\
++    lr = aarch64_return_addr_rtx ();					\
+     fun = gen_rtx_SYMBOL_REF (Pmode, MCOUNT_NAME);			\
+     emit_library_call (fun, LCT_NORMAL, VOIDmode, lr, Pmode);		\
+   }
 diff --git a/gcc/config/aarch64/aarch64.opt b/gcc/config/aarch64/aarch64.opt
 index 3c6d1cc90ad..f474a28eb92 100644
 --- a/gcc/config/aarch64/aarch64.opt
@@ -9363,6 +9492,45 @@ index 3f39b9d3b88..b31abc6af9b 100644
  
  OB_DEF     (s390_vec_extend_s64,        s390_vec_extend_s64_s8,s390_vec_extend_s64_s32,B_VX,        BT_FN_OV4SI_OV4SI)
  OB_DEF_VAR (s390_vec_extend_s64_s8,     s390_vsegb,         0,                  0,                  BT_OV_V2DI_V16QI)
+diff --git a/gcc/config/s390/s390.c b/gcc/config/s390/s390.c
+index db3f94978ec..fb0ef44c196 100644
+--- a/gcc/config/s390/s390.c
++++ b/gcc/config/s390/s390.c
+@@ -7766,15 +7766,13 @@ print_operand (FILE *file, rtx x, int code)
+   switch (code)
+     {
+     case 'A':
+-#ifdef HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS
+-      if (TARGET_Z14 && MEM_P (x))
++      if (TARGET_VECTOR_LOADSTORE_ALIGNMENT_HINTS && MEM_P (x))
+ 	{
+ 	  if (MEM_ALIGN (x) >= 128)
+ 	    fprintf (file, ",4");
+ 	  else if (MEM_ALIGN (x) == 64)
+ 	    fprintf (file, ",3");
+ 	}
+-#endif
+       return;
+     case 'C':
+       fprintf (file, s390_branch_condition_mnemonic (x, FALSE));
+diff --git a/gcc/config/s390/s390.h b/gcc/config/s390/s390.h
+index f7023d985f1..bd5316ffe94 100644
+--- a/gcc/config/s390/s390.h
++++ b/gcc/config/s390/s390.h
+@@ -167,6 +167,13 @@ enum processor_flags
+ 	(TARGET_VX && TARGET_CPU_VXE2)
+ #define TARGET_VXE2_P(opts)						\
+ 	(TARGET_VX_P (opts) && TARGET_CPU_VXE2_P (opts))
++#if defined(HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS_ON_Z13)
++#define TARGET_VECTOR_LOADSTORE_ALIGNMENT_HINTS TARGET_Z13
++#elif defined(HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS)
++#define TARGET_VECTOR_LOADSTORE_ALIGNMENT_HINTS TARGET_Z14
++#else
++#define TARGET_VECTOR_LOADSTORE_ALIGNMENT_HINTS 0
++#endif
+ 
+ #ifdef HAVE_AS_MACHINE_MACHINEMODE
+ #define S390_USE_TARGET_ATTRIBUTE 1
 diff --git a/gcc/config/s390/vecintrin.h b/gcc/config/s390/vecintrin.h
 index 21375970c91..d7a4ae64c36 100644
 --- a/gcc/config/s390/vecintrin.h
@@ -9609,6 +9777,64 @@ index 362e5ff3c1f..673ddad2eae 100644
    [(set_attr "type"	"arith,load")
     (set_attr "mode"	"SI")
     (set_attr "length"	"3,3")])
+diff --git a/gcc/configure b/gcc/configure
+index a065ba23728..35f5a87983b 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -27779,6 +27779,37 @@ if test $gcc_cv_as_s390_vector_loadstore_alignment_hints = yes; then
+ 
+ $as_echo "#define HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS 1" >>confdefs.h
+ 
++fi
++
++    { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for vector load/store alignment hints on z13" >&5
++$as_echo_n "checking assembler for vector load/store alignment hints on z13... " >&6; }
++if ${gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13+:} false; then :
++  $as_echo_n "(cached) " >&6
++else
++  gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13=no
++  if test x$gcc_cv_as != x; then
++    $as_echo '	vl %v24,0(%r15),3 ' > conftest.s
++    if { ac_try='$gcc_cv_as $gcc_cv_as_flags -mzarch -march=z13 -o conftest.o conftest.s >&5'
++  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
++  (eval $ac_try) 2>&5
++  ac_status=$?
++  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
++  test $ac_status = 0; }; }
++    then
++	gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13=yes
++    else
++      echo "configure: failed program was" >&5
++      cat conftest.s >&5
++    fi
++    rm -f conftest.o conftest.s
++  fi
++fi
++{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13" >&5
++$as_echo "$gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13" >&6; }
++if test $gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13 = yes; then
++
++$as_echo "#define HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS_ON_Z13 1" >>confdefs.h
++
+ fi
+ 
+ 
+diff --git a/gcc/configure.ac b/gcc/configure.ac
+index 3a7251102ef..eef4f1acd01 100644
+--- a/gcc/configure.ac
++++ b/gcc/configure.ac
+@@ -4908,6 +4908,11 @@ pointers into PC-relative form.])
+       [	vl %v24,0(%r15),3 ],,
+       [AC_DEFINE(HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS, 1,
+ 	  [Define if your assembler supports vl/vst/vlm/vstm with an optional alignment hint argument.])])
++    gcc_GAS_CHECK_FEATURE([vector load/store alignment hints on z13],
++      gcc_cv_as_s390_vector_loadstore_alignment_hints_on_z13,, [-mzarch -march=z13],
++      [	vl %v24,0(%r15),3 ],,
++      [AC_DEFINE(HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS_ON_Z13, 1,
++	  [Define if your assembler supports vl/vst/vlm/vstm with an optional alignment hint argument on z13.])])
+ 
+     ;;
+ esac
 diff --git a/gcc/coverage.c b/gcc/coverage.c
 index 1ffefd5f482..9be446a862d 100644
 --- a/gcc/coverage.c
@@ -11187,7 +11413,7 @@ index 65d5fcb0845..599f37ea9da 100644
  }
  
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
-index f5becf988d2..a581e9d959b 100644
+index f5becf988d2..7dbe400f99e 100644
 --- a/gcc/doc/extend.texi
 +++ b/gcc/doc/extend.texi
 @@ -2760,7 +2760,7 @@ the same type as the target function.  As a result of the @code{copy}
@@ -11212,7 +11438,41 @@ index f5becf988d2..a581e9d959b 100644
  @end table
  
  The above target attributes can be specified as follows:
-@@ -19722,6 +19728,13 @@ bool scalar_test_data_class (__ieee128 source, const int condition);
+@@ -10914,18 +10920,31 @@ The @var{level} argument must be a constant integer.
+ 
+ On some machines it may be impossible to determine the return address of
+ any function other than the current one; in such cases, or when the top
+-of the stack has been reached, this function returns @code{0} or a
+-random value.  In addition, @code{__builtin_frame_address} may be used
++of the stack has been reached, this function returns an unspecified
++value.  In addition, @code{__builtin_frame_address} may be used
+ to determine if the top of the stack has been reached.
+ 
+ Additional post-processing of the returned value may be needed, see
+ @code{__builtin_extract_return_addr}.
+ 
++The stored representation of the return address in memory may be different
++from the address returned by @code{__builtin_return_address}.  For example,
++on AArch64 the stored address may be mangled with return address signing
++whereas the address returned by @code{__builtin_return_address} is not.
++
+ Calling this function with a nonzero argument can have unpredictable
+ effects, including crashing the calling program.  As a result, calls
+ that are considered unsafe are diagnosed when the @option{-Wframe-address}
+ option is in effect.  Such calls should only be made in debugging
+ situations.
++
++On targets where code addresses are representable as @code{void *},
++@smallexample
++void *addr = __builtin_extract_return_addr (__builtin_return_address (0));
++@end smallexample
++gives the code address where the current function would return.  For example,
++such an address may be used with @code{dladdr} or other interfaces that work
++with code addresses.
+ @end deftypefn
+ 
+ @deftypefn {Built-in Function} {void *} __builtin_extract_return_addr (void *@var{addr})
+@@ -19722,6 +19741,13 @@ bool scalar_test_data_class (__ieee128 source, const int condition);
  bool scalar_test_neg (float source);
  bool scalar_test_neg (double source);
  bool scalar_test_neg (__ieee128 source);
@@ -11226,7 +11486,7 @@ index f5becf988d2..a581e9d959b 100644
  @end smallexample
  
  The @code{scalar_extract_exp} and @code{scalar_extract_sig}
-@@ -19741,6 +19754,9 @@ Note that the sign of the significand is not represented in the result
+@@ -19741,6 +19767,9 @@ Note that the sign of the significand is not represented in the result
  returned from the @code{scalar_extract_sig} function.  Use the
  @code{scalar_test_neg} function to test the sign of its @code{double}
  argument.
@@ -17096,6 +17356,27 @@ index 00000000000..2a2850d2fac
 +}
 +
 +/* { dg-final { scan-assembler-not {hint (36|38) // bti (j|jc)} } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c b/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
+index 0140bee194f..232ba67ade0 100644
+--- a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
++++ b/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
+@@ -41,12 +41,12 @@ func3 (int a, int b, int c)
+ void __attribute__ ((target ("arch=armv8.3-a")))
+ func4 (long offset, void *handler, int *ptr, int imm1, int imm2)
+ {
+-  /* paciasp */
++  /* no paciasp */
+   *ptr = imm1 + foo (imm1) + imm2;
+   __builtin_eh_return (offset, handler);
+-  /* autiasp */
++  /* no autiasp */
+   return;
+ }
+ 
+-/* { dg-final { scan-assembler-times "autiasp" 4 } } */
+-/* { dg-final { scan-assembler-times "paciasp" 4 } } */
++/* { dg-final { scan-assembler-times "autiasp" 3 } } */
++/* { dg-final { scan-assembler-times "paciasp" 3 } } */
 diff --git a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
 index e571b2f13b3..f56415f3354 100644
 --- a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
@@ -18306,6 +18587,28 @@ index 00000000000..058ca0b0fe4
 +
 +/* { dg_final { scan_assembler_times "vmsumudm" 2 } } */
 +
+diff --git a/gcc/testsuite/gcc.target/s390/vector/align-1.c b/gcc/testsuite/gcc.target/s390/vector/align-1.c
+index cc7777ad22a..6997af2ddcd 100644
+--- a/gcc/testsuite/gcc.target/s390/vector/align-1.c
++++ b/gcc/testsuite/gcc.target/s390/vector/align-1.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O3 -mzarch -march=z14" } */
++/* { dg-options "-O3 -mzarch -march=z13" } */
+ 
+ /* The user alignment ends up in DECL_ALIGN of the VAR_DECL and is
+    currently ignored if it is smaller than the alignment of the type.
+diff --git a/gcc/testsuite/gcc.target/s390/vector/align-2.c b/gcc/testsuite/gcc.target/s390/vector/align-2.c
+index e4e2fba6a58..00e09d3eadb 100644
+--- a/gcc/testsuite/gcc.target/s390/vector/align-2.c
++++ b/gcc/testsuite/gcc.target/s390/vector/align-2.c
+@@ -1,5 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-O3 -mzarch -march=z14" } */
++/* { dg-options "-O3 -mzarch -march=z13" } */
+ 
+ /* The user alignment ends up in TYPE_ALIGN of the type of the
+    VAR_DECL.  */
 diff --git a/gcc/testsuite/gcc.target/s390/zvector/pr94613.c b/gcc/testsuite/gcc.target/s390/zvector/pr94613.c
 new file mode 100644
 index 00000000000..c3581d82ede
@@ -21254,10 +21557,65 @@ index d634af9d949..5be5321d258 100644
  #undef _FILE_OFFSET_BITS
  
 diff --git a/libgcc/config/aarch64/aarch64-unwind.h b/libgcc/config/aarch64/aarch64-unwind.h
-index 223ac9157f1..c936befaeae 100644
+index 223ac9157f1..687687e5d1f 100644
 --- a/libgcc/config/aarch64/aarch64-unwind.h
 +++ b/libgcc/config/aarch64/aarch64-unwind.h
-@@ -80,6 +80,8 @@ aarch64_frob_update_context (struct _Unwind_Context *context,
+@@ -27,22 +27,20 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ 
+ #define DWARF_REGNUM_AARCH64_RA_STATE 34
+ 
+-#define MD_POST_EXTRACT_ROOT_ADDR(addr)  __builtin_aarch64_xpaclri (addr)
+-#define MD_POST_EXTRACT_FRAME_ADDR(context, fs, addr) \
+-  aarch64_post_extract_frame_addr (context, fs, addr)
+-#define MD_POST_FROB_EH_HANDLER_ADDR(current, target, addr) \
+-  aarch64_post_frob_eh_handler_addr (current, target, addr)
++#define MD_DEMANGLE_RETURN_ADDR(context, fs, addr) \
++  aarch64_demangle_return_addr (context, fs, addr)
+ #define MD_FROB_UPDATE_CONTEXT(context, fs) \
+   aarch64_frob_update_context (context, fs)
+ 
+-/* Do AArch64 private extraction on ADDR based on context info CONTEXT and
+-   unwind frame info FS.  If ADDR is signed, we do address authentication on it
+-   using CFA of current frame.  */
++/* Do AArch64 private extraction on ADDR_WORD based on context info CONTEXT and
++   unwind frame info FS.  If ADDR_WORD is signed, we do address authentication
++   on it using CFA of current frame.  */
+ 
+ static inline void *
+-aarch64_post_extract_frame_addr (struct _Unwind_Context *context,
+-				 _Unwind_FrameState *fs, void *addr)
++aarch64_demangle_return_addr (struct _Unwind_Context *context,
++			      _Unwind_FrameState *fs, _Unwind_Word addr_word)
+ {
++  void *addr = (void *)addr_word;
+   if (fs->regs.reg[DWARF_REGNUM_AARCH64_RA_STATE].loc.offset & 0x1)
+     {
+       _Unwind_Word salt = (_Unwind_Word) context->cfa;
+@@ -52,23 +50,6 @@ aarch64_post_extract_frame_addr (struct _Unwind_Context *context,
+     return addr;
+ }
+ 
+-/* Do AArch64 private frob on exception handler's address HANDLER_ADDR before
+-   installing it into current context CURRENT.  TARGET is currently not used.
+-   We need to sign exception handler's address if CURRENT itself is signed.  */
+-
+-static inline void *
+-aarch64_post_frob_eh_handler_addr (struct _Unwind_Context *current,
+-				   struct _Unwind_Context *target
+-				   ATTRIBUTE_UNUSED,
+-				   void *handler_addr)
+-{
+-  if (current->flags & RA_A_SIGNED_BIT)
+-    return __builtin_aarch64_pacia1716 (handler_addr,
+-					(_Unwind_Word) current->cfa);
+-  else
+-    return handler_addr;
+-}
+-
+ /* Do AArch64 private initialization on CONTEXT based on frame info FS.  Mark
+    CONTEXT as return address signed if bit 0 of DWARF_REGNUM_AARCH64_RA_STATE is
+    set.  */
+@@ -80,6 +61,8 @@ aarch64_frob_update_context (struct _Unwind_Context *context,
    if (fs->regs.reg[DWARF_REGNUM_AARCH64_RA_STATE].loc.offset & 0x1)
      /* The flag is used for re-authenticating EH handler's address.  */
      context->flags |= RA_A_SIGNED_BIT;
@@ -21322,10 +21680,10 @@ index 00000000000..2f2921349e7
 +#endif /* __gnu_linux__  */
 diff --git a/libgcc/config/aarch64/lse.S b/libgcc/config/aarch64/lse.S
 new file mode 100644
-index 00000000000..f7f1c19587b
+index 00000000000..69529834390
 --- /dev/null
 +++ b/libgcc/config/aarch64/lse.S
-@@ -0,0 +1,276 @@
+@@ -0,0 +1,306 @@
 +/* Out-of-line LSE atomics for AArch64 architecture.
 +   Copyright (C) 2019 Free Software Foundation, Inc.
 +   Contributed by Linaro Ltd.
@@ -21464,6 +21822,8 @@ index 00000000000..f7f1c19587b
 +#define tmp1	17
 +#define tmp2	15
 +
++#define BTI_C	hint	34
++
 +/* Start and end a function.  */
 +.macro	STARTFN name
 +	.text
@@ -21473,6 +21833,7 @@ index 00000000000..f7f1c19587b
 +	.type	\name, %function
 +	.cfi_startproc
 +\name:
++	BTI_C
 +.endm
 +
 +.macro	ENDFN name
@@ -21601,6 +21962,33 @@ index 00000000000..f7f1c19587b
 +	ret
 +
 +ENDFN	NAME(LDNM)
++#endif
++
++/* GNU_PROPERTY_AARCH64_* macros from elf.h for use in asm code.  */
++#define FEATURE_1_AND 0xc0000000
++#define FEATURE_1_BTI 1
++#define FEATURE_1_PAC 2
++
++/* Add a NT_GNU_PROPERTY_TYPE_0 note.  */
++#define GNU_PROPERTY(type, value)	\
++  .section .note.gnu.property, "a";	\
++  .p2align 3;				\
++  .word 4;				\
++  .word 16;				\
++  .word 5;				\
++  .asciz "GNU";				\
++  .word type;				\
++  .word 4;				\
++  .word value;				\
++  .word 0;
++
++#if defined(__linux__) || defined(__FreeBSD__)
++.section .note.GNU-stack, "", %progbits
++
++/* Add GNU property note if built with branch protection.  */
++# ifdef __ARM_FEATURE_BTI_DEFAULT
++GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI)
++# endif
 +#endif
 diff --git a/libgcc/config/aarch64/t-lse b/libgcc/config/aarch64/t-lse
 new file mode 100644
@@ -22059,6 +22447,80 @@ index 993db8fb057..03c0257dd00 100644
  
  #ifdef HAVE_GAS_HIDDEN
  #define ATTRIBUTE_HIDDEN  __attribute__ ((__visibility__ ("hidden")))
+diff --git a/libgcc/unwind-dw2.c b/libgcc/unwind-dw2.c
+index e6130af2fb5..8c21ab8a121 100644
+--- a/libgcc/unwind-dw2.c
++++ b/libgcc/unwind-dw2.c
+@@ -1532,11 +1532,14 @@ uw_update_context (struct _Unwind_Context *context, _Unwind_FrameState *fs)
+     {
+       /* Compute the return address now, since the return address column
+ 	 can change from frame to frame.  */
+-      context->ra = __builtin_extract_return_addr
+-	(_Unwind_GetPtr (context, fs->retaddr_column));
+-#ifdef MD_POST_EXTRACT_FRAME_ADDR
+-      context->ra = MD_POST_EXTRACT_FRAME_ADDR (context, fs, context->ra);
++      void *ret_addr;
++#ifdef MD_DEMANGLE_RETURN_ADDR
++      _Unwind_Word ra = _Unwind_GetGR (context, fs->retaddr_column);
++      ret_addr = MD_DEMANGLE_RETURN_ADDR (context, fs, ra);
++#else
++      ret_addr = _Unwind_GetPtr (context, fs->retaddr_column);
+ #endif
++      context->ra = __builtin_extract_return_addr (ret_addr);
+     }
+ }
+ 
+@@ -1571,9 +1574,6 @@ uw_init_context_1 (struct _Unwind_Context *context,
+ 		   void *outer_cfa, void *outer_ra)
+ {
+   void *ra = __builtin_extract_return_addr (__builtin_return_address (0));
+-#ifdef MD_POST_EXTRACT_ROOT_ADDR
+-  ra = MD_POST_EXTRACT_ROOT_ADDR (ra);
+-#endif
+   _Unwind_FrameState fs;
+   _Unwind_SpTmp sp_slot;
+   _Unwind_Reason_Code code;
+@@ -1610,9 +1610,6 @@ uw_init_context_1 (struct _Unwind_Context *context,
+      initialization context, then we can't see it in the given
+      call frame data.  So have the initialization context tell us.  */
+   context->ra = __builtin_extract_return_addr (outer_ra);
+-#ifdef MD_POST_EXTRACT_ROOT_ADDR
+-  context->ra = MD_POST_EXTRACT_ROOT_ADDR (context->ra);
+-#endif
+ }
+ 
+ static void _Unwind_DebugHook (void *, void *)
+@@ -1635,21 +1632,6 @@ _Unwind_DebugHook (void *cfa __attribute__ ((__unused__)),
+ #endif
+ }
+ 
+-/* Frob exception handler's address kept in TARGET before installing into
+-   CURRENT context.  */
+-
+-static inline void *
+-uw_frob_return_addr (struct _Unwind_Context *current
+-		     __attribute__ ((__unused__)),
+-		     struct _Unwind_Context *target)
+-{
+-  void *ret_addr = __builtin_frob_return_addr (target->ra);
+-#ifdef MD_POST_FROB_EH_HANDLER_ADDR
+-  ret_addr = MD_POST_FROB_EH_HANDLER_ADDR (current, target, ret_addr);
+-#endif
+-  return ret_addr;
+-}
+-
+ /* Install TARGET into CURRENT so that we can return to it.  This is a
+    macro because __builtin_eh_return must be invoked in the context of
+    our caller.  FRAMES is a number of frames to be unwind.
+@@ -1661,7 +1643,7 @@ uw_frob_return_addr (struct _Unwind_Context *current
+   do									\
+     {									\
+       long offset = uw_install_context_1 ((CURRENT), (TARGET));		\
+-      void *handler = uw_frob_return_addr ((CURRENT), (TARGET));	\
++      void *handler = __builtin_frob_return_addr ((TARGET)->ra);	\
+       _Unwind_DebugHook ((TARGET)->cfa, handler);			\
+       _Unwind_Frames_Extra (FRAMES);					\
+       __builtin_eh_return (offset, handler);				\
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
 index 01aa551b914..ad7a872ea9d 100644
 --- a/libgfortran/ChangeLog
@@ -23641,6 +24103,66 @@ index 3bd7446571d..157e369d4e7 100644
        PRINT *, "CheCKpOInT"
  !$ACC PARALLEL
        STOP "SiGN"
+diff --git a/libitm/config/aarch64/sjlj.S b/libitm/config/aarch64/sjlj.S
+index c704d1b0898..367806b68fd 100644
+--- a/libitm/config/aarch64/sjlj.S
++++ b/libitm/config/aarch64/sjlj.S
+@@ -24,6 +24,8 @@
+ 
+ #include "asmcfi.h"
+ 
++#define BTI_C	hint	34
++
+ 	.text
+ 	.align	2
+ 	.global	_ITM_beginTransaction
+@@ -31,6 +33,7 @@
+ 
+ _ITM_beginTransaction:
+ 	cfi_startproc
++	BTI_C
+ 	mov	x1, sp
+ 	stp	x29, x30, [sp, -11*16]!
+ 	cfi_adjust_cfa_offset(11*16)
+@@ -70,6 +73,7 @@ GTM_longjmp:
+ 	/* The first parameter becomes the return value (x0).
+ 	   The third parameter is ignored for now.  */
+ 	cfi_startproc
++	BTI_C
+ 	ldp	x19, x20, [x1, 1*16]
+ 	ldp	x21, x22, [x1, 2*16]
+ 	ldp	x23, x24, [x1, 3*16]
+@@ -87,6 +91,29 @@ GTM_longjmp:
+ 	cfi_endproc
+ 	.size	GTM_longjmp, . - GTM_longjmp
+ 
+-#ifdef __linux__
++/* GNU_PROPERTY_AARCH64_* macros from elf.h for use in asm code.  */
++#define FEATURE_1_AND 0xc0000000
++#define FEATURE_1_BTI 1
++#define FEATURE_1_PAC 2
++
++/* Add a NT_GNU_PROPERTY_TYPE_0 note.  */
++#define GNU_PROPERTY(type, value)	\
++  .section .note.gnu.property, "a";	\
++  .p2align 3;				\
++  .word 4;				\
++  .word 16;				\
++  .word 5;				\
++  .asciz "GNU";				\
++  .word type;				\
++  .word 4;				\
++  .word value;				\
++  .word 0;
++
++#if defined(__linux__) || defined(__FreeBSD__)
+ .section .note.GNU-stack, "", %progbits
++
++/* Add GNU property note if built with branch protection.  */
++# ifdef __ARM_FEATURE_BTI_DEFAULT
++GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI)
++# endif
+ #endif
 diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
 index 569a3c91ab2..9a1f9e90723 100644
 --- a/libphobos/ChangeLog
