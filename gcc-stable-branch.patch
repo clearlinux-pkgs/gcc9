@@ -60,7 +60,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (126):
+GCC Administrator (127):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -425,6 +426,9 @@ Richard Biener (4):
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
+
+Romain Naour (1):
+      Fix missing dependencies for selftests which occasionally causes failed builds.
 
 Samuel Thibault (1):
       hurd: libgcc unwinding support over signal trampolines
@@ -5300,10 +5304,61 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..5add120235c 100644
+index d8e53874e68..89c99906222 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,907 @@
+@@ -1,3 +1,958 @@
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-13  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	* config/aarch64/aarch64-c.c (aarch64_update_cpp_builtins): Add
++	__ARM_FEATURE_PAC_DEFAULT support.
++
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-13  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94891
++	* doc/extend.texi: Update the text for  __builtin_return_address.
++
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-13  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94891
++	* config/aarch64/aarch64.c (aarch64_return_address_signing_enabled):
++	Disable return address signing if __builtin_eh_return is used.
++
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-13  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94891
++	PR target/94791
++	* config/aarch64/aarch64-protos.h (aarch64_return_addr_rtx): Declare.
++	* config/aarch64/aarch64.c (aarch64_return_addr_rtx): New.
++	(aarch64_return_addr): Use aarch64_return_addr_rtx.
++	* config/aarch64/aarch64.h (PROFILE_HOOK): Likewise.
++
++2020-07-16  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
++
++	Backported from master:
++	2020-06-16  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
++
++	* config.in: Regenerate.
++	* config/s390/s390.c (print_operand): Emit vector alignment hints
++	for target z13, if AS accepts them.  For other targets the logic
++	stays the same.
++	* config/s390/s390.h (TARGET_VECTOR_LOADSTORE_ALIGNMENT_HINTS): Define
++	macro.
++	* configure: Regenerate.
++	* configure.ac: Check HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS_ON_Z13.
++
 +2020-07-10  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	* config/rs6000/altivec.h (vec_vmsumudm): New define.
@@ -6211,6 +6266,30 @@ index d8e53874e68..5add120235c 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/Makefile.in b/gcc/Makefile.in
+index abae872cd63..35d90f12d4c 100644
+--- a/gcc/Makefile.in
++++ b/gcc/Makefile.in
+@@ -1687,6 +1687,10 @@ $(FULL_DRIVER_NAME): ./xgcc
+ 	$(LN_S) $< $@
+ 
+ #
++# SELFTEST_DEPS need to be set before including language makefile fragments.
++# Otherwise $(SELFTEST_DEPS) is empty when used from <LANG>/Make-lang.in.
++SELFTEST_DEPS = $(GCC_PASSES) stmp-int-hdrs $(srcdir)/testsuite/selftests
++
+ # Language makefile fragments.
+ 
+ # The following targets define the interface between us and the languages.
+@@ -1950,8 +1954,6 @@ DEVNULL=$(if $(findstring mingw,$(build)),nul,/dev/null)
+ SELFTEST_FLAGS = -nostdinc $(DEVNULL) -S -o $(DEVNULL) \
+ 	-fself-test=$(srcdir)/testsuite/selftests
+ 
+-SELFTEST_DEPS = $(GCC_PASSES) stmp-int-hdrs $(srcdir)/testsuite/selftests
+-
+ # Run the selftests during the build once we have a driver and the frontend,
+ # so that self-test failures are caught as early as possible.
+ # Use "s-selftest-FE" to ensure that we only run the selftests if the
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
 index a819f57a2bf..474416a2198 100644
 --- a/gcc/ada/ChangeLog
@@ -13303,10 +13382,28 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..4682d9ff36f 100644
+index e132f2657ef..1478b397b73 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,899 @@
+@@ -1,3 +1,917 @@
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-13  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94891
++	* gcc.target/aarch64/return_address_sign_1.c: Update test.
++
++2020-07-16  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
++
++	Backported from master:
++	2020-06-16  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
++
++	* gcc.target/s390/vector/align-1.c: Change target architecture
++	to z13.
++	* gcc.target/s390/vector/align-2.c: Change target architecture
++	to z13.
++
 +2020-07-10  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	* gcc.target/powerpc/builtins-msum-runnable.c: New test.
@@ -21360,10 +21457,42 @@ index 9b8a3bd9308..b4c7edc249e 100644
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..6437b305079 100644
+index a5c30516ff8..275925541ab 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,105 @@
+@@ -1,3 +1,137 @@
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-13  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/94891
++	* config/aarch64/aarch64-unwind.h (MD_POST_EXTRACT_ROOT_ADDR): Remove.
++	(MD_POST_FROB_EH_HANDLER_ADDR): Remove.
++	(MD_POST_EXTRACT_FRAME_ADDR): Rename to ...
++	(MD_DEMANGLE_RETURN_ADDR): This.
++	(aarch64_post_extract_frame_addr): Rename to ...
++	(aarch64_demangle_return_addr): This.
++	(aarch64_post_frob_eh_handler_addr): Remove.
++	* unwind-dw2.c (uw_update_context): Demangle return address.
++	(uw_frob_return_addr): Remove.
++
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-09  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	PR target/96001
++	* config/aarch64/lse.S: Add BTI marking and related definitions,
++	and add BTI c to function entries.
++
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-09  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	* config/aarch64/lse.S: Add stack note.
++
 +2020-06-17  Samuel Thibault  <samuel.thibault@gnu.org>
 +
 +	Backported from master:
@@ -24103,6 +24232,29 @@ index 3bd7446571d..157e369d4e7 100644
        PRINT *, "CheCKpOInT"
  !$ACC PARALLEL
        STOP "SiGN"
+diff --git a/libitm/ChangeLog b/libitm/ChangeLog
+index 703db28ee23..d8203bfb37a 100644
+--- a/libitm/ChangeLog
++++ b/libitm/ChangeLog
+@@ -1,3 +1,18 @@
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-09  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	* config/aarch64/sjlj.S: Add BTI marking and related definitions,
++	and add BTI c to function entries.
++
++2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	Backported from master:
++	2020-07-09  Szabolcs Nagy  <szabolcs.nagy@arm.com>
++
++	* config/aarch64/sjlj.S: Add stack note if __FreeBSD__ is defined.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
 diff --git a/libitm/config/aarch64/sjlj.S b/libitm/config/aarch64/sjlj.S
 index c704d1b0898..367806b68fd 100644
 --- a/libitm/config/aarch64/sjlj.S
