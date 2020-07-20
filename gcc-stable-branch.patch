@@ -60,7 +60,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (127):
+GCC Administrator (130):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5304,10 +5307,18 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..89c99906222 100644
+index d8e53874e68..0b0ff9d0c77 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,958 @@
+@@ -1,3 +1,966 @@
++2020-07-17  Romain Naour  <romain.naour@gmail.com>
++
++	Backported from master:
++	2020-07-17  Romain Naour  <romain.naour@gmail.com>
++
++	* Makefile.in (SELFTEST_DEPS): Move before including language makefile
++	fragments.
++
 +2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
 +
 +	Backported from master:
