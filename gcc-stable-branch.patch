@@ -64,7 +64,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (138):
+GCC Administrator (139):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -401,7 +402,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (14):
+Martin Liska (15):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -416,6 +417,7 @@ Martin Liska (14):
       asan: fix RTX emission for ilp32
       gcc-changelog: sync from master.
       gcc-changelog: fix when somebody reverts a backport
+      gcc-changelog: fix combining of arguments.
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -5265,7 +5267,7 @@ index 00000000000..2bf5d1aefaa
 +
 diff --git a/contrib/git-backport.py b/contrib/git-backport.py
 new file mode 100755
-index 00000000000..3a9413dcd27
+index 00000000000..2b8e4686719
 --- /dev/null
 +++ b/contrib/git-backport.py
 @@ -0,0 +1,65 @@
@@ -5317,7 +5319,7 @@ index 00000000000..3a9413dcd27
 +        conflicts = out.strip().split('\n')
 +        changelogs = [c for c in conflicts if c.endswith('ChangeLog')]
 +        if changelogs:
-+            cmd = 'git checkout --theirs %s' % '\n'.join(changelogs)
++            cmd = 'git checkout --theirs %s' % ' '.join(changelogs)
 +            subprocess.check_output(cmd, shell=True)
 +        # 2) remove all ChangeLog files from index
 +        cmd = 'git diff --name-only --diff-filter=M HEAD'
