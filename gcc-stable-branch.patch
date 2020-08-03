@@ -64,7 +64,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (140):
+GCC Administrator (144):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -243,7 +247,7 @@ Harald Anlauf (22):
       PR fortran/95709 - ICE in gfc_resolve_code, at fortran/resolve.c:11807
       PR fortran/89574 - ICE in conv_function_val, at fortran/trans-expr.c:3792
 
-Iain Buclaw (9):
+Iain Buclaw (10):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
       libphobos: Fix struct layout of stat32_t on sparc-*-solaris*
       libphobos: Fix struct layout of addrinfo on sparc-*-solaris*
@@ -253,6 +257,7 @@ Iain Buclaw (9):
       d: Fix multiple definition error when using mixins and interfaces.
       d: Fix ICE in uda_attribute_p when looking up unknown attribute
       d: Fix ICE during error recovery in semantic pass
+      d: Fix ICE in expand_intrinsic_vaarg
 
 Iain Sandoe (1):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
@@ -438,8 +443,9 @@ Nathan Sidwell (2):
 Patrick Palka (1):
       c++: zero_init_expr_p of dependent expression [PR95678]
 
-Rainer Orth (1):
+Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
+      libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
 
 Richard Biener (4):
       tree-optimization/94163 constrain alignment set by PRE
@@ -11086,10 +11092,21 @@ index 3f3583c825d..7c68706640c 100644
  /* Complain that some language-specific thing hanging off a tree
     node has been accessed improperly.  */
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index f8268e87d4d..48af94f3eed 100644
+index f8268e87d4d..345edc57348 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,68 @@
+@@ -1,3 +1,79 @@
++2020-08-01  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2020-07-30  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/96140
++	* intrinsics.cc (expand_intrinsic_vaarg): Handle ref parameters as
++	arguments to va_arg().
++	(expand_intrinsic_vastart): Handle ref parameters as arguments to
++	va_start().
++
 +2020-06-26  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -11459,6 +11476,49 @@ index 6497619e5fd..3a2823d6e46 100644
  	  }
  
  	if (e->argprefix)
+diff --git a/gcc/d/intrinsics.cc b/gcc/d/intrinsics.cc
+index 4bd321b2db7..f8b8b90636d 100644
+--- a/gcc/d/intrinsics.cc
++++ b/gcc/d/intrinsics.cc
+@@ -495,8 +495,17 @@ expand_intrinsic_vaarg (tree callexp)
+     {
+       parmn = CALL_EXPR_ARG (callexp, 1);
+       STRIP_NOPS (parmn);
+-      gcc_assert (TREE_CODE (parmn) == ADDR_EXPR);
+-      parmn = TREE_OPERAND (parmn, 0);
++
++      /* The `ref' argument to va_arg is either an address or reference,
++	 get the value of it.  */
++      if (TREE_CODE (parmn) == PARM_DECL && POINTER_TYPE_P (TREE_TYPE (parmn)))
++	parmn = build_deref (parmn);
++      else
++	{
++	  gcc_assert (TREE_CODE (parmn) == ADDR_EXPR);
++	  parmn = TREE_OPERAND (parmn, 0);
++	}
++
+       type = TREE_TYPE (parmn);
+     }
+ 
+@@ -530,10 +539,16 @@ expand_intrinsic_vastart (tree callexp)
+   /* The va_list argument should already have its address taken.  The second
+      argument, however, is inout and that needs to be fixed to prevent a
+      warning.  Could be casting, so need to check type too?  */
+-  gcc_assert (TREE_CODE (ap) == ADDR_EXPR && TREE_CODE (parmn) == ADDR_EXPR);
++  gcc_assert (TREE_CODE (ap) == ADDR_EXPR
++	      || (TREE_CODE (ap) == PARM_DECL
++		  && POINTER_TYPE_P (TREE_TYPE (ap))));
+ 
+   /* Assuming nobody tries to change the return type.  */
+-  parmn = TREE_OPERAND (parmn, 0);
++  if (TREE_CODE (parmn) != PARM_DECL)
++    {
++      gcc_assert (TREE_CODE (parmn) == ADDR_EXPR);
++      parmn = TREE_OPERAND (parmn, 0);
++    }
+ 
+   return call_builtin_fn (callexp, BUILT_IN_VA_START, 2, ap, parmn);
+ }
 diff --git a/gcc/d/typeinfo.cc b/gcc/d/typeinfo.cc
 index bbd3961181d..0b19bcf7f34 100644
 --- a/gcc/d/typeinfo.cc
@@ -13780,10 +13840,18 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..f4ed5226b12 100644
+index e132f2657ef..2fd9dfecbb9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,959 @@
+@@ -1,3 +1,967 @@
++2020-08-01  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2020-07-30  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/96140
++	* gdc.dg/pr96140.d: New test.
++
 +2020-07-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from master:
@@ -19813,6 +19881,27 @@ index 00000000000..dfb8abb732f
 +
 +static assert(is(typeof(f!(void*)(null, null)) == void*));
 +// { dg-error "static assert  \(.*\) is false" "" { target *-*-* } .-1 }
+diff --git a/gcc/testsuite/gdc.dg/pr96140.d b/gcc/testsuite/gdc.dg/pr96140.d
+new file mode 100644
+index 00000000000..d25bb5d3360
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr96140.d
+@@ -0,0 +1,15 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96140
++// { dg-do compile }
++module pr94140;
++
++import core.stdc.stdarg;
++
++void test_va_arg(ref int a, ...)
++{
++    return va_arg!int(_argptr, a);
++}
++
++void test_va_start(ref va_list a, ...)
++{
++    return va_start(a, a);
++}
 diff --git a/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d b/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d
 new file mode 100644
 index 00000000000..79b78e1e52a
@@ -25765,6 +25854,27 @@ index 76e4460550d..f394823767d 100644
              union
              {
                  timestruc_t st_atim;
+diff --git a/libsanitizer/sanitizer_common/sanitizer_linux.cc b/libsanitizer/sanitizer_common/sanitizer_linux.cc
+index dc1e9849679..b798de7a820 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_linux.cc
++++ b/libsanitizer/sanitizer_common/sanitizer_linux.cc
+@@ -1938,13 +1938,13 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
+ # ifndef REG_EBP
+ #  define REG_EBP  6 // REG_FP
+ # endif
+-# ifndef REG_ESP
+-#  define REG_ESP 17 // REG_SP
++# ifndef REG_UESP
++#  define REG_UESP 17 // REG_SP
+ # endif
+ # endif
+   *pc = ucontext->uc_mcontext.gregs[REG_EIP];
+   *bp = ucontext->uc_mcontext.gregs[REG_EBP];
+-  *sp = ucontext->uc_mcontext.gregs[REG_ESP];
++  *sp = ucontext->uc_mcontext.gregs[REG_UESP];
+ # endif
+ #elif defined(__powerpc__) || defined(__powerpc64__)
+   ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
 index 45847172291..4131684f8ae 100644
 --- a/libstdc++-v3/ChangeLog
