@@ -64,7 +64,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (144):
+GCC Administrator (145):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -327,7 +328,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (28):
+Jonathan Wakely (29):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -356,6 +357,7 @@ Jonathan Wakely (28):
       libstdc++: Fix std::from_chars to ignore leading zeros in base 2
       libstdc++: Remove noexcept from match_results comparisons (PR 94627)
       gcc-changelog: Fix typo in output
+      cpp: Do not use @dots for ... tokens in code examples
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -5355,10 +5357,18 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..428997fc12c 100644
+index d8e53874e68..d75296d982c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,978 @@
+@@ -1,3 +1,986 @@
++2020-08-03  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-03  Jonathan Wakely  <jwakely@redhat.com>
++
++	* doc/cpp.texi (Variadic Macros): Use the exact ... token in
++	code examples.
++
 +2020-07-23  David Edelsohn  <dje.gcc@gmail.com>
 +
 +	Backported from master:
@@ -11649,6 +11659,69 @@ index 65d5fcb0845..599f37ea9da 100644
    real_from_string3 (to, string, fmt);
  }
  
+diff --git a/gcc/doc/cpp.texi b/gcc/doc/cpp.texi
+index e271f5180d8..520b61fb5bc 100644
+--- a/gcc/doc/cpp.texi
++++ b/gcc/doc/cpp.texi
+@@ -1632,7 +1632,7 @@ a function can.  The syntax for defining the macro is similar to that of
+ a function.  Here is an example:
+ 
+ @smallexample
+-#define eprintf(@dots{}) fprintf (stderr, __VA_ARGS__)
++#define eprintf(...) fprintf (stderr, __VA_ARGS__)
+ @end smallexample
+ 
+ This kind of macro is called @dfn{variadic}.  When the macro is invoked,
+@@ -1656,11 +1656,11 @@ below for an important special case for @samp{##}.)
+ If your macro is complicated, you may want a more descriptive name for
+ the variable argument than @code{@w{__VA_ARGS__}}.  CPP permits
+ this, as an extension.  You may write an argument name immediately
+-before the @samp{@dots{}}; that name is used for the variable argument.
++before the @samp{...}; that name is used for the variable argument.
+ The @code{eprintf} macro above could be written
+ 
+ @smallexample
+-#define eprintf(args@dots{}) fprintf (stderr, args)
++#define eprintf(args...) fprintf (stderr, args)
+ @end smallexample
+ 
+ @noindent
+@@ -1671,7 +1671,7 @@ You can have named arguments as well as variable arguments in a variadic
+ macro.  We could define @code{eprintf} like this, instead:
+ 
+ @smallexample
+-#define eprintf(format, @dots{}) fprintf (stderr, format, __VA_ARGS__)
++#define eprintf(format, ...) fprintf (stderr, format, __VA_ARGS__)
+ @end smallexample
+ 
+ @noindent
+@@ -1710,7 +1710,7 @@ invocation expands to its argument; but if the variable argument does
+ not have any tokens, the @code{@w{__VA_OPT__}} expands to nothing:
+ 
+ @smallexample
+-#define eprintf(format, @dots{}) \
++#define eprintf(format, ...) \
+   fprintf (stderr, format __VA_OPT__(,) __VA_ARGS__)
+ @end smallexample
+ 
+@@ -1723,7 +1723,7 @@ the introduction of @code{@w{__VA_OPT__}}, this extension remains
+ supported in GNU CPP, for backward compatibility.  If you write
+ 
+ @smallexample
+-#define eprintf(format, @dots{}) fprintf (stderr, format, ##__VA_ARGS__)
++#define eprintf(format, ...) fprintf (stderr, format, ##__VA_ARGS__)
+ @end smallexample
+ 
+ @noindent
+@@ -1759,7 +1759,7 @@ replacement list of a variadic macro.
+ Variadic macros became a standard part of the C language with C99.  
+ GNU CPP previously supported them
+ with a named variable argument
+-(@samp{args@dots{}}, not @samp{@dots{}} and @code{@w{__VA_ARGS__}}), which
++(@samp{args...}, not @samp{...} and @code{@w{__VA_ARGS__}}), which
+ is still supported for backward compatibility.
+ 
+ @node Predefined Macros
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
 index f5becf988d2..7dbe400f99e 100644
 --- a/gcc/doc/extend.texi
@@ -25854,6 +25927,19 @@ index 76e4460550d..f394823767d 100644
              union
              {
                  timestruc_t st_atim;
+diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
+index 07a4952bc66..21709b8cc65 100644
+--- a/libsanitizer/ChangeLog
++++ b/libsanitizer/ChangeLog
+@@ -1,3 +1,8 @@
++2020-08-03  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
++
++	* sanitizer_common/sanitizer_linux.cc: Cherry-pick llvm-project
++	revision f0e9b76c3500496f8f3ea7abe6f4bf801e3b41e7.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
 diff --git a/libsanitizer/sanitizer_common/sanitizer_linux.cc b/libsanitizer/sanitizer_common/sanitizer_linux.cc
 index dc1e9849679..b798de7a820 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_linux.cc
