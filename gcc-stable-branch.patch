@@ -64,7 +64,12 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (146):
+GCC Administrator (151):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -267,7 +272,7 @@ Iain Sandoe (1):
 Ian Lance Taylor (1):
       go.test: update issue4085b.go to version from Go 1.13
 
-Jakub Jelinek (40):
+Jakub Jelinek (41):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -308,6 +313,7 @@ Jakub Jelinek (40):
       i386: Fix V{64QI,32HI}mode constant permutations [PR94509]
       libstdc++: Update {x86_64,i?86,powerpc64,s390x,aarch64}-linux baselines for GCC 10.1
       testsuite: Improve g++.dg/ext/attr-parm-1.C testcase [PR94946]
+      aarch64: Fix up __aarch64_cas16_acq_rel fallback
 
 Jason Merrill (12):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -329,7 +335,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (29):
+Jonathan Wakely (33):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -359,6 +365,10 @@ Jonathan Wakely (29):
       libstdc++: Remove noexcept from match_results comparisons (PR 94627)
       gcc-changelog: Fix typo in output
       cpp: Do not use @dots for ... tokens in code examples
+      libstdc++: Fix unnecessary allocations in read_symlink [PR 96484]
+      libstdc++: Fix path::generic_string allocator handling (PR 94242)
+      libstdc++: Fix experimental::path::generic_string (PR 93245)
+      libstdc++: Use _wstat64 for Windows [PR 95749]
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -451,6 +461,9 @@ Nathan Sidwell (2):
 Patrick Palka (1):
       c++: zero_init_expr_p of dependent expression [PR95678]
 
+Qian Jianhua (1):
+      aarch64: Add A64FX machine model
+
 Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
       libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
@@ -463,6 +476,12 @@ Richard Biener (4):
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
+
+Richard Sandiford (4):
+      ipa-devirt: Fix crash in obj_type_ref_class [PR95114]
+      early-remat: Handle sets of multiple candidate regs [PR94605]
+      aarch64: Clear canary value after stack_protect_test [PR96191]
+      arm: Clear canary value after stack_protect_test [PR96191]
 
 Romain Naour (1):
       Fix missing dependencies for selftests which occasionally causes failed builds.
@@ -5363,10 +5382,67 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..d6dde8d33f5 100644
+index d8e53874e68..c22e607946f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1052 @@
+@@ -1,3 +1,1109 @@
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-08-06  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/96191
++	* config/arm/arm.md (arm_stack_protect_test_insn): Zero out
++	operand 2 after use.
++	* config/arm/thumb1.md (thumb1_stack_protect_test_insn): Likewise.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-08-05  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/96191
++	* config/aarch64/aarch64.md (stack_protect_test_<mode>): Set the
++	CC register directly, instead of a GPR.  Replace the original GPR
++	destination with an extra scratch register.  Zero out operand 3
++	after use.
++	(stack_protect_test): Update accordingly.
++
++2020-08-07  Qian Jianhua  <qianjh@cn.fujitsu.com>
++
++	Backported from master:
++	2020-08-03  Qian jianhua  <qianjh@cn.fujitsu.com>
++
++	* config/aarch64/aarch64-cores.def (a64fx): New core.
++	* config/aarch64/aarch64-tune.md: Regenerated.
++	* config/aarch64/aarch64.c (a64fx_prefetch_tune, a64fx_tunings): New.
++	* doc/invoke.texi: Add a64fx to the list.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-04-16  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/94605
++	* early-remat.c (early_remat::process_block): Handle insns that
++	set multiple candidate registers.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-07-13  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/95114
++	* tree.h (virtual_method_call_p): Add a default-false parameter
++	that indicates whether the function is being called from dump
++	routines.
++	(obj_type_ref_class): Likewise.
++	* tree.c (virtual_method_call_p): Likewise.
++	* ipa-devirt.c (obj_type_ref_class): Likewise.  Lazily add ODR
++	type information for the type when the parameter is false.
++	* tree-pretty-print.c (dump_generic_node): Update calls to
++	virtual_method_call_p and obj_type_ref_class accordingly.
++
 +2020-08-04  Matthew Malcomson  <matthew.malcomson@arm.com>
 +
 +	* config/aarch64/aarch64-protos.h (aarch64_indirect_call_asm):
@@ -7205,10 +7281,18 @@ index 6d5acb02fc6..f22ad437548 100644
       target between implementations that do or do not support ARMv8.2-A
       16-bit floating-point extensions.  */
 diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
-index 82d91d62519..c9be89e1a4c 100644
+index 82d91d62519..9214686d9d1 100644
 --- a/gcc/config/aarch64/aarch64-cores.def
 +++ b/gcc/config/aarch64/aarch64-cores.def
-@@ -109,6 +109,9 @@ AARCH64_CORE("tsv110",  tsv110, tsv110, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_
+@@ -104,11 +104,17 @@ AARCH64_CORE("ares",  ares, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_F
+ AARCH64_CORE("neoverse-n1",  neoversen1, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_FL_F16 | AARCH64_FL_RCPC | AARCH64_FL_DOTPROD | AARCH64_FL_PROFILE, neoversen1, 0x41, 0xd0c, -1)
+ AARCH64_CORE("neoverse-e1",  neoversee1, cortexa53, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_FL_F16 | AARCH64_FL_RCPC | AARCH64_FL_DOTPROD | AARCH64_FL_SSBS, cortexa53, 0x41, 0xd4a, -1)
+ 
++/* Fujitsu ('F') cores. */
++AARCH64_CORE("a64fx", a64fx, a64fx, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_FL_F16 | AARCH64_FL_SVE, a64fx, 0x46, 0x001, -1)
++
+ /* HiSilicon ('H') cores. */
+ AARCH64_CORE("tsv110",  tsv110, tsv110, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_FL_CRYPTO | AARCH64_FL_F16 | AARCH64_FL_AES | AARCH64_FL_SHA2, tsv110,   0x48, 0xd01, -1)
  
  /* ARMv8.4-A Architecture Processors.  */
  
@@ -7412,7 +7496,7 @@ index e3852c5d182..f413575cfc9 100644
  
  
 diff --git a/gcc/config/aarch64/aarch64-tune.md b/gcc/config/aarch64/aarch64-tune.md
-index 2b1ec85ae31..b12d935342e 100644
+index 2b1ec85ae31..a3bd30754ea 100644
 --- a/gcc/config/aarch64/aarch64-tune.md
 +++ b/gcc/config/aarch64/aarch64-tune.md
 @@ -1,5 +1,5 @@
@@ -7420,13 +7504,64 @@ index 2b1ec85ae31..b12d935342e 100644
  ;; Generated automatically by gentune.sh from aarch64-cores.def
  (define_attr "tune"
 -	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
-+	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,zeus,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
++	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..e7af8e5e671 100644
+index b452a53af99..bcf2777313e 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
-@@ -1879,10 +1879,33 @@ emit_set_insn (rtx x, rtx y)
+@@ -681,6 +681,17 @@ static const cpu_prefetch_tune xgene1_prefetch_tune =
+   -1			/* default_opt_level  */
+ };
+ 
++static const cpu_prefetch_tune a64fx_prefetch_tune =
++{
++  8,			/* num_slots  */
++  64,			/* l1_cache_size  */
++  256,			/* l1_cache_line_size  */
++  32768,		/* l2_cache_size  */
++  true,			/* prefetch_dynamic_strides */
++  -1,			/* minimum_stride */
++  -1			/* default_opt_level  */
++};
++
+ static const struct tune_params generic_tunings =
+ {
+   &cortexa57_extra_costs,
+@@ -1111,6 +1122,32 @@ static const struct tune_params neoversen1_tunings =
+   &generic_prefetch_tune
+ };
+ 
++static const struct tune_params a64fx_tunings =
++{
++  &generic_extra_costs,
++  &generic_addrcost_table,
++  &generic_regmove_cost,
++  &generic_vector_cost,
++  &generic_branch_cost,
++  &generic_approx_modes,
++  SVE_512, /* sve_width  */
++  4, /* memmov_cost  */
++  7, /* issue_rate  */
++  (AARCH64_FUSE_AES_AESMC | AARCH64_FUSE_CMP_BRANCH), /* fusible_ops  */
++  "32",	/* function_align.  */
++  "16",	/* jump_align.  */
++  "32",	/* loop_align.  */
++  4,	/* int_reassoc_width.  */
++  2,	/* fp_reassoc_width.  */
++  2,	/* vec_reassoc_width.  */
++  2,	/* min_div_recip_mul_sf.  */
++  2,	/* min_div_recip_mul_df.  */
++  0,	/* max_case_values.  */
++  tune_params::AUTOPREFETCHER_WEAK,	/* autoprefetcher_model.  */
++  (AARCH64_EXTRA_TUNE_NONE),	/* tune_flags.  */
++  &a64fx_prefetch_tune
++};
++
+ /* Support for fine-grained override of the tuning structures.  */
+ struct aarch64_tuning_override_function
+ {
+@@ -1879,10 +1916,33 @@ emit_set_insn (rtx x, rtx y)
  rtx
  aarch64_gen_compare_reg (RTX_CODE code, rtx x, rtx y)
  {
@@ -7435,15 +7570,15 @@ index b452a53af99..e7af8e5e671 100644
 +  machine_mode cmp_mode = GET_MODE (x);
 +  machine_mode cc_mode;
 +  rtx cc_reg;
- 
--  emit_set_insn (cc_reg, gen_rtx_COMPARE (mode, x, y));
++
 +  if (cmp_mode == TImode)
 +    {
 +      gcc_assert (code == NE);
 +
 +      cc_mode = CCmode;
 +      cc_reg = gen_rtx_REG (cc_mode, CC_REGNUM);
-+
+ 
+-  emit_set_insn (cc_reg, gen_rtx_COMPARE (mode, x, y));
 +      rtx x_lo = operand_subword (x, 0, 0, TImode);
 +      rtx y_lo = operand_subword (y, 0, 0, TImode);
 +      emit_set_insn (cc_reg, gen_rtx_COMPARE (cc_mode, x_lo, y_lo));
@@ -7463,7 +7598,7 @@ index b452a53af99..e7af8e5e671 100644
    return cc_reg;
  }
  
-@@ -1895,7 +1918,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
+@@ -1895,7 +1955,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
    if (y_mode == E_QImode || y_mode == E_HImode)
      {
        if (CONST_INT_P (y))
@@ -7475,7 +7610,7 @@ index b452a53af99..e7af8e5e671 100644
        else
  	{
  	  rtx t, cc_reg;
-@@ -2818,7 +2844,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2818,7 +2881,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    gcc_assert (emit_move_imm || temp1 != NULL_RTX);
    gcc_assert (temp1 == NULL_RTX || !reg_overlap_mentioned_p (temp1, src));
  
@@ -7484,7 +7619,7 @@ index b452a53af99..e7af8e5e671 100644
    rtx_insn *insn;
  
    if (!moffset)
-@@ -2862,7 +2888,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2862,7 +2925,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    if (emit_move_imm)
      {
        gcc_assert (temp1 != NULL_RTX || can_create_pseudo_p ());
@@ -7494,7 +7629,7 @@ index b452a53af99..e7af8e5e671 100644
      }
    insn = emit_insn (offset < 0
  		    ? gen_sub3_insn (dest, src, temp1)
-@@ -4854,6 +4881,17 @@ aarch64_return_address_signing_enabled (void)
+@@ -4854,6 +4918,17 @@ aarch64_return_address_signing_enabled (void)
    /* This function should only be called after frame laid out.   */
    gcc_assert (cfun->machine->frame.laid_out);
  
@@ -7512,7 +7647,7 @@ index b452a53af99..e7af8e5e671 100644
    /* If signing scope is AARCH64_FUNCTION_NON_LEAF, we only sign a leaf function
       if it's LR is pushed onto stack.  */
    return (aarch64_ra_sign_scope == AARCH64_FUNCTION_ALL
-@@ -7541,7 +7579,7 @@ sizetochar (int size)
+@@ -7541,7 +7616,7 @@ sizetochar (int size)
       'S/T/U/V':		Print a FP/SIMD register name for a register list.
  			The register printed is the FP/SIMD register name
  			of X + 0/1/2/3 for S/T/U/V.
@@ -7521,7 +7656,7 @@ index b452a53af99..e7af8e5e671 100644
       'X':		Print bottom 16 bits of integer constant in hex.
       'w/x':		Print a general register name or the zero register
  			(32-bit or 64-bit).
-@@ -7733,12 +7771,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
+@@ -7733,12 +7808,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
        break;
  
      case 'R':
@@ -7541,7 +7676,7 @@ index b452a53af99..e7af8e5e671 100644
        break;
  
      case 'X':
-@@ -8190,6 +8229,9 @@ aarch64_label_mentioned_p (rtx x)
+@@ -8190,6 +8266,9 @@ aarch64_label_mentioned_p (rtx x)
  enum reg_class
  aarch64_regno_regclass (unsigned regno)
  {
@@ -7551,7 +7686,7 @@ index b452a53af99..e7af8e5e671 100644
    if (GP_REGNUM_P (regno))
      return GENERAL_REGS;
  
-@@ -8397,6 +8439,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
+@@ -8397,6 +8476,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
    return cfun->machine->frame.frame_size;
  }
  
@@ -7576,7 +7711,7 @@ index b452a53af99..e7af8e5e671 100644
  /* Implement RETURN_ADDR_RTX.  We do not support moving back to a
     previous frame.  */
  
-@@ -8405,15 +8465,15 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
+@@ -8405,15 +8502,15 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
  {
    if (count != 0)
      return const0_rtx;
@@ -7595,7 +7730,7 @@ index b452a53af99..e7af8e5e671 100644
  
    if (aarch64_bti_enabled ())
      {
-@@ -8436,6 +8496,17 @@ aarch64_asm_trampoline_template (FILE *f)
+@@ -8436,6 +8533,17 @@ aarch64_asm_trampoline_template (FILE *f)
      }
    asm_fprintf (f, "\tbr\t%s\n", reg_names [IP1_REGNUM]);
  
@@ -7613,7 +7748,7 @@ index b452a53af99..e7af8e5e671 100644
    /* The trampoline needs an extra padding instruction.  In case if BTI is
       enabled the padding instruction is replaced by the BTI instruction at
       the beginning.  */
-@@ -8450,10 +8521,14 @@ static void
+@@ -8450,10 +8558,14 @@ static void
  aarch64_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
  {
    rtx fnaddr, mem, a_tramp;
@@ -7630,7 +7765,7 @@ index b452a53af99..e7af8e5e671 100644
  		   GEN_INT (tramp_code_sz), BLOCK_OP_NORMAL);
    mem = adjust_address (m_tramp, ptr_mode, tramp_code_sz);
    fnaddr = XEXP (DECL_RTL (fndecl), 0);
-@@ -8484,6 +8559,7 @@ aarch64_class_max_nregs (reg_class_t regclass, machine_mode mode)
+@@ -8484,6 +8596,7 @@ aarch64_class_max_nregs (reg_class_t regclass, machine_mode mode)
    unsigned int nregs;
    switch (regclass)
      {
@@ -7638,7 +7773,7 @@ index b452a53af99..e7af8e5e671 100644
      case TAILCALL_ADDR_REGS:
      case POINTER_REGS:
      case GENERAL_REGS:
-@@ -8640,6 +8716,8 @@ aarch64_output_casesi (rtx *operands)
+@@ -8640,6 +8753,8 @@ aarch64_output_casesi (rtx *operands)
    output_asm_insn (buf, operands);
    output_asm_insn (patterns[index][1], operands);
    output_asm_insn ("br\t%3", operands);
@@ -7647,7 +7782,7 @@ index b452a53af99..e7af8e5e671 100644
    assemble_label (asm_out_file, label);
    return "";
  }
-@@ -10676,10 +10754,12 @@ aarch64_register_move_cost (machine_mode mode,
+@@ -10676,10 +10791,12 @@ aarch64_register_move_cost (machine_mode mode,
      = aarch64_tune_params.regmove_cost;
  
    /* Caller save and pointer regs are equivalent to GENERAL_REGS.  */
@@ -7662,7 +7797,7 @@ index b452a53af99..e7af8e5e671 100644
      from = GENERAL_REGS;
  
    /* Moving between GPR and stack cost is the same as GP2GP.  */
-@@ -11734,6 +11814,79 @@ aarch64_validate_mcpu (const char *str, const struct processor **res,
+@@ -11734,6 +11851,79 @@ aarch64_validate_mcpu (const char *str, const struct processor **res,
    return false;
  }
  
@@ -7742,7 +7877,7 @@ index b452a53af99..e7af8e5e671 100644
  /* Parses CONST_STR for branch protection features specified in
     aarch64_branch_protect_types, and set any global variables required.  Returns
     the parsing result and assigns LAST_STR to the last processed token from
-@@ -11972,6 +12125,9 @@ aarch64_override_options (void)
+@@ -11972,6 +12162,9 @@ aarch64_override_options (void)
    selected_arch = NULL;
    selected_tune = NULL;
  
@@ -7752,7 +7887,7 @@ index b452a53af99..e7af8e5e671 100644
    if (aarch64_branch_protection_string)
      aarch64_validate_mbranch_protection (aarch64_branch_protection_string);
  
-@@ -12517,6 +12673,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
+@@ -12517,6 +12710,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
       aarch64_handle_attr_branch_protection, OPT_mbranch_protection_ },
    { "sign-return-address", aarch64_attr_enum, false, NULL,
       OPT_msign_return_address_ },
@@ -7761,7 +7896,7 @@ index b452a53af99..e7af8e5e671 100644
    { NULL, aarch64_attr_custom, false, NULL, OPT____ }
  };
  
-@@ -15426,16 +15584,26 @@ static void
+@@ -15426,16 +15621,26 @@ static void
  aarch64_emit_load_exclusive (machine_mode mode, rtx rval,
  			     rtx mem, rtx model_rtx)
  {
@@ -7791,7 +7926,7 @@ index b452a53af99..e7af8e5e671 100644
  }
  
  /* Mark the previous jump instruction as unlikely.  */
-@@ -15447,6 +15615,82 @@ aarch64_emit_unlikely_jump (rtx insn)
+@@ -15447,6 +15652,82 @@ aarch64_emit_unlikely_jump (rtx insn)
    add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
  }
  
@@ -7874,7 +8009,7 @@ index b452a53af99..e7af8e5e671 100644
  /* Expand a compare and swap pattern.  */
  
  void
-@@ -15493,6 +15737,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
+@@ -15493,6 +15774,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
  						   newval, mod_s));
        cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
      }
@@ -7892,7 +8027,7 @@ index b452a53af99..e7af8e5e671 100644
    else
      {
        /* The oldval predicate varies by mode.  Test it and force to reg.  */
-@@ -15538,13 +15793,11 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15538,13 +15830,11 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* Split after prolog/epilog to avoid interactions with shrinkwrapping.  */
    gcc_assert (epilogue_completed);
  
@@ -7907,7 +8042,7 @@ index b452a53af99..e7af8e5e671 100644
  
    rval = operands[0];
    mem = operands[1];
-@@ -15565,7 +15818,8 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15565,7 +15855,8 @@ aarch64_split_compare_and_swap (rtx operands[])
  	CBNZ	scratch, .label1
      .label2:
  	CMP	rval, 0.  */
@@ -7917,7 +8052,7 @@ index b452a53af99..e7af8e5e671 100644
  
    label1 = NULL;
    if (!is_weak)
-@@ -15578,35 +15832,20 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15578,35 +15869,20 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* The initial load can be relaxed for a __sync operation since a final
       barrier will be emitted to stop code hoisting.  */
    if (is_mm_sync (model))
@@ -7960,7 +8095,7 @@ index b452a53af99..e7af8e5e671 100644
  
    aarch64_emit_store_exclusive (mode, scratch, mem, newval, model_rtx);
  
-@@ -15627,22 +15866,16 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15627,22 +15903,16 @@ aarch64_split_compare_and_swap (rtx operands[])
        aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
      }
    else
@@ -7987,7 +8122,7 @@ index b452a53af99..e7af8e5e671 100644
    /* Emit any final barrier needed for a __sync operation.  */
    if (is_mm_sync (model))
      aarch64_emit_post_barrier (model);
-@@ -16415,7 +16648,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
+@@ -16415,7 +16685,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
  
    if (d->vec_flags == VEC_SVE_PRED
        || !d->one_vector_p
@@ -7997,7 +8132,7 @@ index b452a53af99..e7af8e5e671 100644
      return false;
  
    size = (diff + 1) * GET_MODE_UNIT_SIZE (d->vmode);
-@@ -18900,6 +19134,231 @@ aarch64_file_end_indicate_exec_stack ()
+@@ -18900,6 +19171,231 @@ aarch64_file_end_indicate_exec_stack ()
  #undef GNU_PROPERTY_AARCH64_FEATURE_1_BTI
  #undef GNU_PROPERTY_AARCH64_FEATURE_1_AND
  
@@ -8229,7 +8364,7 @@ index b452a53af99..e7af8e5e671 100644
  /* Target-specific selftests.  */
  
  #if CHECKING_P
-@@ -19420,6 +19879,12 @@ aarch64_libgcc_floating_mode_supported_p
+@@ -19420,6 +19916,12 @@ aarch64_libgcc_floating_mode_supported_p
  #define TARGET_RUN_TARGET_SELFTESTS selftest::aarch64_run_selftests
  #endif /* #if CHECKING_P */
  
@@ -8337,7 +8472,7 @@ index 772a9729688..47f2ff6874f 100644
      emit_library_call (fun, LCT_NORMAL, VOIDmode, lr, Pmode);		\
    }
 diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
-index cc5a887d404..ed8cf8ecea1 100644
+index cc5a887d404..9598bac387f 100644
 --- a/gcc/config/aarch64/aarch64.md
 +++ b/gcc/config/aarch64/aarch64.md
 @@ -331,10 +331,25 @@
@@ -8505,6 +8640,62 @@ index cc5a887d404..ed8cf8ecea1 100644
  )
  
  ;; Call subroutine returning any type.
+@@ -6947,10 +6985,8 @@
+    (match_operand 2)]
+   ""
+ {
+-  rtx result;
+   machine_mode mode = GET_MODE (operands[0]);
+ 
+-  result = gen_reg_rtx(mode);
+   if (aarch64_stack_protector_guard != SSP_GLOBAL)
+   {
+     /* Generate access through the system register. The
+@@ -6975,29 +7011,27 @@
+     operands[1] = gen_rtx_MEM (mode, tmp_reg);
+   }
+   emit_insn ((mode == DImode
+-		  ? gen_stack_protect_test_di
+-		  : gen_stack_protect_test_si) (result,
+-					        operands[0],
+-					        operands[1]));
+-
+-  if (mode == DImode)
+-    emit_jump_insn (gen_cbranchdi4 (gen_rtx_EQ (VOIDmode, result, const0_rtx),
+-				    result, const0_rtx, operands[2]));
+-  else
+-    emit_jump_insn (gen_cbranchsi4 (gen_rtx_EQ (VOIDmode, result, const0_rtx),
+-				    result, const0_rtx, operands[2]));
++	     ? gen_stack_protect_test_di
++	     : gen_stack_protect_test_si) (operands[0], operands[1]));
++
++  rtx cc_reg = gen_rtx_REG (CCmode, CC_REGNUM);
++  emit_jump_insn (gen_condjump (gen_rtx_EQ (VOIDmode, cc_reg, const0_rtx),
++				cc_reg, operands[2]));
+   DONE;
+ })
+ 
++;; DO NOT SPLIT THIS PATTERN.  It is important for security reasons that the
++;; canary value does not live beyond the end of this sequence.
+ (define_insn "stack_protect_test_<mode>"
+-  [(set (match_operand:PTR 0 "register_operand" "=r")
+-	(unspec:PTR [(match_operand:PTR 1 "memory_operand" "m")
+-		     (match_operand:PTR 2 "memory_operand" "m")]
+-	 UNSPEC_SP_TEST))
++  [(set (reg:CC CC_REGNUM)
++	(unspec:CC [(match_operand:PTR 0 "memory_operand" "m")
++		    (match_operand:PTR 1 "memory_operand" "m")]
++		   UNSPEC_SP_TEST))
++   (clobber (match_scratch:PTR 2 "=&r"))
+    (clobber (match_scratch:PTR 3 "=&r"))]
+   ""
+-  "ldr\t%<w>3, %1\;ldr\t%<w>0, %2\;eor\t%<w>0, %<w>3, %<w>0"
+-  [(set_attr "length" "12")
++  "ldr\t%<w>2, %0\;ldr\t%<w>3, %1\;subs\t%<w>2, %<w>2, %<w>3\;mov\t%3, 0"
++  [(set_attr "length" "16")
+    (set_attr "type" "multiple")])
+ 
+ ;; Write Floating-point Control Register.
 diff --git a/gcc/config/aarch64/aarch64.opt b/gcc/config/aarch64/aarch64.opt
 index 3c6d1cc90ad..4beb2d3d243 100644
 --- a/gcc/config/aarch64/aarch64.opt
@@ -9042,7 +9233,7 @@ index cdfc0f9e72f..d4e2ad2a317 100644
  
  	      return "ldmia%?\t%1, %M0";
 diff --git a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
-index 53e54874c12..bfb03f1b96d 100644
+index 53e54874c12..aa1f23c8e9e 100644
 --- a/gcc/config/arm/arm.md
 +++ b/gcc/config/arm/arm.md
 @@ -6362,16 +6362,21 @@
@@ -9070,6 +9261,52 @@ index 53e54874c12..bfb03f1b96d 100644
  )
  
  ;; Subroutine to store a half word from a register into memory.
+@@ -8898,6 +8903,8 @@
+   [(set_attr "arch" "t1,32")]
+ )
+ 
++;; DO NOT SPLIT THIS PATTERN.  It is important for security reasons that the
++;; canary value does not live beyond the end of this sequence.
+ (define_insn "arm_stack_protect_test_insn"
+   [(set (reg:CC_Z CC_REGNUM)
+ 	(compare:CC_Z (unspec:SI [(match_operand:SI 1 "memory_operand" "m,m")
+@@ -8907,8 +8914,8 @@
+    (clobber (match_operand:SI 0 "register_operand" "=&l,&r"))
+    (clobber (match_dup 2))]
+   "TARGET_32BIT"
+-  "ldr\t%0, [%2]\;ldr\t%2, %1\;eors\t%0, %2, %0"
+-  [(set_attr "length" "8,12")
++  "ldr\t%0, [%2]\;ldr\t%2, %1\;eors\t%0, %2, %0\;mov\t%2, #0"
++  [(set_attr "length" "12,16")
+    (set_attr "conds" "set")
+    (set_attr "type" "multiple")
+    (set_attr "arch" "t,32")]
+diff --git a/gcc/config/arm/thumb1.md b/gcc/config/arm/thumb1.md
+index 041e2db343f..6eca8c49c0e 100644
+--- a/gcc/config/arm/thumb1.md
++++ b/gcc/config/arm/thumb1.md
+@@ -2020,6 +2020,8 @@
+   [(set_attr "type" "mov_reg")]
+ )
+ 
++;; DO NOT SPLIT THIS PATTERN.  It is important for security reasons that the
++;; canary value does not live beyond the end of this sequence.
+ (define_insn "thumb1_stack_protect_test_insn"
+   [(set (match_operand:SI 0 "register_operand" "=&l")
+ 	(unspec:SI [(match_operand:SI 1 "memory_operand" "m")
+@@ -2027,9 +2029,9 @@
+ 	 UNSPEC_SP_TEST))
+    (clobber (match_dup 2))]
+   "TARGET_THUMB1"
+-  "ldr\t%0, [%2]\;ldr\t%2, %1\;eors\t%0, %2, %0"
+-  [(set_attr "length" "8")
+-   (set_attr "conds" "set")
++  "ldr\t%0, [%2]\;ldr\t%2, %1\;eors\t%0, %2, %0\;movs\t%2, #0"
++  [(set_attr "length" "10")
++   (set_attr "conds" "clob")
+    (set_attr "type" "multiple")]
+ )
+ 
 diff --git a/gcc/config/i386/darwin.h b/gcc/config/i386/darwin.h
 index bdb36f00959..c099a6238d8 100644
 --- a/gcc/config/i386/darwin.h
@@ -12597,7 +12834,7 @@ index f5becf988d2..7dbe400f99e 100644
  The @code{scalar_insert_exp}
  functions require a 64-bit environment supporting ISA 3.0 or later.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..1612ee75ce3 100644
+index 0ab6c9c6449..93436dec08f 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -12658,16 +12895,21 @@ index 0ab6c9c6449..1612ee75ce3 100644
  @item -march=@var{name}
  @opindex march
  Specify the name of the target architecture and, optionally, one or
-@@ -15830,7 +15855,7 @@ performance of the code.  Permissible values for this option are:
+@@ -15828,9 +15853,11 @@ performance of the code.  Permissible values for this option are:
+ @samp{cortex-a76}, @samp{ares}, @samp{exynos-m1}, @samp{emag}, @samp{falkor},
+ @samp{neoverse-e1},@samp{neoverse-n1},@samp{qdf24xx}, @samp{saphira},
  @samp{phecda}, @samp{xgene1}, @samp{vulcan}, @samp{octeontx},
- @samp{octeontx81},  @samp{octeontx83}, @samp{thunderx}, @samp{thunderxt88},
+-@samp{octeontx81},  @samp{octeontx83}, @samp{thunderx}, @samp{thunderxt88},
++@samp{octeontx81},  @samp{octeontx83},
++@samp{a64fx},
++@samp{thunderx}, @samp{thunderxt88},
  @samp{thunderxt88p1}, @samp{thunderxt81}, @samp{tsv110},
 -@samp{thunderxt83}, @samp{thunderx2t99},
 +@samp{thunderxt83}, @samp{thunderx2t99}, @samp{zeus},
  @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
  @samp{cortex-a73.cortex-a35}, @samp{cortex-a73.cortex-a53},
  @samp{cortex-a75.cortex-a55}, @samp{cortex-a76.cortex-a55}
-@@ -15916,6 +15941,17 @@ argument @samp{leaf} can be used to extend the signing to include leaf
+@@ -15916,6 +15943,17 @@ argument @samp{leaf} can be used to extend the signing to include leaf
  functions.
  @samp{bti} turns on branch target identification mechanism.
  
@@ -12685,7 +12927,7 @@ index 0ab6c9c6449..1612ee75ce3 100644
  @item -msve-vector-bits=@var{bits}
  @opindex msve-vector-bits
  Specify the number of bits in an SVE vector register.  This option only has
-@@ -28711,9 +28747,9 @@ Note that @option{-mcmodel=large} is incompatible with
+@@ -28711,9 +28749,9 @@ Note that @option{-mcmodel=large} is incompatible with
  @option{-mindirect-branch=thunk-extern} since the thunk function may
  not be reachable in the large code model.
  
@@ -12698,7 +12940,7 @@ index 0ab6c9c6449..1612ee75ce3 100644
  
  @item -mfunction-return=@var{choice}
  @opindex mfunction-return
-@@ -28726,6 +28762,10 @@ object file.  You can control this behavior for a specific function by
+@@ -28726,6 +28764,10 @@ object file.  You can control this behavior for a specific function by
  using the function attribute @code{function_return}.
  @xref{Function Attributes}.
  
@@ -12872,6 +13114,19 @@ index 30c4c7007ee..9ea109b3b61 100644
  	      if (die == auto_die || die == decltype_auto_die)
  		add_type_attribute (subr_die, TREE_TYPE (TREE_TYPE (decl)),
  				    TYPE_UNQUALIFIED, false, context_die);
+diff --git a/gcc/early-remat.c b/gcc/early-remat.c
+index 122891c1edb..712e39033f4 100644
+--- a/gcc/early-remat.c
++++ b/gcc/early-remat.c
+@@ -1995,7 +1995,7 @@ early_remat::process_block (basic_block bb)
+ 	}
+ 
+       /* Now process definitions.  */
+-      if (next_def && insn == next_def->insn)
++      while (next_def && insn == next_def->insn)
+ 	{
+ 	  unsigned int gen = canon_candidate (next_candidate);
+ 
 diff --git a/gcc/fold-const.c b/gcc/fold-const.c
 index c717f24501e..64273c1c6bc 100644
 --- a/gcc/fold-const.c
@@ -14566,6 +14821,36 @@ index edcec10f49f..5d4bc1979c7 100644
        if (hsa_callable_function_p (function_decl))
  	gen_hsa_insns_for_direct_call (stmt, hbb);
        else if (!gen_hsa_insns_for_known_library_call (stmt, hbb))
+diff --git a/gcc/ipa-devirt.c b/gcc/ipa-devirt.c
+index 3e040e27305..356641b51a5 100644
+--- a/gcc/ipa-devirt.c
++++ b/gcc/ipa-devirt.c
+@@ -2003,10 +2003,11 @@ add_type_duplicate (odr_type val, tree type)
+   return build_bases;
+ }
+ 
+-/* REF is OBJ_TYPE_REF, return the class the ref corresponds to.  */
++/* REF is OBJ_TYPE_REF, return the class the ref corresponds to.
++   FOR_DUMP_P is true when being called from the dump routines.  */
+ 
+ tree
+-obj_type_ref_class (const_tree ref)
++obj_type_ref_class (const_tree ref, bool for_dump_p)
+ {
+   gcc_checking_assert (TREE_CODE (ref) == OBJ_TYPE_REF);
+   ref = TREE_TYPE (ref);
+@@ -2022,8 +2023,10 @@ obj_type_ref_class (const_tree ref)
+   tree ret = TREE_TYPE (ref);
+   if (!in_lto_p && !TYPE_STRUCTURAL_EQUALITY_P (ret))
+     ret = TYPE_CANONICAL (ret);
++  else if (odr_type ot = get_odr_type (ret, !for_dump_p))
++    ret = ot->type;
+   else
+-    ret = get_odr_type (ret)->type;
++    gcc_assert (for_dump_p);
+   return ret;
+ }
+ 
 diff --git a/gcc/ipa-icf-gimple.c b/gcc/ipa-icf-gimple.c
 index 25284936bc3..38e0ac12f7e 100644
 --- a/gcc/ipa-icf-gimple.c
@@ -14725,10 +15010,51 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..2142682e727 100644
+index e132f2657ef..905df14b2c9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,981 @@
+@@ -1,3 +1,1022 @@
++2020-08-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/96402
++	* gcc.target/aarch64/pr96402.c: New test.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-08-06  Richard Sandiford  <richard.sandiford@arm.com>
++
++	* gcc.target/arm/stack-protector-1.c: New test.
++	* gcc.target/arm/stack-protector-2.c: Likewise.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-08-05  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR target/96191
++	* gcc.target/aarch64/stack-protector-1.c: New test.
++	* gcc.target/aarch64/stack-protector-2.c: Likewise.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-04-16  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR rtl-optimization/94605
++	* gcc.target/aarch64/sve/pr94605.c: New test.
++
++2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-07-13  Richard Sandiford  <richard.sandiford@arm.com>
++
++	PR middle-end/95114
++	* g++.target/aarch64/pr95114.C: New test.
++
 +2020-08-04  Matthew Malcomson  <matthew.malcomson@arm.com>
 +
 +	* gcc.target/aarch64/sls-mitigation/sls-miti-blr-bti.c: New test.
@@ -17288,6 +17614,15 @@ index 00000000000..e73df499070
 +  }
 +  __builtin_abort ();
 +}
+diff --git a/gcc/testsuite/g++.target/aarch64/pr95114.C b/gcc/testsuite/g++.target/aarch64/pr95114.C
+new file mode 100644
+index 00000000000..1689159e47c
+--- /dev/null
++++ b/gcc/testsuite/g++.target/aarch64/pr95114.C
+@@ -0,0 +1,3 @@
++template<typename T> struct foo { virtual void f() = 0; };
++extern foo<__Int8x8_t> &x;
++void f() { x.f(); }
 diff --git a/gcc/testsuite/gcc.c-torture/compile/packed-aligned-1.c b/gcc/testsuite/gcc.c-torture/compile/packed-aligned-1.c
 new file mode 100644
 index 00000000000..9f0923e29ee
@@ -18860,6 +19195,28 @@ index 00000000000..2a2850d2fac
 +}
 +
 +/* { dg-final { scan-assembler-not {hint (36|38) // bti (j|jc)} } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr96402.c b/gcc/testsuite/gcc.target/aarch64/pr96402.c
+new file mode 100644
+index 00000000000..fa2dddfac15
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr96402.c
+@@ -0,0 +1,16 @@
++/* PR target/96402 */
++/* { dg-do run { target int128 } } */
++/* { dg-options "-moutline-atomics" } */
++
++int
++main ()
++{
++  __int128 a = 0;
++  __sync_val_compare_and_swap (&a, (__int128) 0, (__int128) 1);
++  if (a != 1)
++    __builtin_abort ();
++  __sync_val_compare_and_swap (&a, (__int128) 1, (((__int128) 0xdeadbeeffeedbac1ULL) << 64) | 0xabadcafe00c0ffeeULL);
++  if (a != ((((__int128) 0xdeadbeeffeedbac1ULL) << 64) | 0xabadcafe00c0ffeeULL))
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c b/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
 index 0140bee194f..232ba67ade0 100644
 --- a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
@@ -19191,6 +19548,131 @@ index 00000000000..812250379f8
 +# All done.
 +torture-finish
 +dg-finish
+diff --git a/gcc/testsuite/gcc.target/aarch64/stack-protector-1.c b/gcc/testsuite/gcc.target/aarch64/stack-protector-1.c
+new file mode 100644
+index 00000000000..73e83bc413f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/stack-protector-1.c
+@@ -0,0 +1,89 @@
++/* { dg-do run } */
++/* { dg-require-effective-target fstack_protector } */
++/* { dg-options "-fstack-protector-all -O2" } */
++
++extern volatile long *stack_chk_guard_ptr;
++
++volatile long *
++get_ptr (void)
++{
++  return stack_chk_guard_ptr;
++}
++
++void __attribute__ ((noipa))
++f (void)
++{
++  volatile int x;
++  x = 1;
++  x += 1;
++}
++
++#define CHECK(REG) "\tcmp\tx0, " #REG "\n\tbeq\t1f\n"
++
++asm (
++"	.pushsection .data\n"
++"	.align	3\n"
++"	.globl	stack_chk_guard_ptr\n"
++"stack_chk_guard_ptr:\n"
++#if __ILP32__
++"	.word	__stack_chk_guard\n"
++#else
++"	.xword	__stack_chk_guard\n"
++#endif
++"	.weak	__stack_chk_guard\n"
++"__stack_chk_guard:\n"
++"	.word	0xdead4321\n"
++"	.word	0xbeef8765\n"
++"	.text\n"
++"	.globl	main\n"
++"	.type	main, %function\n"
++"main:\n"
++"	bl	get_ptr\n"
++"	str	x0, [sp, #-16]!\n"
++"	bl	f\n"
++"	str	x0, [sp, #8]\n"
++"	ldr	x0, [sp]\n"
++#if __ILP32__
++"	ldr     w0, [x0]\n"
++#else
++"	ldr     x0, [x0]\n"
++#endif
++	CHECK (x1)
++	CHECK (x2)
++	CHECK (x3)
++	CHECK (x4)
++	CHECK (x5)
++	CHECK (x6)
++	CHECK (x7)
++	CHECK (x8)
++	CHECK (x9)
++	CHECK (x10)
++	CHECK (x11)
++	CHECK (x12)
++	CHECK (x13)
++	CHECK (x14)
++	CHECK (x15)
++	CHECK (x16)
++	CHECK (x17)
++	CHECK (x18)
++	CHECK (x19)
++	CHECK (x20)
++	CHECK (x21)
++	CHECK (x22)
++	CHECK (x23)
++	CHECK (x24)
++	CHECK (x25)
++	CHECK (x26)
++	CHECK (x27)
++	CHECK (x28)
++	CHECK (x29)
++	CHECK (x30)
++"	ldr	x1, [sp]\n"
++	CHECK (x1)
++"	mov	x0, #0\n"
++"	b	exit\n"
++"1:\n"
++"	b	abort\n"
++"	.size	main, .-main\n"
++"	.popsection"
++);
+diff --git a/gcc/testsuite/gcc.target/aarch64/stack-protector-2.c b/gcc/testsuite/gcc.target/aarch64/stack-protector-2.c
+new file mode 100644
+index 00000000000..266c36fdbc6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/stack-protector-2.c
+@@ -0,0 +1,6 @@
++/* { dg-do run } */
++/* { dg-require-effective-target fstack_protector } */
++/* { dg-require-effective-target fpic } */
++/* { dg-options "-fstack-protector-all -O2 -fpic" } */
++
++#include "stack-protector-1.c"
+diff --git a/gcc/testsuite/gcc.target/aarch64/sve/pr94605.c b/gcc/testsuite/gcc.target/aarch64/sve/pr94605.c
+new file mode 100644
+index 00000000000..593e959e292
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sve/pr94605.c
+@@ -0,0 +1,12 @@
++/* { dg-options "-O2 -msve-vector-bits=256" } */
++
++typedef int v8si __attribute__((vector_size(32)));
++int g (v8si, v8si);
++
++void
++f (void)
++{
++  v8si x = {}, y = {};
++  while (g (x, y))
++    asm ("" : "+w" (x), "+w" (y));
++}
 diff --git a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
 index e571b2f13b3..f56415f3354 100644
 --- a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap.c
@@ -19290,6 +19772,87 @@ index 00000000000..acace4c8f2a
 +}
 +
 +/* { dg-final { scan-assembler-times "bl.*__aarch64_cas2_acq_rel" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/arm/stack-protector-1.c b/gcc/testsuite/gcc.target/arm/stack-protector-1.c
+new file mode 100644
+index 00000000000..b03ea14c4e2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/stack-protector-1.c
+@@ -0,0 +1,63 @@
++/* { dg-do run } */
++/* { dg-require-effective-target fstack_protector } */
++/* { dg-options "-fstack-protector-all -O2" } */
++
++extern volatile long *stack_chk_guard_ptr;
++
++volatile long *
++get_ptr (void)
++{
++  return stack_chk_guard_ptr;
++}
++
++void __attribute__ ((noipa))
++f (void)
++{
++  volatile int x;
++  x = 1;
++  x += 1;
++}
++
++#define CHECK(REG) "\tcmp\tr0, " #REG "\n\tbeq\t1f\n"
++
++asm (
++"	.data\n"
++"	.align	3\n"
++"	.globl	stack_chk_guard_ptr\n"
++"stack_chk_guard_ptr:\n"
++"	.word	__stack_chk_guard\n"
++"	.weak	__stack_chk_guard\n"
++"__stack_chk_guard:\n"
++"	.word	0xdead4321\n"
++"	.text\n"
++"	.globl	main\n"
++"	.type	main, %function\n"
++"main:\n"
++"	bl	get_ptr\n"
++"	str	r0, [sp, #-8]!\n"
++"	bl	f\n"
++"	str	r0, [sp, #4]\n"
++"	ldr     r0, [sp]\n"
++"	ldr     r0, [r0]\n"
++	CHECK (r1)
++	CHECK (r2)
++	CHECK (r3)
++	CHECK (r4)
++	CHECK (r5)
++	CHECK (r6)
++	CHECK (r7)
++	CHECK (r8)
++	CHECK (r9)
++	CHECK (r10)
++	CHECK (r11)
++	CHECK (r12)
++	CHECK (r13)
++	CHECK (r14)
++"	ldr	r1, [sp, #4]\n"
++	CHECK (r1)
++"	mov	r0, #0\n"
++"	b	exit\n"
++"1:\n"
++"	b	abort\n"
++"	.size	main, .-main"
++);
+diff --git a/gcc/testsuite/gcc.target/arm/stack-protector-2.c b/gcc/testsuite/gcc.target/arm/stack-protector-2.c
+new file mode 100644
+index 00000000000..266c36fdbc6
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/stack-protector-2.c
+@@ -0,0 +1,6 @@
++/* { dg-do run } */
++/* { dg-require-effective-target fstack_protector } */
++/* { dg-require-effective-target fpic } */
++/* { dg-options "-fstack-protector-all -O2 -fpic" } */
++
++#include "stack-protector-1.c"
 diff --git a/gcc/testsuite/gcc.target/i386/avx2-pr94460.c b/gcc/testsuite/gcc.target/i386/avx2-pr94460.c
 new file mode 100644
 index 00000000000..75b7a7bf313
@@ -23526,7 +24089,7 @@ index 25c5ced57b7..6450cae371d 100644
      }
  
 diff --git a/gcc/tree-pretty-print.c b/gcc/tree-pretty-print.c
-index ae0a6c12072..b06b595d151 100644
+index ae0a6c12072..2190635b432 100644
 --- a/gcc/tree-pretty-print.c
 +++ b/gcc/tree-pretty-print.c
 @@ -37,7 +37,6 @@ along with GCC; see the file COPYING3.  If not see
@@ -23537,7 +24100,21 @@ index ae0a6c12072..b06b595d151 100644
  static void newline_and_indent (pretty_printer *, int);
  static void maybe_init_pretty_print (FILE *);
  static void print_struct_decl (pretty_printer *, const_tree, int, dump_flags_t);
-@@ -4021,8 +4020,8 @@ print_call_name (pretty_printer *pp, tree node, dump_flags_t flags)
+@@ -2944,10 +2943,11 @@ dump_generic_node (pretty_printer *pp, tree node, int spc, dump_flags_t flags,
+ 	 libstdc++-prettyprinters/shared_ptr.cc with and without -g,
+ 	 for example, at occurrences of OBJ_TYPE_REF.  */
+       if (!(flags & (TDF_SLIM | TDF_COMPARE_DEBUG))
+-	  && virtual_method_call_p (node))
++	  && virtual_method_call_p (node, true))
+ 	{
+ 	  pp_string (pp, "(");
+-	  dump_generic_node (pp, obj_type_ref_class (node), spc, flags, false);
++	  dump_generic_node (pp, obj_type_ref_class (node, true),
++			     spc, flags, false);
+ 	  pp_string (pp, ")");
+ 	}
+       dump_generic_node (pp, OBJ_TYPE_REF_OBJECT (node), spc, flags, false);
+@@ -4021,8 +4021,8 @@ print_call_name (pretty_printer *pp, tree node, dump_flags_t flags)
  /* Print the first N characters in the array STR, replacing non-printable
     characters (including embedded nuls) with unambiguous escape sequences.  */
  
@@ -24032,6 +24609,48 @@ index 0308b26b808..ed6586753c5 100644
  
    /* Replace use of lhs with newly computed result.  If the use stmt is a
       single arg PHI, just replace all uses of PHI result.  It's necessary
+diff --git a/gcc/tree.c b/gcc/tree.c
+index 32e94e48132..d8d90bf0636 100644
+--- a/gcc/tree.c
++++ b/gcc/tree.c
+@@ -12995,10 +12995,11 @@ lhd_gcc_personality (void)
+    OBJ_TYPE_REF representing an virtual call of C++ method.
+    (As opposed to OBJ_TYPE_REF representing objc calls
+    through a cast where middle-end devirtualization machinery
+-   can't apply.) */
++   can't apply.)  FOR_DUMP_P is true when being called from
++   the dump routines.  */
+ 
+ bool
+-virtual_method_call_p (const_tree target)
++virtual_method_call_p (const_tree target, bool for_dump_p)
+ {
+   if (TREE_CODE (target) != OBJ_TYPE_REF)
+     return false;
+@@ -13011,7 +13012,7 @@ virtual_method_call_p (const_tree target)
+   /* If we do not have BINFO associated, it means that type was built
+      without devirtualization enabled.  Do not consider this a virtual
+      call.  */
+-  if (!TYPE_BINFO (obj_type_ref_class (target)))
++  if (!TYPE_BINFO (obj_type_ref_class (target, for_dump_p)))
+     return false;
+   return true;
+ }
+diff --git a/gcc/tree.h b/gcc/tree.h
+index 2f8e37bb356..8d25916ff9d 100644
+--- a/gcc/tree.h
++++ b/gcc/tree.h
+@@ -5043,8 +5043,8 @@ extern location_t *block_nonartificial_location (tree);
+ extern location_t tree_nonartificial_location (tree);
+ extern tree block_ultimate_origin (const_tree);
+ extern tree get_binfo_at_offset (tree, poly_int64, tree);
+-extern bool virtual_method_call_p (const_tree);
+-extern tree obj_type_ref_class (const_tree ref);
++extern bool virtual_method_call_p (const_tree, bool = false);
++extern tree obj_type_ref_class (const_tree ref, bool = false);
+ extern bool types_same_for_odr (const_tree type1, const_tree type2);
+ extern bool contains_bitfld_component_ref_p (const_tree);
+ extern bool block_may_fallthru (const_tree);
 diff --git a/gcc/varasm.c b/gcc/varasm.c
 index 8f006dcff67..8d87e28cc7c 100644
 --- a/gcc/varasm.c
@@ -24143,10 +24762,19 @@ index 9b8a3bd9308..b4c7edc249e 100644
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..275925541ab 100644
+index a5c30516ff8..8ee2508c50b 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,137 @@
+@@ -1,3 +1,146 @@
++2020-08-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/96402
++	* config/aarch64/lse.S (__aarch64_cas16_acq_rel): Use x2, x3 instead
++	of x(tmp0), x(tmp1) in STXP arguments.
++
 +2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
 +
 +	Backported from master:
@@ -24495,7 +25123,7 @@ index 00000000000..2f2921349e7
 +#endif /* __gnu_linux__  */
 diff --git a/libgcc/config/aarch64/lse.S b/libgcc/config/aarch64/lse.S
 new file mode 100644
-index 00000000000..69529834390
+index 00000000000..e3ae5191103
 --- /dev/null
 +++ b/libgcc/config/aarch64/lse.S
 @@ -0,0 +1,306 @@
@@ -24704,7 +25332,7 @@ index 00000000000..69529834390
 +	cmp		x0, x(tmp0)
 +	ccmp		x1, x(tmp1), #0, eq
 +	bne		1f
-+	STXP		w(tmp2), x(tmp0), x(tmp1), [x4]
++	STXP		w(tmp2), x2, x3, [x4]
 +	cbnz		w(tmp2), 0b
 +1:	ret
 +
@@ -27112,10 +27740,46 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..4131684f8ae 100644
+index 45847172291..d520a8e0a4c 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,327 @@
+@@ -1,3 +1,363 @@
++2020-08-07  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-03-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93245
++	* include/experimental/bits/fs_path.h (path::generic_string<C,T,A>()):
++	Return the generic format path, not the native one.
++	* testsuite/experimental/filesystem/path/generic/generic_string.cc:
++	Improve test coverage.
++
++2020-08-07  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-03-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94242
++	* include/bits/fs_path.h (path::_S_str_convert): Replace first
++	parameter with basic_string_view so that strings with different
++	allocators can be accepted.
++	(path::generic_string<C,T,A>()): Use basic_string object that uses the
++	right allocator type.
++	* testsuite/27_io/filesystem/path/generic/94242.cc: New test.
++	* testsuite/27_io/filesystem/path/generic/generic_string.cc: Improve
++	test coverage.
++
++2020-08-06  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-06  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/96484
++	* src/c++17/fs_ops.cc (fs::read_symlink): Return an error
++	immediately for non-symlinks.
++	* src/filesystem/ops.cc (fs::read_symlink): Likewise.
++
 +2020-07-02  Ville Voutilainen  <ville.voutilainen@gmail.com>
 +
 +	Backported from master:
@@ -32001,10 +32665,40 @@ index 4641dbebd85..523bbecfab3 100644
  
    namespace __detail
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
-index 5dc624dbb1e..6b39c46ac6e 100644
+index 5dc624dbb1e..c24153c6f33 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
 +++ b/libstdc++-v3/include/bits/fs_path.h
-@@ -1073,6 +1073,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -545,7 +545,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ 
+     template<typename _CharT, typename _Traits, typename _Allocator>
+       static basic_string<_CharT, _Traits, _Allocator>
+-      _S_str_convert(const string_type&, const _Allocator& __a);
++      _S_str_convert(basic_string_view<value_type>, const _Allocator&);
+ 
+     void _M_split_cmpts();
+ 
+@@ -953,7 +953,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ 
+   template<typename _CharT, typename _Traits, typename _Allocator>
+     std::basic_string<_CharT, _Traits, _Allocator>
+-    path::_S_str_convert(const string_type& __str, const _Allocator& __a)
++    path::_S_str_convert(basic_string_view<value_type> __str,
++			 const _Allocator& __a)
+     {
+       static_assert(!is_same_v<_CharT, value_type>);
+ 
+@@ -1063,7 +1064,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ #else
+       const value_type __slash = '/';
+ #endif
+-      string_type __str(__a);
++      using _Alloc2 = typename allocator_traits<_Allocator>::template
++	rebind_alloc<value_type>;
++      basic_string<value_type, char_traits<value_type>, _Alloc2> __str(__a);
+ 
+       if (_M_type() == _Type::_Root_dir)
+ 	__str.assign(1, __slash);
+@@ -1073,9 +1076,16 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
  	  bool __add_slash = false;
  	  for (auto& __elem : *this)
  	    {
@@ -32017,7 +32711,11 @@ index 5dc624dbb1e..6b39c46ac6e 100644
 +#endif
  	      if (__add_slash)
  		__str += __slash;
- 	      __str += __elem._M_pathname;
+-	      __str += __elem._M_pathname;
++	      __str += basic_string_view<value_type>(__elem._M_pathname);
+ 	      __add_slash = __elem._M_type() == _Type::_Filename;
+ 	    }
+ 	}
 diff --git a/libstdc++-v3/include/bits/ptr_traits.h b/libstdc++-v3/include/bits/ptr_traits.h
 index c90a35080f1..80ecf5b420d 100644
 --- a/libstdc++-v3/include/bits/ptr_traits.h
@@ -32113,6 +32811,76 @@ index b8243a73445..9959c39d083 100644
        /**
         *  @brief Attempts to insert a std::pair into the %unordered_map.
         *  @param __k    Key to use for finding a possibly existing pair in
+diff --git a/libstdc++-v3/include/experimental/bits/fs_path.h b/libstdc++-v3/include/experimental/bits/fs_path.h
+index 64089b432eb..64329e36b54 100644
+--- a/libstdc++-v3/include/experimental/bits/fs_path.h
++++ b/libstdc++-v3/include/experimental/bits/fs_path.h
+@@ -996,34 +996,56 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+   inline std::u32string
+   path::u32string() const { return string<char32_t>(); }
+ 
+-#ifndef _GLIBCXX_FILESYSTEM_IS_WINDOWS
+   template<typename _CharT, typename _Traits, typename _Allocator>
+     inline std::basic_string<_CharT, _Traits, _Allocator>
+     path::generic_string(const _Allocator& __a) const
+-    { return string<_CharT, _Traits, _Allocator>(__a); }
++    {
++#ifdef _GLIBCXX_FILESYSTEM_IS_WINDOWS
++      const _CharT __slash = is_same<_CharT, wchar_t>::value
++	? _CharT(L'/')
++	: _CharT('/'); // Assume value is correct for the encoding.
++#else
++      const _CharT __slash = _CharT('/');
++#endif
++      basic_string<_CharT, _Traits, _Allocator> __str(__a);
++      __str.reserve(_M_pathname.size());
++      bool __add_slash = false;
++      for (auto& __elem : *this)
++	{
++	  if (__elem._M_type == _Type::_Root_dir)
++	    {
++	      __str += __slash;
++	      continue;
++	    }
++	  if (__add_slash)
++	    __str += __slash;
++	  __str += __elem.string<_CharT, _Traits, _Allocator>(__a);
++	  __add_slash = __elem._M_type == _Type::_Filename;
++	}
++      return __str;
++    }
+ 
+   inline std::string
+-  path::generic_string() const { return string(); }
++  path::generic_string() const { return generic_string<char>(); }
+ 
+ #if _GLIBCXX_USE_WCHAR_T
+   inline std::wstring
+-  path::generic_wstring() const { return wstring(); }
++  path::generic_wstring() const { return generic_string<wchar_t>(); }
+ #endif
+ 
+ #ifdef _GLIBCXX_USE_CHAR8_T
+   inline std::u8string
+-  path::generic_u8string() const { return u8string(); }
++  path::generic_u8string() const { return generic_string<char8_t>(); }
+ #else
+   inline std::string
+-  path::generic_u8string() const { return u8string(); }
++  path::generic_u8string() const { return generic_string<char>(); }
+ #endif
+ 
+   inline std::u16string
+-  path::generic_u16string() const { return u16string(); }
++  path::generic_u16string() const { return generic_string<char16_t>(); }
+ 
+   inline std::u32string
+-  path::generic_u32string() const { return u32string(); }
+-#endif
++  path::generic_u32string() const { return generic_string<char32_t>(); }
+ 
+   inline int
+   path::compare(const string_type& __s) const { return compare(path(__s)); }
 diff --git a/libstdc++-v3/include/experimental/executor b/libstdc++-v3/include/experimental/executor
 index 266a2487899..7e2a97fd8ec 100644
 --- a/libstdc++-v3/include/experimental/executor
@@ -32946,6 +33714,23 @@ index 3c288301952..0f704c054cf 100644
  #endif // C++2a
  #endif // C++17
  #endif // C++14
+diff --git a/libstdc++-v3/src/c++17/fs_ops.cc b/libstdc++-v3/src/c++17/fs_ops.cc
+index 5f1f47b9fb7..5bb4b5d0160 100644
+--- a/libstdc++-v3/src/c++17/fs_ops.cc
++++ b/libstdc++-v3/src/c++17/fs_ops.cc
+@@ -1180,6 +1180,12 @@ fs::path fs::read_symlink(const path& p, error_code& ec)
+       ec.assign(errno, std::generic_category());
+       return result;
+     }
++  else if (!fs::is_symlink(make_file_status(st)))
++    {
++      ec.assign(EINVAL, std::generic_category());
++      return result;
++    }
++
+   std::string buf(st.st_size ? st.st_size + 1 : 128, '\0');
+   do
+     {
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
 index 54bef75efd8..a6be0e03a78 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
@@ -33019,6 +33804,45 @@ index e28526d1bfe..f39360cb4bf 100644
  	  void* __start = (char*)(__ch + 1) - __size;
  	  __r->deallocate(__start, __size, __align);
  	}
+diff --git a/libstdc++-v3/src/filesystem/ops-common.h b/libstdc++-v3/src/filesystem/ops-common.h
+index 21d0bbabb43..5c907fbca1e 100644
+--- a/libstdc++-v3/src/filesystem/ops-common.h
++++ b/libstdc++-v3/src/filesystem/ops-common.h
+@@ -71,14 +71,14 @@ namespace __gnu_posix
+   inline int close(int fd)
+   { return ::_close(fd); }
+ 
+-  typedef struct ::_stat stat_type;
++  typedef struct ::__stat64 stat_type;
+ 
+   inline int stat(const wchar_t* path, stat_type* buffer)
+-  { return ::_wstat(path, buffer); }
++  { return ::_wstat64(path, buffer); }
+ 
+   inline int lstat(const wchar_t* path, stat_type* buffer)
+   {
+-    // TODO symlinks not currently supported
++    // FIXME: symlinks not currently supported
+     return stat(path, buffer);
+   }
+ 
+diff --git a/libstdc++-v3/src/filesystem/ops.cc b/libstdc++-v3/src/filesystem/ops.cc
+index 5c5d6b9ef26..913b3c5a024 100644
+--- a/libstdc++-v3/src/filesystem/ops.cc
++++ b/libstdc++-v3/src/filesystem/ops.cc
+@@ -998,6 +998,12 @@ fs::path fs::read_symlink(const path& p [[gnu::unused]], error_code& ec)
+       ec.assign(errno, std::generic_category());
+       return result;
+     }
++  else if (!fs::is_symlink(make_file_status(st)))
++    {
++      ec.assign(EINVAL, std::generic_category());
++      return result;
++    }
++
+   std::string buf(st.st_size ? st.st_size + 1 : 128, '\0');
+   do
+     {
 diff --git a/libstdc++-v3/testsuite/20_util/from_chars/1.cc b/libstdc++-v3/testsuite/20_util/from_chars/1.cc
 index a352dc87ed4..ee9f5f773e0 100644
 --- a/libstdc++-v3/testsuite/20_util/from_chars/1.cc
@@ -34122,8 +34946,66 @@ index 00000000000..9f4c9c0aa08
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/94242.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/94242.cc
+new file mode 100644
+index 00000000000..c917daed94e
+--- /dev/null
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/94242.cc
+@@ -0,0 +1,52 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// C++17 30.10.7.4.7 path generic format observers [fs.path.generic.obs]
++
++#include <filesystem>
++#include <testsuite_allocator.h>
++
++using std::filesystem::path;
++using __gnu_test::SimpleAllocator;
++
++void
++test01()
++{
++  path p = "//foo//bar//.";
++  using C = path::value_type;
++  auto g = p.generic_string<C, std::char_traits<C>, SimpleAllocator<C>>();
++  VERIFY( g == path("/foo/bar/.").c_str() );
++}
++
++void
++test02()
++{
++  path p = "//foo//bar//.";
++  using C = char16_t;
++  auto g = p.generic_string<C, std::char_traits<C>, SimpleAllocator<C>>();
++  VERIFY( g == u"/foo/bar/." );
++}
++
++int
++main()
++{
++  test01();
++  test02();
++}
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc
-index 5a0c24c25c3..5caf079ed9b 100644
+index 5a0c24c25c3..8554e9f8f63 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc
 +++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/generic_string.cc
 @@ -1,7 +1,7 @@
@@ -34135,7 +35017,31 @@ index 5a0c24c25c3..5caf079ed9b 100644
  //
  // This file is part of the GNU ISO C++ Library.  This library is free
  // software; you can redistribute it and/or modify it under the
-@@ -46,8 +46,20 @@ test01()
+@@ -21,6 +21,7 @@
+ // C++17 30.10.7.4.7 path generic format observers [fs.path.generic.obs]
+ 
+ #include <filesystem>
++#include <testsuite_fs.h>
+ #include <testsuite_hooks.h>
+ 
+ using std::filesystem::path;
+@@ -34,11 +35,15 @@ test01()
+ #ifdef __CYGWIN__
+   VERIFY( path("//a").generic_string() == "//a" );
+   VERIFY( path("//a/").generic_string() == "//a/" );
++  VERIFY( path("//a//").generic_string() == "//a/" );
+   VERIFY( path("//a/b").generic_string() == "//a/b" );
++  VERIFY( path("//a//b").generic_string() == "//a/b" );
+ #else
+   VERIFY( path("//a").generic_string() == "/a" );
+   VERIFY( path("//a/").generic_string() == "/a/" );
++  VERIFY( path("//a//").generic_string() == "/a/" );
+   VERIFY( path("//a/b").generic_string() == "/a/b" );
++  VERIFY( path("//a//b").generic_string() == "/a/b" );
+ #endif
+   VERIFY( path("/a//b").generic_string() == "/a/b" );
+   VERIFY( path("/a//b/").generic_string() == "/a/b/" );
+@@ -46,8 +51,47 @@ test01()
    VERIFY( path("/a//b//.").generic_string() == "/a/b/." );
  }
  
@@ -34150,11 +35056,38 @@ index 5a0c24c25c3..5caf079ed9b 100644
 +  }
 +}
 +
++void
++test03()
++{
++  for (path p : __gnu_test::test_paths)
++  {
++    // A path constructed from the generic format string should compare equal
++    // to the original, because they represent the same path.
++    VERIFY( path(p.generic_string()) == p );
++    VERIFY( path(p.generic_wstring()) == p );
++    VERIFY( path(p.generic_u8string()) == p );
++    VERIFY( path(p.generic_u16string()) == p );
++    VERIFY( path(p.generic_u32string()) == p );
++  }
++
++  for (path p : { "a///b//c", "///a//b//c", "a:b//c", "a://b///c" })
++  {
++    // A path constructed from the generic format string should compare equal
++    // to the original, because they represent the same path.
++    VERIFY( path(p.generic_string()) == p );
++    VERIFY( path(p.generic_wstring()) == p );
++    VERIFY( path(p.generic_u8string()) == p );
++    VERIFY( path(p.generic_u16string()) == p );
++    VERIFY( path(p.generic_u32string()) == p );
++  }
++}
++
  int
  main()
  {
    test01();
 +  test02();
++  test03();
  }
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/utf.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/utf.cc
 new file mode 100644
@@ -34518,6 +35451,75 @@ index 1bbc37408c3..82061f9e7e9 100644
    last_write_time(f.path, time, ec);
    VERIFY( !ec );
    VERIFY( approx_equal(last_write_time(f.path), time) );
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc b/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc
+index 2788ebd3082..efaa452a586 100644
+--- a/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc
++++ b/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc
+@@ -23,27 +23,55 @@
+ 
+ #include <experimental/filesystem>
+ #include <testsuite_fs.h>
+-#include <testsuite_hooks.h>
++#include <testsuite_allocator.h>
+ 
+ using std::experimental::filesystem::path;
+ 
+ void
+ test01()
+ {
+-  for (const path& p : __gnu_test::test_paths)
++  __gnu_test::compare_paths( path("///a//b///").generic_string(), "/a/b/." );
++  __gnu_test::compare_paths( path("///a//b").generic_u16string(), "/a/b" );
++  __gnu_test::compare_paths( path("//a//b").generic_u16string(), "//a/b" );
++}
++
++using __gnu_test::SimpleAllocator;
++
++void
++test02()
++{
++  path p = "//foo//bar//.";
++  using C = char16_t;
++  auto g = p.generic_string<C, std::char_traits<C>, SimpleAllocator<C>>();
++  VERIFY( g == u"//foo/bar/." );
++}
++
++
++void
++test03()
++{
++  for (path p : { "/a///b//c", "///a//b//c", "a:b//c", "a://b///c" })
+   {
+-    path p2(p), p3;
+-    p2.swap(p3);
+-    VERIFY( p2 == path() );
+-    VERIFY( p3 == p );
+-    p2.swap(p3);
+-    VERIFY( p2 == p );
+-    VERIFY( p3 == path() );
++    // A path constructed from the generic format string should compare equal
++    // to the original, because they represent the same path.
++    VERIFY( path(p.generic_string()) == p );
++    VERIFY( path(p.generic_wstring()) == p );
++    VERIFY( path(p.generic_u8string()) == p );
++    VERIFY( path(p.generic_u16string()) == p );
++    VERIFY( path(p.generic_u32string()) == p );
+   }
++
++  // Except when the original consists entirely of a root-directory with
++  // multiple slashes, because path("///").native() is "///" but the
++  // generic format string is "/". In the Filesystem TS path::compare just
++  // compares native strings, so path("///") != path("/").
++  VERIFY( path("///").generic_string() == "/" );
+ }
+ 
+ int
+ main()
+ {
+   test01();
++  test02();
++  test03();
+ }
 diff --git a/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc b/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc
 new file mode 100644
 index 00000000000..0898d12927a
