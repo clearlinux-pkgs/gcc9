@@ -12,8 +12,9 @@ Alexandre Oliva (2):
 Andre Vieira (1):
       aarch64: Fix bootstrap with old binutils [PR93053]
 
-Andrea Corallo (1):
+Andrea Corallo (2):
       aarch64: backport fix for PR target/94530
+      libstdc++-v3/test: Better skip for "use_service.cc"
 
 Andreas Krebbel (4):
       PR94613: Fix vec_sel builtin for IBM Z
@@ -336,7 +337,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (33):
+Jonathan Wakely (34):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -370,6 +371,7 @@ Jonathan Wakely (33):
       libstdc++: Fix path::generic_string allocator handling (PR 94242)
       libstdc++: Fix experimental::path::generic_string (PR 93245)
       libstdc++: Use _wstat64 for Windows [PR 95749]
+      libstdc++: Disable net tests that depend on threads [PR 89760]
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -35533,10 +35535,10 @@ index 2788ebd3082..efaa452a586 100644
  }
 diff --git a/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc b/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc
 new file mode 100644
-index 00000000000..0898d12927a
+index 00000000000..fe8d385b0f7
 --- /dev/null
 +++ b/libstdc++-v3/testsuite/experimental/net/execution_context/make_service.cc
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,40 @@
 +// Copyright (C) 2020 Free Software Foundation, Inc.
 +//
 +// This file is part of the GNU ISO C++ Library.  This library is free
@@ -35555,6 +35557,7 @@ index 00000000000..0898d12927a
 +// <http://www.gnu.org/licenses/>.
 +
 +// { dg-do compile { target c++14 } }
++// { dg-require-gthreads "" }
 +
 +#include <experimental/executor>
 +
@@ -35576,12 +35579,29 @@ index 00000000000..0898d12927a
 +
 +static_assert(std::is_default_constructible<net::service_already_exists>(),
 +	      "LWG 3414. service_already_exists has no usable constructors");
+diff --git a/libstdc++-v3/testsuite/experimental/net/execution_context/use_service.cc b/libstdc++-v3/testsuite/experimental/net/execution_context/use_service.cc
+index 5b3087059cf..e9a1915639a 100644
+--- a/libstdc++-v3/testsuite/experimental/net/execution_context/use_service.cc
++++ b/libstdc++-v3/testsuite/experimental/net/execution_context/use_service.cc
+@@ -15,7 +15,11 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
+-// { dg-do run { target c++14 } }
++// { dg-do run }
++// { dg-options "-pthread"  }
++// { dg-require-effective-target c++14 }
++// { dg-require-effective-target pthread }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/executor>
+ #include <testsuite_hooks.h>
 diff --git a/libstdc++-v3/testsuite/experimental/net/executor/1.cc b/libstdc++-v3/testsuite/experimental/net/executor/1.cc
 new file mode 100644
-index 00000000000..cd0af4b7737
+index 00000000000..88e263297ee
 --- /dev/null
 +++ b/libstdc++-v3/testsuite/experimental/net/executor/1.cc
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,101 @@
 +// Copyright (C) 2020 Free Software Foundation, Inc.
 +//
 +// This file is part of the GNU ISO C++ Library.  This library is free
@@ -35600,6 +35620,7 @@ index 00000000000..cd0af4b7737
 +// <http://www.gnu.org/licenses/>.
 +
 +// { dg-do run { target c++14 } }
++// { dg-require-gthreads "" }
 +
 +#include <experimental/executor>
 +#include <testsuite_hooks.h>
@@ -35682,6 +35703,138 @@ index 00000000000..cd0af4b7737
 +  test02();
 +  test03();
 +}
+diff --git a/libstdc++-v3/testsuite/experimental/net/headers.cc b/libstdc++-v3/testsuite/experimental/net/headers.cc
+index 1705d2da59c..959ce0dcb36 100644
+--- a/libstdc++-v3/testsuite/experimental/net/headers.cc
++++ b/libstdc++-v3/testsuite/experimental/net/headers.cc
+@@ -16,6 +16,7 @@
+ // <http://www.gnu.org/licenses/>.
+ 
+ // { dg-do compile }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/net>
+ 
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/comparisons.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/comparisons.cc
+index 83a8bab88fa..83359ec1e77 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/comparisons.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/comparisons.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/cons.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/cons.cc
+index 15774803c00..65f3100887e 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/cons.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/cons.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/creation.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/creation.cc
+index 5919845c2f7..1a933b902d5 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/creation.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/creation.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc
+index 37ca8c81e32..2d71581ac2e 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc b/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc
+index 746557af656..f9bea5f9ccd 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/lookup.cc b/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/lookup.cc
+index 39fb7fd7708..40cb3db3610 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/lookup.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/lookup.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/reverse.cc b/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/reverse.cc
+index 34ebe5eba70..831d78c44fe 100644
+--- a/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/reverse.cc
++++ b/libstdc++-v3/testsuite/experimental/net/internet/resolver/ops/reverse.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options net_ts }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/internet>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc b/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc
+index d1886e75f06..935df8373cb 100644
+--- a/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc
++++ b/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options libatomic }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/timer>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/timer/waitable/dest.cc b/libstdc++-v3/testsuite/experimental/net/timer/waitable/dest.cc
+index cc3b6ee5658..9cc3df90ce2 100644
+--- a/libstdc++-v3/testsuite/experimental/net/timer/waitable/dest.cc
++++ b/libstdc++-v3/testsuite/experimental/net/timer/waitable/dest.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options libatomic }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/timer>
+ #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/timer/waitable/ops.cc b/libstdc++-v3/testsuite/experimental/net/timer/waitable/ops.cc
+index 0f89bec16cd..76aff0abb7e 100644
+--- a/libstdc++-v3/testsuite/experimental/net/timer/waitable/ops.cc
++++ b/libstdc++-v3/testsuite/experimental/net/timer/waitable/ops.cc
+@@ -17,6 +17,7 @@
+ 
+ // { dg-do run { target c++14 } }
+ // { dg-add-options libatomic }
++// { dg-require-gthreads "" }
+ 
+ #include <experimental/timer>
+ #include <testsuite_hooks.h>
 diff --git a/libstdc++-v3/testsuite/lib/libstdc++.exp b/libstdc++-v3/testsuite/lib/libstdc++.exp
 index 1ab896d3deb..a616227ae7b 100644
 --- a/libstdc++-v3/testsuite/lib/libstdc++.exp
