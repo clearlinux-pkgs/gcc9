@@ -38,6 +38,9 @@ Carl Love (4):
       rs6000, Fix header comment for intrinsic function _mm_movemask_epi8
       pr94833, fix vec_first_match_index for nulls
 
+Christophe Lyon (1):
+      testsuite: Fix gcc.target/arm/stack-protector-1.c for Cortex-M
+
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
 
@@ -65,7 +68,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (152):
+GCC Administrator (153):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -379,12 +383,13 @@ Joseph Myers (1):
 Julian Brown (1):
       Test cases for mixed structured/dynamic data lifetimes with OpenACC [PR92843]
 
-Kewen Lin (5):
+Kewen Lin (6):
       [testsuite] Fix PR94023 to guard case under vect_hw_misalign
       [testsuite] Fix PR94019 to check vector char when vect_hw_misalign
       [testsuite] Fix PR93935 to guard case under vect_hw_misalign
       Fix PR94043 by making vect_live_op generate lc-phi
       Fix PR94443 with gsi_insert_seq_before [PR94443]
+      testsuite: Add -fno-common to pr82374.c [PR94077]
 
 Kyrylo Tkachov (12):
       aarch64: Extend %R for integer registers
@@ -17837,6 +17842,21 @@ index 00000000000..ea3a132270a
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/gomp/pr82374.c b/gcc/testsuite/gcc.dg/gomp/pr82374.c
+index 453266ed84e..e63a2f5c62d 100644
+--- a/gcc/testsuite/gcc.dg/gomp/pr82374.c
++++ b/gcc/testsuite/gcc.dg/gomp/pr82374.c
+@@ -1,6 +1,9 @@
+ /* PR tree-optimization/82374 */
+ /* { dg-do compile } */
+-/* { dg-options "-O2 -fno-tree-vectorize -fdump-tree-vect-details" } */
++/* Option -fno-common makes vectorizer able to force alignment and ensures
++   vectorization can succeed even on targets lacking of unaligned vector
++   load/store.  */
++/* { dg-options "-O2 -fno-tree-vectorize -fdump-tree-vect-details -fno-common" } */
+ /* { dg-additional-options "-mavx -mno-avx2" { target i?86-*-* x86_64-*-* } } */
+ /* { dg-additional-options "-mvsx" { target powerpc_vsx_ok } } */
+ 
 diff --git a/gcc/testsuite/gcc.dg/pr93399.c b/gcc/testsuite/gcc.dg/pr93399.c
 new file mode 100644
 index 00000000000..3d9299018be
@@ -19777,7 +19797,7 @@ index 00000000000..acace4c8f2a
 +/* { dg-final { scan-assembler-times "bl.*__aarch64_cas2_acq_rel" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/arm/stack-protector-1.c b/gcc/testsuite/gcc.target/arm/stack-protector-1.c
 new file mode 100644
-index 00000000000..b03ea14c4e2
+index 00000000000..8d28b0a847c
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/arm/stack-protector-1.c
 @@ -0,0 +1,63 @@
@@ -19817,7 +19837,8 @@ index 00000000000..b03ea14c4e2
 +"	.type	main, %function\n"
 +"main:\n"
 +"	bl	get_ptr\n"
-+"	str	r0, [sp, #-8]!\n"
++"	sub	sp, sp, #8\n"
++"	str	r0, [sp]\n"
 +"	bl	f\n"
 +"	str	r0, [sp, #4]\n"
 +"	ldr     r0, [sp]\n"
@@ -19834,7 +19855,6 @@ index 00000000000..b03ea14c4e2
 +	CHECK (r10)
 +	CHECK (r11)
 +	CHECK (r12)
-+	CHECK (r13)
 +	CHECK (r14)
 +"	ldr	r1, [sp, #4]\n"
 +	CHECK (r1)
@@ -27743,10 +27763,43 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..d61fd4db562 100644
+index 45847172291..2e6a74db8df 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,373 @@
+@@ -1,3 +1,406 @@
++2020-08-11  Andrea Corallo  <andrea.corallo@arm.com>
++
++	Backported from master:
++	2020-04-02  Andrea Corallo  <andrea.corallo@arm.com>
++
++	* testsuite/experimental/net/execution_context/use_service.cc:
++	Require pthread and gthreads.
++
++2020-08-11  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/89760
++	* testsuite/experimental/net/execution_context/make_service.cc:
++	Add dg-require-gthreads.
++	* testsuite/experimental/net/executor/1.cc: Likewise.
++	* testsuite/experimental/net/headers.cc: Likewise.
++	* testsuite/experimental/net/internet/address/v4/comparisons.cc:
++	Likewise.
++	* testsuite/experimental/net/internet/address/v4/cons.cc:
++	Likewise.
++	* testsuite/experimental/net/internet/address/v4/creation.cc:
++	Likewise.
++	* testsuite/experimental/net/internet/address/v4/members.cc:
++	Likewise.
++	* testsuite/experimental/net/internet/resolver/base.cc:
++	Likewise.
++	* testsuite/experimental/net/internet/resolver/ops/lookup.cc:
++	Likewise.
++	* testsuite/experimental/net/internet/resolver/ops/reverse.cc:
++	Likewise.
++	* testsuite/experimental/net/timer/waitable/cons.cc: Likewise.
++	* testsuite/experimental/net/timer/waitable/dest.cc: Likewise.
++	* testsuite/experimental/net/timer/waitable/ops.cc: Likewise.
++
 +2020-08-10  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
