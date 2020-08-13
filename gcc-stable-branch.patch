@@ -68,7 +68,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (153):
+GCC Administrator (154):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -15018,10 +15019,23 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..905df14b2c9 100644
+index e132f2657ef..94a48b605de 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1022 @@
+@@ -1,3 +1,1035 @@
++2020-08-12  Kewen Lin  <linkw@linux.ibm.com>
++
++	PR testsuite/94077
++	* gcc.dg/gomp/pr82374.c: Add option -fno-common.
++
++2020-08-12  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backported from master:
++	2020-08-12  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	* gcc.target/arm/stack-protector-1.c: Adapt code to Cortex-M
++	restrictions.
++
 +2020-08-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
