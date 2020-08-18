@@ -68,7 +68,12 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (154):
+GCC Administrator (159):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -548,12 +553,13 @@ Tobias Burnus (2):
       [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
       ICE in gfc_get_dataptr_offset, at fortran/trans-array.c:6951
 
-Uros Bizjak (5):
+Uros Bizjak (6):
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
       i386: Require OPTION_MASK_ISA_SSE2 for __builtin_ia32_movq128 [PR94603]
       i386: Remove unneeded assignments when triggering SSE exceptions
       alpha: Implement the PR94780 fix for alpha.
+      i386: Fix restore_stack_nonlocal expander [PR96536].
 
 Ville Voutilainen (1):
       PR libstdc++/91807
@@ -9644,6 +9650,23 @@ index 14e5a392f62..ad1949b2371 100644
  const wide_int_bitmask PTA_KNL = PTA_BROADWELL | PTA_AVX512PF | PTA_AVX512ER
    | PTA_AVX512F | PTA_AVX512CD;
  const wide_int_bitmask PTA_BONNELL = PTA_CORE2 | PTA_MOVBE;
+diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
+index 698c31a0a97..237c0054a09 100644
+--- a/gcc/config/i386/i386.md
++++ b/gcc/config/i386/i386.md
+@@ -18158,8 +18158,11 @@
+       emit_insn (tmp);
+ 
+       /* Compare and jump over adjustment code.  */
+-      noadj_label = gen_label_rtx ();
++      tmp = gen_rtx_COMPARE (CCZmode, reg_ssp, const0_rtx);
+       flags = gen_rtx_REG (CCZmode, FLAGS_REG);
++      emit_insn (gen_rtx_SET (flags, tmp));
++
++      noadj_label = gen_label_rtx ();
+       tmp = gen_rtx_EQ (VOIDmode, flags, const0_rtx);
+       tmp = gen_rtx_IF_THEN_ELSE (VOIDmode, tmp,
+ 				  gen_rtx_LABEL_REF (VOIDmode, noadj_label),
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index 18cc39ae521..cbcbe3846ca 100644
 --- a/gcc/config/i386/sse.md
