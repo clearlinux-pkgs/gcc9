@@ -68,7 +68,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (159):
+GCC Administrator (160):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -347,7 +348,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (34):
+Jonathan Wakely (35):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -382,6 +383,7 @@ Jonathan Wakely (34):
       libstdc++: Fix experimental::path::generic_string (PR 93245)
       libstdc++: Use _wstat64 for Windows [PR 95749]
       libstdc++: Disable net tests that depend on threads [PR 89760]
+      libstdc++: Add deprecated attributes to old iostream members
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -5397,10 +5399,16 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..c22e607946f 100644
+index d8e53874e68..ccf9d9b62ea 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1109 @@
+@@ -1,3 +1,1115 @@
++2020-08-18  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/96536
++	* config/i386/i386.md (restore_stack_nonlocal):
++	Add missing compare RTX.
++
 +2020-08-07  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backported from master:
@@ -32754,6 +32762,30 @@ index e1513142415..898b029e66b 100644
      </row>
  
      <row>
+diff --git a/libstdc++-v3/include/bits/c++config b/libstdc++-v3/include/bits/c++config
+index 7e0962edd19..d2c2efe1c06 100644
+--- a/libstdc++-v3/include/bits/c++config
++++ b/libstdc++-v3/include/bits/c++config
+@@ -77,6 +77,7 @@
+ // Macros for deprecated attributes.
+ //   _GLIBCXX_USE_DEPRECATED
+ //   _GLIBCXX_DEPRECATED
++//   _GLIBCXX_DEPRECATED_SUGGEST
+ //   _GLIBCXX17_DEPRECATED
+ #ifndef _GLIBCXX_USE_DEPRECATED
+ # define _GLIBCXX_USE_DEPRECATED 1
+@@ -84,8 +85,11 @@
+ 
+ #if defined(__DEPRECATED) && (__cplusplus >= 201103L)
+ # define _GLIBCXX_DEPRECATED __attribute__ ((__deprecated__))
++# define _GLIBCXX_DEPRECATED_SUGGEST(ALT) \
++  __attribute__ ((__deprecated__ ("use '" ALT "' instead")))
+ #else
+ # define _GLIBCXX_DEPRECATED
++# define _GLIBCXX_DEPRECATED_SUGGEST(ALT)
+ #endif
+ 
+ #if defined(__DEPRECATED) && (__cplusplus >= 201703L)
 diff --git a/libstdc++-v3/include/bits/erase_if.h b/libstdc++-v3/include/bits/erase_if.h
 index 4641dbebd85..523bbecfab3 100644
 --- a/libstdc++-v3/include/bits/erase_if.h
@@ -32819,6 +32851,34 @@ index 5dc624dbb1e..c24153c6f33 100644
  	      __add_slash = __elem._M_type() == _Type::_Filename;
  	    }
  	}
+diff --git a/libstdc++-v3/include/bits/ios_base.h b/libstdc++-v3/include/bits/ios_base.h
+index be908b3ffd2..bc96ff6ddc8 100644
+--- a/libstdc++-v3/include/bits/ios_base.h
++++ b/libstdc++-v3/include/bits/ios_base.h
+@@ -471,12 +471,17 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+ #if __cplusplus <= 201402L
+     // Annex D.6 (removed in C++17)
+-    typedef int io_state;
+-    typedef int open_mode;
+-    typedef int seek_dir;
+-
+-    typedef std::streampos streampos;
+-    typedef std::streamoff streamoff;
++    typedef int io_state
++      _GLIBCXX_DEPRECATED_SUGGEST("std::iostate");
++    typedef int open_mode
++      _GLIBCXX_DEPRECATED_SUGGEST("std::openmode");
++    typedef int seek_dir
++      _GLIBCXX_DEPRECATED_SUGGEST("std::seekdir");
++
++    typedef std::streampos streampos
++      _GLIBCXX_DEPRECATED_SUGGEST("std::streampos");
++    typedef std::streamoff streamoff
++      _GLIBCXX_DEPRECATED_SUGGEST("std::streamoff");
+ #endif
+ 
+     // Callbacks;
 diff --git a/libstdc++-v3/include/bits/ptr_traits.h b/libstdc++-v3/include/bits/ptr_traits.h
 index c90a35080f1..80ecf5b420d 100644
 --- a/libstdc++-v3/include/bits/ptr_traits.h
@@ -33514,6 +33574,21 @@ index 7ff5d17afe7..5b6ec60268a 100644
    template<typename _Tp = std::byte>
      class polymorphic_allocator;
  #endif
+diff --git a/libstdc++-v3/include/std/streambuf b/libstdc++-v3/include/std/streambuf
+index d9ca981d704..f812e32de42 100644
+--- a/libstdc++-v3/include/std/streambuf
++++ b/libstdc++-v3/include/std/streambuf
+@@ -786,9 +786,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+        *
+        *  See http://gcc.gnu.org/ml/libstdc++/2002-05/msg00168.html
+        */
+-#if __cplusplus >= 201103L
+-      [[__deprecated__("stossc is deprecated, use sbumpc instead")]]
+-#endif
++      _GLIBCXX_DEPRECATED_SUGGEST("std::basic_streambuf::sbumpc")
+       void
+       stossc()
+       {
 diff --git a/libstdc++-v3/include/std/string b/libstdc++-v3/include/std/string
 index 6ccc06f337a..506cb78313e 100644
 --- a/libstdc++-v3/include/std/string
@@ -35334,6 +35409,35 @@ index 00000000000..7bb2f643043
 +  test01();
 +  test02();
 +}
+diff --git a/libstdc++-v3/testsuite/27_io/types/1.cc b/libstdc++-v3/testsuite/27_io/types/1.cc
+index 640ff737330..19a42360b11 100644
+--- a/libstdc++-v3/testsuite/27_io/types/1.cc
++++ b/libstdc++-v3/testsuite/27_io/types/1.cc
+@@ -15,6 +15,7 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
++// { dg-options "-Wdeprecated" }
+ // { dg-do compile { target c++14_down } }
+ 
+ // 27.4.2.1 - Types [lib.ios.types]
+@@ -26,6 +27,14 @@
+ // Annex D, deprecated.
+ void test01()
+ {
+-  typedef std::ios_base::streampos streampos_type;
+-  typedef std::ios_base::streamoff streamoff_type;
++  typedef std::ios_base::streampos streampos_type; // { dg-warning "is deprecated: use 'std::streampos' instead" }
++  typedef std::ios_base::streamoff streamoff_type; // { dg-warning "is deprecated: use 'std::streamoff' instead" }
++}
++
++// Annex D, deprecated.
++void test02()
++{
++  typedef std::ios_base::io_state iostate_type; // { dg-warning "is deprecated: use 'std::iostate' instead" }
++  typedef std::ios_base::open_mode openmode_type; // { dg-warning "is deprecated: use 'std::openmode' instead" }
++  typedef std::ios_base::seek_dir seekdir_type; // { dg-warning "is deprecated: use 'std::seekdir' instead" }
+ }
 diff --git a/libstdc++-v3/testsuite/28_regex/match_results/94627.cc b/libstdc++-v3/testsuite/28_regex/match_results/94627.cc
 new file mode 100644
 index 00000000000..dc4883c19a0
