@@ -68,7 +68,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (161):
+GCC Administrator (165):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -420,7 +424,7 @@ Marek Polacek (4):
       c++: Fix ICE in check_local_shadow with enum [PR95560]
       c++: Fix bogus -Wparentheses warning [PR95344]
 
-Mark Eggleston (12):
+Mark Eggleston (13):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
@@ -433,6 +437,7 @@ Mark Eggleston (12):
       Fortran  : Bogus error with additional blanks in type(*) PR95829
       Fortran  : ICE in gfc_check_reshape PR95585
       Fortran  : ICE in gfc_check_pointer_assign PR95612
+      Fortran  :  get_environment_variable runtime error PR96486
 
 Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
@@ -494,11 +499,12 @@ Richard Biener (4):
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
 
-Richard Sandiford (4):
+Richard Sandiford (5):
       ipa-devirt: Fix crash in obj_type_ref_class [PR95114]
       early-remat: Handle sets of multiple candidate regs [PR94605]
       aarch64: Clear canary value after stack_protect_test [PR96191]
       arm: Clear canary value after stack_protect_test [PR96191]
+      Update links to Arm docs
 
 Romain Naour (1):
       Fix missing dependencies for selftests which occasionally causes failed builds.
@@ -524,9 +530,16 @@ Szabolcs Nagy (13):
       doc: Clarify __builtin_return_address [PR94891]
       aarch64: Add missing ACLE support for PAC-RET
 
-Tamar Christina (2):
+Tamar Christina (9):
       AArch64: Break apart paradoxical subregs for VSTRUCT writes (PR target/94052)
       AArch64: Fix options canonicanization for assembler
+      AArch64: Fix bugs in -mcpu=native detection.
+      AArch64: Add GCC_CPUINFO override
+      Arm: Add GCC_CPUINFO override
+      Testsuite: Make it easier to debug environment setting functions
+      Testuite: Document environment setting directives
+      AArch64: Add test for -mcpu=native
+      AArch64: Fix hwasan failure in readline.
 
 Thomas Koenig (8):
       Revert patch for PR fortran/93956.
@@ -5400,10 +5413,58 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..ccf9d9b62ea 100644
+index d8e53874e68..3da84adc6d0 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1115 @@
+@@ -1,3 +1,1163 @@
++2020-08-21  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2020-08-21  Richard Sandiford  <richard.sandiford@arm.com>
++
++	* doc/extend.texi: Update links to Arm docs.
++	* doc/invoke.texi: Likewise.
++
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-08-03  Tamar Christina  <tamar.christina@arm.com>
++
++	* config/aarch64/driver-aarch64.c (readline): Check return value fgets.
++
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-07-17  Tamar Christina  <tamar.christina@arm.com>
++
++	* doc/sourcebuild.texi (dg-set-compiler-env-var,
++	dg-set-target-env-var): Document.
++
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-07-17  Tamar Christina  <tamar.christina@arm.com>
++
++	* config/arm/driver-arm.c (host_detect_local_cpu): Add GCC_CPUINFO.
++
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-07-17  Tamar Christina  <tamar.christina@arm.com>
++
++	* config/aarch64/driver-aarch64.c (host_detect_local_cpu):
++	Add GCC_CPUINFO.
++
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-07-17  Tamar Christina  <tamar.christina@arm.com>
++
++	* config/aarch64/driver-aarch64.c (INCLUDE_SET): New.
++	(parse_field): Use std::string.
++	(split_words, readline, find_field): New.
++	(host_detect_local_cpu): Fix truncation issues.
++
 +2020-08-18  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/96536
@@ -9050,6 +9111,239 @@ index 21f9549e660..3e170e4c58c 100644
  (define_memory_constraint "Q"
   "A memory address which uses a single base register with no offset."
   (and (match_code "mem")
+diff --git a/gcc/config/aarch64/driver-aarch64.c b/gcc/config/aarch64/driver-aarch64.c
+index 6f16775f47d..106dc00e9dc 100644
+--- a/gcc/config/aarch64/driver-aarch64.c
++++ b/gcc/config/aarch64/driver-aarch64.c
+@@ -21,6 +21,7 @@
+ 
+ #include "config.h"
+ #define INCLUDE_STRING
++#define INCLUDE_SET
+ #include "system.h"
+ #include "coretypes.h"
+ #include "tm.h"
+@@ -119,9 +120,15 @@ valid_bL_core_p (unsigned int *core, unsigned int bL_core)
+ /* Returns the hex integer that is after ':' for the FIELD.
+    Returns -1 is returned if there was problem parsing the integer. */
+ static unsigned
+-parse_field (const char *field)
++parse_field (const std::string &field)
+ {
+-  const char *rest = strchr (field, ':');
++  const char *rest = strchr (field.c_str (), ':');
++
++  /* The line must be in the format of <name>:<value>, if it's not
++     then we have a weird format.  */
++  if (rest == NULL)
++    return -1;
++
+   char *after;
+   unsigned fint = strtol (rest + 1, &after, 16);
+   if (after == rest + 1)
+@@ -129,6 +136,82 @@ parse_field (const char *field)
+   return fint;
+ }
+ 
++/* Returns the index of the ':' inside the FIELD which must be found
++   after the value of KEY.  Returns string::npos if line does not contain
++   a field.  */
++
++static size_t
++find_field (const std::string &field, const std::string &key)
++{
++  size_t key_pos, sep_pos;
++  key_pos = field.find (key);
++  if (key_pos == std::string::npos)
++    return std::string::npos;
++
++  sep_pos = field.find (":", key_pos + 1);
++  if (sep_pos == std::string::npos)
++    return std::string::npos;
++
++  return sep_pos;
++}
++
++/* Splits and returns a string based on whitespace and return it as
++   part of a set. Empty strings are ignored.  */
++
++static void
++split_words (const std::string &val, std::set<std::string> &result)
++{
++  size_t cur, prev = 0;
++  std::string word;
++  while ((cur = val.find_first_of (" \n", prev)) != std::string::npos)
++    {
++      word = val.substr (prev, cur - prev);
++      /* Skip adding empty words.  */
++      if (!word.empty ())
++	result.insert (word);
++      prev = cur + 1;
++    }
++
++  if (prev != cur)
++    result.insert (val.substr (prev));
++}
++
++/* Read an entire line from F until '\n' or EOF.  */
++
++static std::string
++readline (FILE *f)
++{
++  char *buf = NULL;
++  int size = 0;
++  int last = 0;
++  const int buf_size = 128;
++
++  if (feof (f))
++    return std::string ();
++
++  do
++    {
++      size += buf_size;
++      buf = (char*) xrealloc (buf, size);
++      gcc_assert (buf);
++      /* If fgets fails it returns NULL, but if it reaches EOF
++	 with 0 characters read it also returns EOF.  However
++	 the condition on the loop would have broken out of the
++	 loop in that case,  and if we are in the first iteration
++	 then the empty string is the correct thing to return.  */
++      if (!fgets (buf + last, buf_size, f))
++	return std::string ();
++      /* If we're not at the end of the line then override the
++	 \0 added by fgets.  */
++      last = strnlen (buf, size) - 1;
++    }
++  while (!feof (f) && buf[last] != '\n');
++
++  std::string result (buf);
++  free (buf);
++  return result;
++}
++
+ /*  Return true iff ARR contains CORE, in either of the two elements. */
+ 
+ static bool
+@@ -167,7 +250,6 @@ host_detect_local_cpu (int argc, const char **argv)
+ {
+   const char *res = NULL;
+   static const int num_exts = ARRAY_SIZE (aarch64_extensions);
+-  char buf[128];
+   FILE *f = NULL;
+   bool arch = false;
+   bool tune = false;
+@@ -181,6 +263,9 @@ host_detect_local_cpu (int argc, const char **argv)
+   bool processed_exts = false;
+   unsigned long extension_flags = 0;
+   unsigned long default_flags = 0;
++  std::string buf;
++  size_t sep_pos = -1;
++  char *fcpu_info;
+ 
+   gcc_assert (argc);
+ 
+@@ -198,16 +283,20 @@ host_detect_local_cpu (int argc, const char **argv)
+   if (!arch && !tune && !cpu)
+     goto not_found;
+ 
+-  f = fopen ("/proc/cpuinfo", "r");
++  fcpu_info = getenv ("GCC_CPUINFO");
++  if (fcpu_info)
++    f = fopen (fcpu_info, "r");
++  else
++    f = fopen ("/proc/cpuinfo", "r");
+ 
+   if (f == NULL)
+     goto not_found;
+ 
+   /* Look through /proc/cpuinfo to determine the implementer
+      and then the part number that identifies a particular core.  */
+-  while (fgets (buf, sizeof (buf), f) != NULL)
++  while (!(buf = readline (f)).empty ())
+     {
+-      if (strstr (buf, "implementer") != NULL)
++      if (find_field (buf, "implementer") != std::string::npos)
+ 	{
+ 	  unsigned cimp = parse_field (buf);
+ 	  if (cimp == INVALID_IMP)
+@@ -219,8 +308,7 @@ host_detect_local_cpu (int argc, const char **argv)
+ 	  else if (imp != cimp)
+ 	    goto not_found;
+ 	}
+-
+-      if (strstr (buf, "variant") != NULL)
++      else if (find_field (buf, "variant") != std::string::npos)
+ 	{
+ 	  unsigned cvariant = parse_field (buf);
+ 	  if (!contains_core_p (variants, cvariant))
+@@ -232,8 +320,7 @@ host_detect_local_cpu (int argc, const char **argv)
+ 	    }
+           continue;
+         }
+-
+-      if (strstr (buf, "part") != NULL)
++      else if (find_field (buf, "part") != std::string::npos)
+ 	{
+ 	  unsigned ccore = parse_field (buf);
+ 	  if (!contains_core_p (cores, ccore))
+@@ -245,39 +332,36 @@ host_detect_local_cpu (int argc, const char **argv)
+ 	    }
+ 	  continue;
+ 	}
+-      if (!tune && !processed_exts && strstr (buf, "Features") != NULL)
++      else if (!tune && !processed_exts
++	       && (sep_pos = find_field (buf, "Features")) != std::string::npos)
+ 	{
++	  /* First create the list of features in the buffer.  */
++	  std::set<std::string> features;
++	  /* Drop everything till the :.  */
++	  buf = buf.substr (sep_pos + 1);
++	  split_words (buf, features);
++
+ 	  for (i = 0; i < num_exts; i++)
+ 	    {
+-	      const char *p = aarch64_extensions[i].feat_string;
++	      const std::string val (aarch64_extensions[i].feat_string);
+ 
+ 	      /* If the feature contains no HWCAPS string then ignore it for the
+ 		 auto detection.  */
+-	      if (*p == '\0')
++	      if (val.empty ())
+ 		continue;
+ 
+ 	      bool enabled = true;
+ 
+ 	      /* This may be a multi-token feature string.  We need
+ 		 to match all parts, which could be in any order.  */
+-	      size_t len = strlen (buf);
+-	      do
+-		{
+-		  const char *end = strchr (p, ' ');
+-		  if (end == NULL)
+-		    end = strchr (p, '\0');
+-		  if (memmem (buf, len, p, end - p) == NULL)
+-		    {
+-		      /* Failed to match this token.  Turn off the
+-			 features we'd otherwise enable.  */
+-		      enabled = false;
+-		      break;
+-		    }
+-		  if (*end == '\0')
+-		    break;
+-		  p = end + 1;
+-		}
+-	      while (1);
++	      std::set<std::string> tokens;
++	      split_words (val, tokens);
++	      std::set<std::string>::iterator it;
++
++	      /* Iterate till the first feature isn't found or all of them
++		 are found.  */
++	      for (it = tokens.begin (); enabled && it != tokens.end (); ++it)
++		enabled = enabled && features.count (*it);
+ 
+ 	      if (enabled)
+ 		extension_flags |= aarch64_extensions[i].flag;
 diff --git a/gcc/config/aarch64/falkor-tag-collision-avoidance.c b/gcc/config/aarch64/falkor-tag-collision-avoidance.c
 index 779dee81f7f..698d1595d0a 100644
 --- a/gcc/config/aarch64/falkor-tag-collision-avoidance.c
@@ -9305,6 +9599,32 @@ index 53e54874c12..aa1f23c8e9e 100644
     (set_attr "conds" "set")
     (set_attr "type" "multiple")
     (set_attr "arch" "t,32")]
+diff --git a/gcc/config/arm/driver-arm.c b/gcc/config/arm/driver-arm.c
+index a13f905e9f8..7d5d82ec7e6 100644
+--- a/gcc/config/arm/driver-arm.c
++++ b/gcc/config/arm/driver-arm.c
+@@ -61,6 +61,7 @@ host_detect_local_cpu (int argc, const char **argv)
+   FILE *f = NULL;
+   bool arch;
+   const struct vendor_cpu *cpu_table = NULL;
++  char *fcpu_info = NULL;
+ 
+   if (argc < 1)
+     goto not_found;
+@@ -69,7 +70,12 @@ host_detect_local_cpu (int argc, const char **argv)
+   if (!arch && strcmp (argv[0], "cpu") != 0 && strcmp (argv[0], "tune"))
+     goto not_found;
+ 
+-  f = fopen ("/proc/cpuinfo", "r");
++  fcpu_info = getenv ("GCC_CPUINFO");
++  if (fcpu_info)
++    f = fopen (fcpu_info, "r");
++  else
++    f = fopen ("/proc/cpuinfo", "r");
++
+   if (f == NULL)
+     goto not_found;
+ 
 diff --git a/gcc/config/arm/thumb1.md b/gcc/config/arm/thumb1.md
 index 041e2db343f..6eca8c49c0e 100644
 --- a/gcc/config/arm/thumb1.md
@@ -12791,7 +13111,7 @@ index e271f5180d8..520b61fb5bc 100644
  
  @node Predefined Macros
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
-index f5becf988d2..7dbe400f99e 100644
+index f5becf988d2..3ab83a1cf94 100644
 --- a/gcc/doc/extend.texi
 +++ b/gcc/doc/extend.texi
 @@ -2760,7 +2760,7 @@ the same type as the target function.  As a result of the @code{copy}
@@ -12850,6 +13170,30 @@ index f5becf988d2..7dbe400f99e 100644
  @end deftypefn
  
  @deftypefn {Built-in Function} {void *} __builtin_extract_return_addr (void *@var{addr})
+@@ -14402,12 +14421,12 @@ long long __builtin_arm_wzero ()
+ 
+ GCC implements extensions for C as described in the ARM C Language
+ Extensions (ACLE) specification, which can be found at
+-@uref{http://infocenter.arm.com/help/topic/com.arm.doc.ihi0053c/IHI0053C_acle_2_0.pdf}.
++@uref{https://developer.arm.com/documentation/ihi0053/latest/}.
+ 
+ As a part of ACLE, GCC implements extensions for Advanced SIMD as described in
+ the ARM C Language Extensions Specification.  The complete list of Advanced SIMD
+ intrinsics can be found at
+-@uref{http://infocenter.arm.com/help/topic/com.arm.doc.ihi0073a/IHI0073A_arm_neon_intrinsics_ref.pdf}.
++@uref{https://developer.arm.com/documentation/ihi0073/latest/}.
+ The built-in intrinsics for the Advanced SIMD extension are available when
+ NEON is enabled.
+ 
+@@ -14438,7 +14457,7 @@ void __builtin_arm_set_fpscr (unsigned int)
+ GCC implements the ARMv8-M Security Extensions as described in the ARMv8-M
+ Security Extensions: Requirements on Development Tools Engineering
+ Specification, which can be found at
+-@uref{http://infocenter.arm.com/help/topic/com.arm.doc.ecm0359818/ECM0359818_armv8m_security_extensions_reqs_on_dev_tools_1_0.pdf}.
++@uref{https://developer.arm.com/documentation/ecm0359818/latest/}.
+ 
+ As part of the Security Extensions GCC implements two new function attributes:
+ @code{cmse_nonsecure_entry} and @code{cmse_nonsecure_call}.
 @@ -19722,6 +19741,13 @@ bool scalar_test_data_class (__ieee128 source, const int condition);
  bool scalar_test_neg (float source);
  bool scalar_test_neg (double source);
@@ -12875,7 +13219,7 @@ index f5becf988d2..7dbe400f99e 100644
  The @code{scalar_insert_exp}
  functions require a 64-bit environment supporting ISA 3.0 or later.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..93436dec08f 100644
+index 0ab6c9c6449..cb2dde07343 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -12968,6 +13312,15 @@ index 0ab6c9c6449..93436dec08f 100644
  @item -msve-vector-bits=@var{bits}
  @opindex msve-vector-bits
  Specify the number of bits in an SVE vector register.  This option only has
+@@ -17926,7 +17964,7 @@ is only available when generating non-pic code for M-profile targets.
+ @opindex mcmse
+ Generate secure code as per the "ARMv8-M Security Extensions: Requirements on
+ Development Tools Engineering Specification", which can be found on
+-@url{http://infocenter.arm.com/help/topic/com.arm.doc.ecm0359818/ECM0359818_armv8m_security_extensions_reqs_on_dev_tools_1_0.pdf}.
++@url{https://developer.arm.com/documentation/ecm0359818/latest/}.
+ @end table
+ 
+ @node AVR Options
 @@ -28711,9 +28749,9 @@ Note that @option{-mcmodel=large} is incompatible with
  @option{-mindirect-branch=thunk-extern} since the thunk function may
  not be reachable in the large code model.
@@ -12992,6 +13345,29 @@ index 0ab6c9c6449..93436dec08f 100644
  Note that @option{-mcmodel=large} is incompatible with
  @option{-mfunction-return=thunk} and
  @option{-mfunction-return=thunk-extern} since the thunk function may
+diff --git a/gcc/doc/sourcebuild.texi b/gcc/doc/sourcebuild.texi
+index 546af7f7261..7b44b886a66 100644
+--- a/gcc/doc/sourcebuild.texi
++++ b/gcc/doc/sourcebuild.texi
+@@ -1244,6 +1244,18 @@ This DejaGnu directive compares @var{regexp} to the combined output
+ that the test executable writes to @file{stdout} and @file{stderr}.
+ @end table
+ 
++@subsubsection Specify environment variables for a test
++
++@table @code
++@item @{ dg-set-compiler-env-var @var{var_name} "@var{var_value}" @}
++Specify that the environment variable @var{var_name} needs to be set
++to @var{var_value} before invoking the compiler on the test file.
++
++@item @{ dg-set-target-env-var @var{var_name} "@var{var_value}" @}
++Specify that the environment variable @var{var_name} needs to be set
++to @var{var_value} before execution of the program created by the test.
++@end table
++
+ @subsubsection Specify additional files for a test
+ 
+ @table @code
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index 8c8978bb13a..7f5c370d97a 100644
 --- a/gcc/doc/tm.texi
@@ -15051,10 +15427,53 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..94a48b605de 100644
+index e132f2657ef..c0c0f7cd793 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1035 @@
+@@ -1,3 +1,1078 @@
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-07-17  Tamar Christina  <tamar.christina@arm.com>
++
++	* gcc.target/aarch64/cpunative/aarch64-cpunative.exp: New file.
++	* gcc.target/aarch64/cpunative/info_0: New test.
++	* gcc.target/aarch64/cpunative/info_1: New test.
++	* gcc.target/aarch64/cpunative/info_10: New test.
++	* gcc.target/aarch64/cpunative/info_11: New test.
++	* gcc.target/aarch64/cpunative/info_12: New test.
++	* gcc.target/aarch64/cpunative/info_13: New test.
++	* gcc.target/aarch64/cpunative/info_14: New test.
++	* gcc.target/aarch64/cpunative/info_15: New test.
++	* gcc.target/aarch64/cpunative/info_2: New test.
++	* gcc.target/aarch64/cpunative/info_3: New test.
++	* gcc.target/aarch64/cpunative/info_4: New test.
++	* gcc.target/aarch64/cpunative/info_5: New test.
++	* gcc.target/aarch64/cpunative/info_6: New test.
++	* gcc.target/aarch64/cpunative/info_7: New test.
++	* gcc.target/aarch64/cpunative/info_8: New test.
++	* gcc.target/aarch64/cpunative/info_9: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_0.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_1.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_10.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_13.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_14.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_2.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_3.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_4.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_5.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_6.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_7.c: New test.
++	* gcc.target/aarch64/cpunative/native_cpu_8.c: New test.
++
++2020-08-21  Tamar Christina  <tamar.christina@arm.com>
++
++	Backported from master:
++	2020-07-17  Tamar Christina  <tamar.christina@arm.com>
++
++	* lib/gcc-dg.exp (dg-set-compiler-env-var, dg-set-target-env-var): Add
++	verbose output.
++
 +2020-08-12  Kewen Lin  <linkw@linux.ibm.com>
 +
 +	PR testsuite/94077
@@ -18847,6 +19266,490 @@ index 8d2ae67dfbe..6daf9b08f5a 100644
  /* { dg-skip-if "" { *-*-* } { "-mcpu=*" } { "" } } */
  
  int
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/aarch64-cpunative.exp b/gcc/testsuite/gcc.target/aarch64/cpunative/aarch64-cpunative.exp
+new file mode 100644
+index 00000000000..ce80ca04b8d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/aarch64-cpunative.exp
+@@ -0,0 +1,35 @@
++# Copyright (C) 2014-2020 Free Software Foundation, Inc.
++
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 3 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with GCC; see the file COPYING3.  If not see
++# <http://www.gnu.org/licenses/>.
++
++# GCC testsuite that uses the `dg.exp' driver.
++
++# Exit immediately if this isn't an AArch64 target.
++if ![istarget aarch64*-*-*] then {
++  return
++}
++
++# Load support procs.
++load_lib gcc-dg.exp
++
++# Initialize `dg'.
++dg-init
++
++# Main loop.
++dg-runtest [lsort [glob -nocomplain $srcdir/$subdir/*.\[cCS\]]] \
++	"" ""
++
++# All done.
++dg-finish
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_0 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_0
+new file mode 100644
+index 00000000000..ef4a3f606fa
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_0
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 asimddp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_1 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_1
+new file mode 100644
+index 00000000000..0f434bca285
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_1
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: fp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_10 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_10
+new file mode 100644
+index 00000000000..c6e9d7ca9e2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_10
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: 
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_11 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_11
+new file mode 100644
+index 00000000000..fb76f7d45bc
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_11
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp sb
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_12 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_12
+new file mode 100644
+index 00000000000..9b6aa7bc248
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_12
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp ssbs
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_13 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_13
+new file mode 100644
+index 00000000000..ef4a3f606fa
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_13
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: fp asimd evtstrm aes pmull sha1 sha2 crc32 asimddp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_14 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_14
+new file mode 100644
+index 00000000000..33897571513
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_14
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: Lorem ipsum dolor sit ametd rebum expetendis per at Dolor lucilius referrentur ei mei virtute eruditi eum ne Iisque verterem tacimates eu mea ei autem asimd fp asimddp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_15 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_15
+new file mode 100644
+index 00000000000..bc645394556
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_15
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: Lorem ipsum dolor sit ametd rebum expetendis per at Dolor lucilius referrentur ei mei virtute eruditi eum ne Iisque verter svesm4 asimd fp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_2 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_2
+new file mode 100644
+index 00000000000..965d37760ac
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_2
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_3 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_3
+new file mode 100644
+index 00000000000..0c276f884a8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_3
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_4 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_4
+new file mode 100644
+index 00000000000..716210c1417
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_4
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp aes pmull sha1 sha2
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_5 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_5
+new file mode 100644
+index 00000000000..7a002e1c4c8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_5
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp fphp asimdhp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_6 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_6
+new file mode 100644
+index 00000000000..d341dfe86f4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_6
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp aes pmull sha1 sha2 fphp asimdhp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_7 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_7
+new file mode 100644
+index 00000000000..ccb784915d5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_7
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd pmull sha1 fp aes sha2 fphp asimdhp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_8 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_8
+new file mode 100644
+index 00000000000..d6d9d03a2a2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_8
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd sve fp
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/info_9 b/gcc/testsuite/gcc.target/aarch64/cpunative/info_9
+new file mode 100644
+index 00000000000..c9aa4a9a07d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/info_9
+@@ -0,0 +1,8 @@
++processor	: 0
++BogoMIPS	: 100.00
++Features	: asimd fp svesm4
++CPU implementer	: 0x41
++CPU architecture: 8
++CPU variant	: 0x0
++CPU part	: 0xd08
++CPU revision	: 2
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_0.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_0.c
+new file mode 100644
+index 00000000000..f155f51bae7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_0.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_0" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+crypto\+crc\+dotprod} } } */
++
++/* Test a normal looking procinfo.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_1.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_1.c
+new file mode 100644
+index 00000000000..2cf0e89994b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_1.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_1" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+nosimd} } } */
++
++/* Test one where fp is on by default so turn off simd.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_10.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_10.c
+new file mode 100644
+index 00000000000..6a753965c52
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_10.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_10" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+nofp\+nosimd} } } */
++
++/* Test one with no entry in feature list.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_13.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_13.c
+new file mode 100644
+index 00000000000..b7b3a8e13df
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_13.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_13" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+crypto\+crc\+dotprod} } } */
++
++/* Test one with mixed order of feature bits.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_14.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_14.c
+new file mode 100644
+index 00000000000..781ab1ebbfb
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_14.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_14" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+dotprod} } } */
++
++/* Test one where valid feature bits are at a boundary > buffer size.   */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_2.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_2.c
+new file mode 100644
+index 00000000000..aad71f4347d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_2.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_2" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+nofp\+nosimd} } } */
++
++/* Test one where asimd is provided byt no fp.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_3.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_3.c
+new file mode 100644
+index 00000000000..50685c297db
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_3.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_3" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a} } } */
++
++/* Test where asimd and fp are the only ones provided, these are default
++   and so shouldn't emit anything.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_4.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_4.c
+new file mode 100644
+index 00000000000..91ae809757a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_4.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_4" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+crypto} } } */
++
++/* Test one where all crypto bits are given so crypto should be enabled.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_5.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_5.c
+new file mode 100644
+index 00000000000..84139e58ee0
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_5.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_5" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+fp16} } } */
++
++/* Test one where fp16 is available and so should be emitted.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_6.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_6.c
+new file mode 100644
+index 00000000000..da72052e623
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_6.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_6" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+crypto\+fp16} } } */
++
++/* Test one where the feature bits for crypto and fp16 are given in
++   same order as declared in options file.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_7.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_7.c
+new file mode 100644
+index 00000000000..96ad4c14db1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_7.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_7" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+crypto\+fp16} } } */
++
++/* Test one where the crypto and fp16 options are specified in different
++   order from what is in the options file.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_8.c b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_8.c
+new file mode 100644
+index 00000000000..7a5a2144a39
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/cpunative/native_cpu_8.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile { target { { aarch64*-*-linux*} && native } } } */
++/* { dg-set-compiler-env-var GCC_CPUINFO "$srcdir/gcc.target/aarch64/cpunative/info_8" } */
++/* { dg-additional-options "-mcpu=native" } */
++
++int main()
++{
++  return 0;
++}
++
++/* { dg-final { scan-assembler {\.arch armv8-a\+sve} } } */
++
++/* Test one where sve is enabled.  */
 diff --git a/gcc/testsuite/gcc.target/aarch64/options_set_11.c b/gcc/testsuite/gcc.target/aarch64/options_set_11.c
 new file mode 100644
 index 00000000000..d083bfdbd5c
@@ -23706,6 +24609,21 @@ index 00000000000..9f171764948
 +  class(t) :: x     ! { dg-error "must be dummy, allocatable or pointer" }
 +  allocate (x%a[*])
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pr96486.f90 b/gcc/testsuite/gfortran.dg/pr96486.f90
+new file mode 100644
+index 00000000000..fdc7025d61c
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr96486.f90
+@@ -0,0 +1,9 @@
++! { dg-do run }
++
++program test
++  implicit none
++  character(0) :: value
++  integer :: l, stat
++  call get_environment_variable("HOME",value,length=l,status=stat)
++  if (stat.ne.-1) stop 1
++end program test
 diff --git a/gcc/testsuite/gfortran.dg/recursive_check_16.f90 b/gcc/testsuite/gfortran.dg/recursive_check_16.f90
 new file mode 100644
 index 00000000000..d8e9d69ea7b
@@ -23773,6 +24691,30 @@ index 6bf315fcc2f..6304ce073aa 100644
  		n2 = 1<<63 - 1
  		shouldPanic("len out of range", func() { _ = make(T, int(n2)) })
  		shouldPanic("cap out of range", func() { _ = make(T, 0, int(n2)) })
+diff --git a/gcc/testsuite/lib/gcc-dg.exp b/gcc/testsuite/lib/gcc-dg.exp
+index c56e8e80ae0..547b6465d74 100644
+--- a/gcc/testsuite/lib/gcc-dg.exp
++++ b/gcc/testsuite/lib/gcc-dg.exp
+@@ -470,7 +470,10 @@ proc dg-set-target-env-var { args } {
+ 	error "dg-set-target-env-var: need two arguments"
+ 	return
+     }
+-    lappend set_target_env_var [list [lindex $args 1] [lindex $args 2]]
++    set var [lindex $args 1]
++    set value [lindex $args 2]
++    verbose "dg-set-target-env-var $var $value" 2
++    lappend set_target_env_var [list $var $value]
+ }
+ 
+ proc set-target-env-var { } {
+@@ -511,6 +514,7 @@ proc dg-set-compiler-env-var { args } {
+     }
+     set var [lindex $args 1]
+     set value [lindex $args 2]
++    verbose "dg-set-compiler-env-var $var $value" 2
+     if [info exists ::env($var)] {
+       lappend saved_compiler_env_var [list $var 1 $::env($var)]
+     } else {
 diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
 index ea9a50ccb27..79482f9b69c 100644
 --- a/gcc/testsuite/lib/target-supports.exp
@@ -26113,6 +27055,31 @@ index a2f4281d0c5..bf4d78586c9 100644
  #else
        __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libgfortran/intrinsics/env.c b/libgfortran/intrinsics/env.c
+index d62116d5e5b..00b1662443e 100644
+--- a/libgfortran/intrinsics/env.c
++++ b/libgfortran/intrinsics/env.c
+@@ -110,10 +110,7 @@ get_environment_variable_i4 (char *name, char *value, GFC_INTEGER_4 *length,
+ 
+   if (value != NULL)
+     { 
+-      if (value_len < 1)
+-	runtime_error ("Zero-length string passed as value to "
+-		       "get_environment_variable.");
+-      else
++      if (value_len > 0)
+ 	memset (value, ' ', value_len); /* Blank the string.  */
+     }
+ 
+@@ -138,7 +135,7 @@ get_environment_variable_i4 (char *name, char *value, GFC_INTEGER_4 *length,
+ 	      memcpy (value, res, value_len);
+ 	      stat = GFC_VALUE_TOO_SHORT;
+ 	    }
+-	  else
++	  else if (res_len > 0)
+ 	    memcpy (value, res, res_len);
+ 	}
+     }
 diff --git a/libgfortran/io/async.c b/libgfortran/io/async.c
 index 28b84f6613a..5af919bd71c 100644
 --- a/libgfortran/io/async.c
