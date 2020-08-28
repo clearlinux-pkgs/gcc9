@@ -38,8 +38,9 @@ Carl Love (4):
       rs6000, Fix header comment for intrinsic function _mm_movemask_epi8
       pr94833, fix vec_first_match_index for nulls
 
-Christophe Lyon (1):
+Christophe Lyon (2):
       testsuite: Fix gcc.target/arm/stack-protector-1.c for Cortex-M
+      arm: Fix -mpure-code support/-mslow-flash-data for armv8-m.base [PR94538]
 
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
@@ -68,7 +69,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (166):
+GCC Administrator (169):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -354,7 +358,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (35):
+Jonathan Wakely (37):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -390,6 +394,8 @@ Jonathan Wakely (35):
       libstdc++: Use _wstat64 for Windows [PR 95749]
       libstdc++: Disable net tests that depend on threads [PR 89760]
       libstdc++: Add deprecated attributes to old iostream members
+      libstdc++: Make variant_npos conversions explicit [PR 96766]
+      libstdc++: Enable assertions in constexpr string_view members [PR 71960]
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -425,7 +431,7 @@ Marek Polacek (4):
       c++: Fix ICE in check_local_shadow with enum [PR95560]
       c++: Fix bogus -Wparentheses warning [PR95344]
 
-Mark Eggleston (13):
+Mark Eggleston (14):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
@@ -439,6 +445,7 @@ Mark Eggleston (13):
       Fortran  : ICE in gfc_check_reshape PR95585
       Fortran  : ICE in gfc_check_pointer_assign PR95612
       Fortran  :  get_environment_variable runtime error PR96486
+      Fortran  : ICE for division by zero in declaration PR95882
 
 Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
@@ -5414,10 +5421,22 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..3da84adc6d0 100644
+index d8e53874e68..3b711be9941 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1163 @@
+@@ -1,3 +1,1175 @@
++2020-08-27  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backported from master:
++	2020-08-24  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	PR target/94538
++	PR target/94538
++	* config/arm/thumb1.md: Disable set-constant splitter when
++	TARGET_HAVE_MOVT.
++	(thumb1_movsi_insn): Fix -mpure-code
++	alternative.
++
 +2020-08-21  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backported from master:
@@ -9627,10 +9646,90 @@ index a13f905e9f8..7d5d82ec7e6 100644
      goto not_found;
  
 diff --git a/gcc/config/arm/thumb1.md b/gcc/config/arm/thumb1.md
-index 041e2db343f..6eca8c49c0e 100644
+index 041e2db343f..8f051f87c0f 100644
 --- a/gcc/config/arm/thumb1.md
 +++ b/gcc/config/arm/thumb1.md
-@@ -2020,6 +2020,8 @@
+@@ -70,6 +70,7 @@
+   "TARGET_THUMB1
+    && arm_disable_literal_pool
+    && GET_CODE (operands[1]) == CONST_INT
++   && !TARGET_HAVE_MOVT
+    && !satisfies_constraint_I (operands[1])"
+   [(clobber (const_int 0))]
+   "
+@@ -696,18 +697,59 @@
+   "TARGET_THUMB1
+    && (   register_operand (operands[0], SImode)
+        || register_operand (operands[1], SImode))"
+-  "@
+-   movs	%0, %1
+-   movs	%0, %1
+-   movw	%0, %1
+-   #
+-   #
+-   ldmia\\t%1, {%0}
+-   stmia\\t%0, {%1}
+-   movs\\t%0, #:upper8_15:%1; lsls\\t%0, #8; adds\\t%0, #:upper0_7:%1; lsls\\t%0, #8; adds\\t%0, #:lower8_15:%1; lsls\\t%0, #8; adds\\t%0, #:lower0_7:%1
+-   ldr\\t%0, %1
+-   str\\t%1, %0
+-   mov\\t%0, %1"
++{
++  switch (which_alternative)
++    {
++      default:
++      case 0: return "movs\t%0, %1";
++      case 1: return "movs\t%0, %1";
++      case 2: return "movw\t%0, %1";
++      case 3: return "#";
++      case 4: return "#";
++      case 5: return "ldmia\t%1, {%0}";
++      case 6: return "stmia\t%0, {%1}";
++      case 7:
++      /* pure-code alternative: build the constant byte by byte,
++	 instead of loading it from a constant pool.  */
++	{
++	  int i;
++	  HOST_WIDE_INT op1 = INTVAL (operands[1]);
++	  bool mov_done_p = false;
++	  rtx ops[2];
++	  ops[0] = operands[0];
++
++	  /* Emit upper 3 bytes if needed.  */
++	  for (i = 0; i < 3; i++)
++	    {
++	       int byte = (op1 >> (8 * (3 - i))) & 0xff;
++
++	      if (byte)
++		{
++		  ops[1] = GEN_INT (byte);
++		  if (mov_done_p)
++		    output_asm_insn ("adds\t%0, %1", ops);
++		  else
++		    output_asm_insn ("movs\t%0, %1", ops);
++		  mov_done_p = true;
++		}
++
++	      if (mov_done_p)
++		output_asm_insn ("lsls\t%0, #8", ops);
++	    }
++
++	  /* Emit lower byte if needed.  */
++	  ops[1] = GEN_INT (op1 & 0xff);
++	  if (!mov_done_p)
++	    output_asm_insn ("movs\t%0, %1", ops);
++	  else if (op1 & 0xff)
++	    output_asm_insn ("adds\t%0, %1", ops);
++	  return "";
++	}
++      case 8: return "ldr\t%0, %1";
++      case 9: return "str\t%1, %0";
++      case 10: return "mov\t%0, %1";
++    }
++}
+   [(set_attr "length" "2,2,4,4,4,2,2,14,2,2,2")
+    (set_attr "type" "mov_reg,mov_imm,mov_imm,multiple,multiple,load_4,store_4,alu_sreg,load_4,store_4,mov_reg")
+    (set_attr "pool_range" "*,*,*,*,*,*,*, *,1018,*,*")
+@@ -2020,6 +2062,8 @@
    [(set_attr "type" "mov_reg")]
  )
  
@@ -9639,7 +9738,7 @@ index 041e2db343f..6eca8c49c0e 100644
  (define_insn "thumb1_stack_protect_test_insn"
    [(set (match_operand:SI 0 "register_operand" "=&l")
  	(unspec:SI [(match_operand:SI 1 "memory_operand" "m")
-@@ -2027,9 +2029,9 @@
+@@ -2027,9 +2071,9 @@
  	 UNSPEC_SP_TEST))
     (clobber (match_dup 2))]
    "TARGET_THUMB1"
@@ -13578,10 +13677,19 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..13438bdaaad 100644
+index 8fefea2b63d..c0193d4e254 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,392 @@
+@@ -1,3 +1,401 @@
++2020-08-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master:
++	2020-08-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95882
++	* decl.c (char_len_param_value): Check gfc_seen_div0 and
++	if it is set return MATCH_ERROR.
++
 +2020-07-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from master:
@@ -14102,7 +14210,7 @@ index 9117121e5fe..ab3df62170a 100644
    if ((derived->attr.use_assoc || derived->attr.used_in_submodule)
         && !derived->attr.vtype && !derived->attr.is_class)
 diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
-index abff4af9f67..1b75ba3949a 100644
+index abff4af9f67..95813d7f69d 100644
 --- a/gcc/fortran/decl.c
 +++ b/gcc/fortran/decl.c
 @@ -668,6 +668,10 @@ gfc_match_data (void)
@@ -14128,7 +14236,17 @@ index abff4af9f67..1b75ba3949a 100644
    if ((*expr)->expr_type == EXPR_FUNCTION)
      {
        if ((*expr)->ts.type == BT_INTEGER
-@@ -3980,7 +3989,8 @@ error_return:
+@@ -1093,6 +1102,9 @@ char_len_param_value (gfc_expr **expr, bool *deferred)
+       gfc_free_expr (e);
+     }
+ 
++  if (gfc_seen_div0)
++    m = MATCH_ERROR;
++
+   return m;
+ 
+ syntax:
+@@ -3980,7 +3992,8 @@ error_return:
  match
  gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  {
@@ -14138,7 +14256,7 @@ index abff4af9f67..1b75ba3949a 100644
    gfc_symbol *sym, *dt_sym;
    match m;
    char c;
-@@ -4025,7 +4035,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -4025,7 +4038,7 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
        gfc_gobble_whitespace ();
        if (gfc_peek_ascii_char () == '*')
  	{
@@ -14147,7 +14265,7 @@ index abff4af9f67..1b75ba3949a 100644
  	    return m;
  	  if (gfc_comp_struct (gfc_current_state ()))
  	    {
-@@ -4182,7 +4192,11 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
+@@ -4182,7 +4195,11 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
  	    return m;
  	  gcc_assert (!sym->attr.pdt_template && sym->attr.pdt_type);
  	  ts->u.derived = sym;
@@ -14160,7 +14278,7 @@ index abff4af9f67..1b75ba3949a 100644
  	}
  
        if (sym && sym->attr.flavor == FL_STRUCT)
-@@ -5339,15 +5353,19 @@ match_attr_spec (void)
+@@ -5339,15 +5356,19 @@ match_attr_spec (void)
        if (d == DECL_STATIC && seen[DECL_SAVE])
  	continue;
  
@@ -14183,7 +14301,7 @@ index abff4af9f67..1b75ba3949a 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5355,8 +5373,11 @@ match_attr_spec (void)
+@@ -5355,8 +5376,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_KIND)
  	    {
@@ -14197,7 +14315,7 @@ index abff4af9f67..1b75ba3949a 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5379,8 +5400,11 @@ match_attr_spec (void)
+@@ -5379,8 +5403,11 @@ match_attr_spec (void)
  	    }
  	  else if (d == DECL_LEN)
  	    {
@@ -14211,7 +14329,7 @@ index abff4af9f67..1b75ba3949a 100644
  		{
  		  m = MATCH_ERROR;
  		  goto cleanup;
-@@ -5403,8 +5427,10 @@ match_attr_spec (void)
+@@ -5403,8 +5430,10 @@ match_attr_spec (void)
  	    }
  	  else
  	    {
@@ -14224,7 +14342,7 @@ index abff4af9f67..1b75ba3949a 100644
  	      m = MATCH_ERROR;
  	      goto cleanup;
  	    }
-@@ -8962,7 +8988,7 @@ access_attr_decl (gfc_statement st)
+@@ -8962,7 +8991,7 @@ access_attr_decl (gfc_statement st)
  	  else
  	    {
  	      gfc_error ("Access specification of the .%s. operator at %C "
@@ -14233,7 +14351,7 @@ index abff4af9f67..1b75ba3949a 100644
  	      goto done;
  	    }
  
-@@ -9602,13 +9628,20 @@ gfc_match_submod_proc (void)
+@@ -9602,13 +9631,20 @@ gfc_match_submod_proc (void)
    if (get_proc_name (name, &sym, false))
      return MATCH_ERROR;
  
@@ -15428,10 +15546,31 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..8fafeabed42 100644
+index e132f2657ef..b6967d66cf9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1086 @@
+@@ -1,3 +1,1107 @@
++2020-08-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master:
++	2020-08-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95882
++	* gfortran.dg/pr95882_1.f90: New test.
++	* gfortran.dg/pr95882_2.f90: New test.
++	* gfortran.dg/pr95882_3.f90: New test.
++	* gfortran.dg/pr95882_4.f90: New test.
++	* gfortran.dg/pr95882_5.f90: New test.
++
++2020-08-27  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backported from master:
++	2020-08-24  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	PR target/94538
++	* gcc.target/arm/pure-code/pr94538-1.c: New test.
++	* gcc.target/arm/pure-code/pr94538-2.c: New test.
++
 +2020-08-24  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from master:
@@ -20753,6 +20892,43 @@ index 00000000000..acace4c8f2a
 +}
 +
 +/* { dg-final { scan-assembler-times "bl.*__aarch64_cas2_acq_rel" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/arm/pure-code/pr94538-1.c b/gcc/testsuite/gcc.target/arm/pure-code/pr94538-1.c
+new file mode 100644
+index 00000000000..31061d5d445
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pure-code/pr94538-1.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-skip-if "skip override" { *-*-* } { "-mfloat-abi=hard" } { "" } } */
++/* { dg-options "-mpure-code -mcpu=cortex-m23 -march=armv8-m.base -mthumb -mfloat-abi=soft" } */
++
++typedef int __attribute__ ((__vector_size__ (16))) V;
++
++V v;
++
++void
++foo (void)
++{
++  v += (V){4095};
++}
+diff --git a/gcc/testsuite/gcc.target/arm/pure-code/pr94538-2.c b/gcc/testsuite/gcc.target/arm/pure-code/pr94538-2.c
+new file mode 100644
+index 00000000000..c1789da6780
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pure-code/pr94538-2.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-mpure-code" } */
++
++typedef int __attribute__ ((__vector_size__ (16))) V;
++
++V v;
++
++void
++foo (void)
++{
++  v += (V){4095};
++}
 diff --git a/gcc/testsuite/gcc.target/arm/stack-protector-1.c b/gcc/testsuite/gcc.target/arm/stack-protector-1.c
 new file mode 100644
 index 00000000000..8d28b0a847c
@@ -24617,6 +24793,69 @@ index 00000000000..9f171764948
 +  end type t
 +  class(t) :: x     ! { dg-error "must be dummy, allocatable or pointer" }
 +  allocate (x%a[*])
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr95882_1.f90 b/gcc/testsuite/gfortran.dg/pr95882_1.f90
+new file mode 100644
+index 00000000000..c254bddf494
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95882_1.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++
++module m
++   type t
++      character(((0)/0)) :: c  ! { dg-error "Division by zero" }
++   end type
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr95882_2.f90 b/gcc/testsuite/gfortran.dg/pr95882_2.f90
+new file mode 100644
+index 00000000000..d308f0c3181
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95882_2.f90
+@@ -0,0 +1,6 @@
++! { dg-do compile }
++
++module m
++   character(0/(0)) :: c = '123456789'  ! { dg-error "Division by zero" }
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr95882_3.f90 b/gcc/testsuite/gfortran.dg/pr95882_3.f90
+new file mode 100644
+index 00000000000..bd849135480
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95882_3.f90
+@@ -0,0 +1,6 @@
++! { dg-do compile }
++
++subroutine s(c)
++   character(((0)/0)) :: c  ! { dg-error "Division by zero" }
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr95882_4.f90 b/gcc/testsuite/gfortran.dg/pr95882_4.f90
+new file mode 100644
+index 00000000000..52892d32b8b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95882_4.f90
+@@ -0,0 +1,7 @@
++! { dg-do compile }
++
++program p
++   character(((0)/0)) :: c  ! { dg-error "Division by zero" }
++   common /x/ c
++end
++
+diff --git a/gcc/testsuite/gfortran.dg/pr95882_5.f90 b/gcc/testsuite/gfortran.dg/pr95882_5.f90
+new file mode 100644
+index 00000000000..dcdf5304052
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr95882_5.f90
+@@ -0,0 +1,6 @@
++! { dg-do compile }
++
++program p
++   character(0/(0)) :: c = '123456789'  ! { dg-error "Division by zero" }
++   common c
 +end
 diff --git a/gcc/testsuite/gfortran.dg/pr96486.f90 b/gcc/testsuite/gfortran.dg/pr96486.f90
 new file mode 100644
@@ -28794,10 +29033,30 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..a2c0b5e94fa 100644
+index 45847172291..e2e850f97fd 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,420 @@
+@@ -1,3 +1,440 @@
++2020-08-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/71960
++	* include/experimental/string_view (basic_string_view):
++	Enable debug assertions.
++	* include/std/string_view (basic_string_view):
++	Likewise.
++
++2020-08-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-24  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/96766
++	* include/std/variant (_Variant_storage): Replace implicit
++	conversions from size_t to __index_type with explicit casts.
++
 +2020-08-19  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -34423,6 +34682,39 @@ index e80626528ce..cea17312dbd 100644
  _GLIBCXX_END_NAMESPACE_VERSION
  } // namespace std
  
+diff --git a/libstdc++-v3/include/experimental/string_view b/libstdc++-v3/include/experimental/string_view
+index 9e810dec844..78c4d332b27 100644
+--- a/libstdc++-v3/include/experimental/string_view
++++ b/libstdc++-v3/include/experimental/string_view
+@@ -178,8 +178,7 @@ inline namespace fundamentals_v1
+       constexpr const _CharT&
+       operator[](size_type __pos) const
+       {
+-	// TODO: Assert to restore in a way compatible with the constexpr.
+-	// __glibcxx_assert(__pos < this->_M_len);
++	__glibcxx_assert(__pos < this->_M_len);
+ 	return *(this->_M_str + __pos);
+       }
+ 
+@@ -198,16 +197,14 @@ inline namespace fundamentals_v1
+       constexpr const _CharT&
+       front() const
+       {
+-	// TODO: Assert to restore in a way compatible with the constexpr.
+-	// __glibcxx_assert(this->_M_len > 0);
++	__glibcxx_assert(this->_M_len > 0);
+ 	return *this->_M_str;
+       }
+ 
+       constexpr const _CharT&
+       back() const
+       {
+-	// TODO: Assert to restore in a way compatible with the constexpr.
+-	// __glibcxx_assert(this->_M_len > 0);
++	__glibcxx_assert(this->_M_len > 0);
+ 	return *(this->_M_str + this->_M_len - 1);
+       }
+ 
 diff --git a/libstdc++-v3/include/std/bit b/libstdc++-v3/include/std/bit
 index c753e39b64a..c4af1cfcb4d 100644
 --- a/libstdc++-v3/include/std/bit
@@ -34603,7 +34895,7 @@ index 6ccc06f337a..506cb78313e 100644
    template<typename _CharT, typename _Traits, typename _Alloc,
  	   typename _Predicate>
 diff --git a/libstdc++-v3/include/std/string_view b/libstdc++-v3/include/std/string_view
-index 42822cc41ab..4d90438e6be 100644
+index 42822cc41ab..b7a0421950e 100644
 --- a/libstdc++-v3/include/std/string_view
 +++ b/libstdc++-v3/include/std/string_view
 @@ -47,7 +47,7 @@ namespace std _GLIBCXX_VISIBILITY(default)
@@ -34615,7 +34907,36 @@ index 42822cc41ab..4d90438e6be 100644
  
    // Helper for basic_string and basic_string_view members.
    constexpr size_t
-@@ -310,6 +310,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+@@ -193,8 +193,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       constexpr const_reference
+       operator[](size_type __pos) const noexcept
+       {
+-	// TODO: Assert to restore in a way compatible with the constexpr.
+-	// __glibcxx_assert(__pos < this->_M_len);
++	__glibcxx_assert(__pos < this->_M_len);
+ 	return *(this->_M_str + __pos);
+       }
+ 
+@@ -211,16 +210,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       constexpr const_reference
+       front() const noexcept
+       {
+-	// TODO: Assert to restore in a way compatible with the constexpr.
+-	// __glibcxx_assert(this->_M_len > 0);
++	__glibcxx_assert(this->_M_len > 0);
+ 	return *this->_M_str;
+       }
+ 
+       constexpr const_reference
+       back() const noexcept
+       {
+-	// TODO: Assert to restore in a way compatible with the constexpr.
+-	// __glibcxx_assert(this->_M_len > 0);
++	__glibcxx_assert(this->_M_len > 0);
+ 	return *(this->_M_str + this->_M_len - 1);
+       }
+ 
+@@ -310,6 +307,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
        }
  
  #if __cplusplus > 201703L
@@ -34662,10 +34983,73 @@ index 9bad55829ce..18bcac824c3 100644
    template<typename _Tp>
      struct unwrap_reference { using type = _Tp; };
 diff --git a/libstdc++-v3/include/std/variant b/libstdc++-v3/include/std/variant
-index 75fb0dc164a..e1882b36700 100644
+index 75fb0dc164a..91fec0baab6 100644
 --- a/libstdc++-v3/include/std/variant
 +++ b/libstdc++-v3/include/std/variant
-@@ -606,7 +606,8 @@ namespace __variant
+@@ -372,12 +372,16 @@ namespace __variant
+   template<typename... _Types>
+     struct _Variant_storage<false, _Types...>
+     {
+-      constexpr _Variant_storage() : _M_index(variant_npos) { }
++      constexpr
++      _Variant_storage()
++      : _M_index(static_cast<__index_type>(variant_npos))
++      { }
+ 
+       template<size_t _Np, typename... _Args>
+-	constexpr _Variant_storage(in_place_index_t<_Np>, _Args&&... __args)
++	constexpr
++	_Variant_storage(in_place_index_t<_Np>, _Args&&... __args)
+ 	: _M_u(in_place_index<_Np>, std::forward<_Args>(__args)...),
+-	_M_index(_Np)
++	_M_index{_Np}
+ 	{ }
+ 
+       constexpr void _M_reset_impl()
+@@ -395,7 +399,7 @@ namespace __variant
+       void _M_reset()
+       {
+ 	_M_reset_impl();
+-	_M_index = variant_npos;
++	_M_index = static_cast<__index_type>(variant_npos);
+       }
+ 
+       ~_Variant_storage()
+@@ -424,16 +428,20 @@ namespace __variant
+   template<typename... _Types>
+     struct _Variant_storage<true, _Types...>
+     {
+-      constexpr _Variant_storage() : _M_index(variant_npos) { }
++      constexpr
++      _Variant_storage()
++      : _M_index(static_cast<__index_type>(variant_npos))
++      { }
+ 
+       template<size_t _Np, typename... _Args>
+-	constexpr _Variant_storage(in_place_index_t<_Np>, _Args&&... __args)
++	constexpr
++	_Variant_storage(in_place_index_t<_Np>, _Args&&... __args)
+ 	: _M_u(in_place_index<_Np>, std::forward<_Args>(__args)...),
+-	_M_index(_Np)
++	_M_index{_Np}
+ 	{ }
+ 
+       void _M_reset()
+-      { _M_index = variant_npos; }
++      { _M_index = static_cast<__index_type>(variant_npos); }
+ 
+       void*
+       _M_storage() const
+@@ -447,7 +455,7 @@ namespace __variant
+       {
+ 	if constexpr (__never_valueless<_Types...>())
+ 	  return true;
+-	return this->_M_index != __index_type(variant_npos);
++	return this->_M_index != static_cast<__index_type>(variant_npos);
+       }
+ 
+       _Variadic_union<_Types...> _M_u;
+@@ -606,7 +614,8 @@ namespace __variant
  		      this->_M_destructive_copy(__rhs_index, __rhs_mem);
  		    else
  		      __variant_cast<_Types...>(*this)
