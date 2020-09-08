@@ -69,7 +69,12 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (175):
+GCC Administrator (180):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -410,7 +415,7 @@ Joseph Myers (1):
 Julian Brown (1):
       Test cases for mixed structured/dynamic data lifetimes with OpenACC [PR92843]
 
-Kewen Lin (7):
+Kewen Lin (8):
       [testsuite] Fix PR94023 to guard case under vect_hw_misalign
       [testsuite] Fix PR94019 to check vector char when vect_hw_misalign
       [testsuite] Fix PR93935 to guard case under vect_hw_misalign
@@ -418,6 +423,7 @@ Kewen Lin (7):
       Fix PR94443 with gsi_insert_seq_before [PR94443]
       testsuite: Add -fno-common to pr82374.c [PR94077]
       rs6000: Backport fixes for PR92923 and PR93136
+      changelog: Fix up changelogs for commit 8c18220564
 
 Kyrylo Tkachov (12):
       aarch64: Extend %R for integer registers
@@ -557,7 +563,7 @@ Tamar Christina (9):
       AArch64: Add test for -mcpu=native
       AArch64: Fix hwasan failure in readline.
 
-Thomas Koenig (8):
+Thomas Koenig (9):
       Revert patch for PR fortran/93956.
       Add early return for invalid STATUS for close.
       Fixes a hang on an invalid ID in a WAIT statement.
@@ -566,6 +572,7 @@ Thomas Koenig (8):
       Do not generate recursion check for compiler-generated procedures.
       Always use name from c_interop_kinds_table for -fc-prototypes.
       Fix handling of implicit_pure by checking if non-pure procedures are called.
+      Fix description of FINDLOC result.
 
 Thomas König (2):
       Backport from trunk of the fix for PR 94270.
@@ -5429,14 +5436,14 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..2f60344af30 100644
+index d8e53874e68..f5d0a85a6aa 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
 @@ -1,3 +1,1284 @@
 +2020-09-02  Kewen Lin  <linkw@linux.ibm.com>
 +
 +	Backported from master:
-+	2020-02-08  Peter Bergner  <bergner@linux.ibm.com>
++	2019-12-30  Peter Bergner  <bergner@linux.ibm.com>
 +
 +	PR target/92923
 +	* config/rs6000/rs6000-builtin.def (VAND, VANDC, VNOR, VOR, VXOR):
@@ -15839,6 +15846,20 @@ index 357a35052eb..d1da044f8f1 100644
  	     gfc_check_team_number, NULL, gfc_resolve_team_number,
  	     team, BT_DERIVED, di, OPTIONAL);
  
+diff --git a/gcc/fortran/intrinsic.texi b/gcc/fortran/intrinsic.texi
+index b39c576a8f6..05632e19c4d 100644
+--- a/gcc/fortran/intrinsic.texi
++++ b/gcc/fortran/intrinsic.texi
+@@ -6041,7 +6041,8 @@ END PROGRAM
+ @item @emph{Description}:
+ Determines the location of the element in the array with the value
+ given in the @var{VALUE} argument, or, if the @var{DIM} argument is
+-supplied, determines the locations of the maximum element along each
++supplied, determines the locations of the elements equal to the
++@var{VALUE} argument element along each
+ row of the array in the @var{DIM} direction.  If @var{MASK} is
+ present, only the elements for which @var{MASK} is @code{.TRUE.} are
+ considered.  If more than one element in the array has the value
 diff --git a/gcc/fortran/libgfortran.h b/gcc/fortran/libgfortran.h
 index 581b2f529db..02250fab4be 100644
 --- a/gcc/fortran/libgfortran.h
@@ -16703,21 +16724,25 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..22e2184623d 100644
+index e132f2657ef..ec5e36d062c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1125 @@
+@@ -1,3 +1,1129 @@
 +2020-09-02  Kewen Lin  <linkw@linux.ibm.com>
 +
-+	Backported from master:
-+	2020-02-08  Kewen Lin  <linkw@linux.ibm.com>
-+
-+	PR target/92923
-+	PR target/93136
 +	* gcc.target/powerpc/fold-vec-logical-ands-longlong.c: Adjust.
 +	* gcc.target/powerpc/fold-vec-logical-ors-longlong.c: Likewise.
++
++	Backported from master:
++	2019-12-30  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/92923
 +	* gcc.target/powerpc/pr92923-1.c: New test.
 +	* gcc.target/powerpc/pr92923-2.c: Likewise.
++
++	2020-02-08  Peter Bergner  <bergner@linux.ibm.com>
++
++	PR target/93136
 +	* gcc.dg/vmx/ops.c: Add -flax-vector-conversions to dg-options.
 +	* gcc.target/powerpc/vsx-vector-6.h: Split tests into smaller functions.
 +	* gcc.target/powerpc/vsx-vector-6.p7.c: Adjust scan-assembler-times
@@ -31572,10 +31597,30 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..e2e850f97fd 100644
+index 45847172291..a257769dc5c 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,440 @@
+@@ -1,3 +1,460 @@
++2020-09-03  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-04-30  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/89510
++	* include/bits/alloc_traits.h (allocator_traits::_S_construct)
++	(allocator_traits::_S_destroy)
++	(allocator_traits<allocator<T>>::construct): Use traits in
++	noexcept-specifiers.
++	* include/bits/allocator.h (allocator<void>::construct)
++	(allocator<void>::destroy): Likewise.
++	* include/ext/malloc_allocator.h (malloc_allocator::construct)
++	(malloc_allocator::destroy): Likewise.
++	* include/ext/new_allocator.h (new_allocator::construct)
++	(new_allocator::destroy): Likewise.
++	* testsuite/20_util/allocator/89510.cc: New test.
++	* testsuite/ext/malloc_allocator/89510.cc: New test.
++	* testsuite/ext/new_allocator/89510.cc: New test.
++
 +2020-08-26  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
