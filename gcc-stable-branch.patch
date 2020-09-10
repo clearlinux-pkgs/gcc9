@@ -58,18 +58,21 @@ Dominique d'Humieres (1):
 Douglas Rupp (1):
       Require powerpc_vsx_ok in gcc.target/powerpc/pr71763.c
 
-Eric Botcazou (5):
+Eric Botcazou (6):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
       Fix Ada bootstrap on Cygwin64
       Update the baseline symbols for SPARC64/Linux
       Fix memory corruption with vector and variant record
+      Fix uninitialized variable with nested variant record types
 
 Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (180):
+GCC Administrator (182):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -264,7 +267,7 @@ H.J. Lu (8):
       x86: Update Intel processor detection
       x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
 
-Harald Anlauf (22):
+Harald Anlauf (23):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -287,6 +290,7 @@ Harald Anlauf (22):
       PR fortran/93337 - ICE in gfc_dt_upper_string, at fortran/module.c:441
       PR fortran/95709 - ICE in gfc_resolve_code, at fortran/resolve.c:11807
       PR fortran/89574 - ICE in conv_function_val, at fortran/trans-expr.c:3792
+      PR fortran/96890 - Wrong answer with intrinsic IALL
 
 Iain Buclaw (10):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -6766,6 +6770,31 @@ index a819f57a2bf..474416a2198 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/gcc/ada/gcc-interface/decl.c b/gcc/ada/gcc-interface/decl.c
+index 8118d119bab..0117f1b8d34 100644
+--- a/gcc/ada/gcc-interface/decl.c
++++ b/gcc/ada/gcc-interface/decl.c
+@@ -8673,11 +8673,15 @@ build_subst_list (Entity_Id gnat_subtype, Entity_Id gnat_type, bool definition)
+     if (!Is_Access_Type (Etype (Node (gnat_constr))))
+       {
+ 	tree gnu_field = gnat_to_gnu_field_decl (gnat_discrim);
+-	tree replacement = convert (TREE_TYPE (gnu_field),
+-				    elaborate_expression
+-				    (Node (gnat_constr), gnat_subtype,
+-				     get_entity_char (gnat_discrim),
+-				     definition, true, false));
++	tree replacement
++	  = elaborate_expression (Node (gnat_constr), gnat_subtype,
++				  get_entity_char (gnat_discrim),
++				  definition, true, false);
++	/* If this is a definition, we need to make sure that the SAVE_EXPRs
++	   are instantiated on every possibly path in size computations.  */
++	if (definition && TREE_CODE (replacement) == SAVE_EXPR)
++	  add_stmt (replacement);
++	replacement = convert (TREE_TYPE (gnu_field), replacement);
+ 	subst_pair s = { gnu_field, replacement };
+ 	gnu_list.safe_push (s);
+       }
 diff --git a/gcc/ada/gcc-interface/trans.c b/gcc/ada/gcc-interface/trans.c
 index 2581b71d6fa..c3a435464c4 100644
 --- a/gcc/ada/gcc-interface/trans.c
@@ -14841,10 +14870,17 @@ index c717f24501e..64273c1c6bc 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..c0193d4e254 100644
+index 8fefea2b63d..104a2dadf62 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,401 @@
+@@ -1,3 +1,408 @@
++2020-09-08  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backported from master:
++	2020-09-08  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	* intrinsic.texi: Fix description of FINDLOC result.
++
 +2020-08-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from master:
@@ -16724,10 +16760,17 @@ index 7916344c584..3e969e52176 100644
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..ec5e36d062c 100644
+index e132f2657ef..2abb0123275 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1129 @@
+@@ -1,3 +1,1136 @@
++2020-09-09  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-09-03  Harald Anlauf  <anlauf@gmx.de>
++
++	* gfortran.dg/iall_masked.f90: New test.
++
 +2020-09-02  Kewen Lin  <linkw@linux.ibm.com>
 +
 +	* gcc.target/powerpc/fold-vec-logical-ands-longlong.c: Adjust.
@@ -26461,6 +26504,34 @@ index 00000000000..744c0f3042e
 +        end do
 +      end do
 +end program
+diff --git a/gcc/testsuite/gfortran.dg/iall_masked.f90 b/gcc/testsuite/gfortran.dg/iall_masked.f90
+new file mode 100644
+index 00000000000..33cc4106a1b
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/iall_masked.f90
+@@ -0,0 +1,22 @@
++! { dg-do run }
++! PR fortran/96890 - Wrong answer with intrinsic IALL
++program p
++  implicit none
++  integer :: iarr1(0), iarr2(2,2), iarr3(2,2,2)
++  logical :: mask1(0), mask2(2,2), mask3(2,2,2)
++
++  if (     iall(iarr1,    mask1) /=          -1                 ) stop 1
++  if (     iall(iarr1, 1, mask1) /=          -1                 ) stop 2
++
++  iarr2 = reshape ([  1,      2,       3,      4      ], shape (iarr2))
++  mask2 = reshape ([ .true., .false., .true., .false. ], shape (mask2))
++
++  if (any (iall(iarr2, 2, mask2) /=          [1,-1])            ) stop 3
++
++  iarr3 = reshape ([  1,      2,       3,      4,     &
++                      5,      6,       7,      8      ], shape (iarr3))
++  mask3 = reshape ([ .true., .false., .true., .false.,&
++                     .true., .false., .true., .false. ], shape (iarr3))
++
++  if (any (iall(iarr3, 2, mask3) /= reshape ([1,-1,5,-1],[2,2]))) stop 4
++end
 diff --git a/gcc/testsuite/gfortran.dg/implicit_pure_5.c b/gcc/testsuite/gfortran.dg/implicit_pure_5.c
 new file mode 100644
 index 00000000000..67a6d9ca45e
@@ -27486,6 +27557,98 @@ index 00000000000..72f6d5c0857
 +    call meh(bar)
 +  end subroutine foo_internal
 +end subroutine foo
+diff --git a/gcc/testsuite/gnat.dg/discr59.adb b/gcc/testsuite/gnat.dg/discr59.adb
+new file mode 100644
+index 00000000000..59e1b5fc290
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/discr59.adb
+@@ -0,0 +1,24 @@
++-- { dg-do run }
++
++with Discr59_Pkg1; use Discr59_Pkg1;
++
++procedure Discr59 is
++
++   function At_Response_Decode return At_Response_Type is
++      Fill : At_Response_Type (Alert, 1);
++   begin
++      return Fill;
++   end;
++
++   function Decode return Rec is
++      Make : constant At_Response_Type := At_Response_Decode;
++      Fill : Rec (At_Response, Make.Kind, Make.Units);
++   begin
++      return Fill;
++   end;
++
++   R : constant Rec := Decode;
++
++begin
++   null;
++end;
+diff --git a/gcc/testsuite/gnat.dg/discr59_pkg1.ads b/gcc/testsuite/gnat.dg/discr59_pkg1.ads
+new file mode 100644
+index 00000000000..455250b33e9
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/discr59_pkg1.ads
+@@ -0,0 +1,35 @@
++with Discr59_Pkg2;
++
++package Discr59_Pkg1 is
++
++   subtype Index_Type is Natural range 1 .. 300;
++
++   type Code_Type is (Global_Query, Status_Query, Alert);
++
++   type Id_Type is (None, At_Command, At_Response);
++
++   package My_G is new Discr59_Pkg2 (21);
++
++   type Arr is array (Index_Type range <>) of My_G.Token_Type;
++
++   type Unit_List_Type (Last : Natural) is record
++      A : Arr (1 .. Last);
++   end record;
++
++   type At_Response_Type (Kind : Code_Type; Units : Natural) is record
++      case Kind is
++         when Global_Query => Global_Query : Unit_List_Type (Units);
++         when Status_Query => null;
++         when Alert        => Alert : Unit_List_Type (Units);
++      end case;
++   end record;
++
++   type Rec (Kind : Id_Type; Code : Code_Type; Units : Natural) is record
++      case Kind is
++         when None        => null;
++         when At_Command  => null;
++         when At_Response => At_Response : At_Response_Type (Code, Units);
++      end case;
++   end record;
++
++end Discr59_Pkg1;
+diff --git a/gcc/testsuite/gnat.dg/discr59_pkg2.ads b/gcc/testsuite/gnat.dg/discr59_pkg2.ads
+new file mode 100644
+index 00000000000..01ed5090ebd
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/discr59_pkg2.ads
+@@ -0,0 +1,15 @@
++generic
++
++   Max_Length : Positive;
++
++package Discr59_Pkg2 is
++
++   type Token_Base_Type (Most : Natural) is record
++      Text : String (1 .. Most) := (others => ' ');
++      Last : Natural            := 0;
++      Used : Natural            := 0;
++   end record;
++
++   type Token_Type is new Token_Base_Type (Max_Length);
++
++end Discr59_Pkg2;
 diff --git a/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go b/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go
 index 6bf315fcc2f..6304ce073aa 100644
 --- a/gcc/testsuite/go.test/test/fixedbugs/issue4085b.go
@@ -29788,10 +29951,22 @@ index e6130af2fb5..8c21ab8a121 100644
        _Unwind_Frames_Extra (FRAMES);					\
        __builtin_eh_return (offset, handler);				\
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 01aa551b914..0ac2b7ae541 100644
+index 01aa551b914..3c4f4fc032a 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,50 @@
+@@ -1,3 +1,62 @@
++2020-09-09  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2020-09-03  Harald Anlauf  <anlauf@gmx.de>
++
++	* m4/iall.m4: Initial value for result should be -1.
++	* generated/iall_i1.c (miall_i1): Generated.
++	* generated/iall_i16.c (miall_i16): Likewise.
++	* generated/iall_i2.c (miall_i2): Likewise.
++	* generated/iall_i4.c (miall_i4): Likewise.
++	* generated/iall_i8.c (miall_i8): Likewise.
++
 +2020-08-24  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from master:
@@ -29876,6 +30051,71 @@ index a2f4281d0c5..bf4d78586c9 100644
  #else
        __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libgfortran/generated/iall_i1.c b/libgfortran/generated/iall_i1.c
+index 3e848ff6787..23f55822812 100644
+--- a/libgfortran/generated/iall_i1.c
++++ b/libgfortran/generated/iall_i1.c
+@@ -345,7 +345,7 @@ miall_i1 (gfc_array_i1 * const restrict retarray,
+       msrc = mbase;
+       {
+ 
+-  result = 0;
++  result = (GFC_INTEGER_1) -1;
+ 	for (n = 0; n < len; n++, src += delta, msrc += mdelta)
+ 	  {
+ 
+diff --git a/libgfortran/generated/iall_i16.c b/libgfortran/generated/iall_i16.c
+index 29a056eecab..c90c5e6c40e 100644
+--- a/libgfortran/generated/iall_i16.c
++++ b/libgfortran/generated/iall_i16.c
+@@ -345,7 +345,7 @@ miall_i16 (gfc_array_i16 * const restrict retarray,
+       msrc = mbase;
+       {
+ 
+-  result = 0;
++  result = (GFC_INTEGER_16) -1;
+ 	for (n = 0; n < len; n++, src += delta, msrc += mdelta)
+ 	  {
+ 
+diff --git a/libgfortran/generated/iall_i2.c b/libgfortran/generated/iall_i2.c
+index 6a6c9936d71..a2fd671e3be 100644
+--- a/libgfortran/generated/iall_i2.c
++++ b/libgfortran/generated/iall_i2.c
+@@ -345,7 +345,7 @@ miall_i2 (gfc_array_i2 * const restrict retarray,
+       msrc = mbase;
+       {
+ 
+-  result = 0;
++  result = (GFC_INTEGER_2) -1;
+ 	for (n = 0; n < len; n++, src += delta, msrc += mdelta)
+ 	  {
+ 
+diff --git a/libgfortran/generated/iall_i4.c b/libgfortran/generated/iall_i4.c
+index cdba6c8c762..03f9ef9cbf2 100644
+--- a/libgfortran/generated/iall_i4.c
++++ b/libgfortran/generated/iall_i4.c
+@@ -345,7 +345,7 @@ miall_i4 (gfc_array_i4 * const restrict retarray,
+       msrc = mbase;
+       {
+ 
+-  result = 0;
++  result = (GFC_INTEGER_4) -1;
+ 	for (n = 0; n < len; n++, src += delta, msrc += mdelta)
+ 	  {
+ 
+diff --git a/libgfortran/generated/iall_i8.c b/libgfortran/generated/iall_i8.c
+index 5cd7353013d..3b9cc9197b6 100644
+--- a/libgfortran/generated/iall_i8.c
++++ b/libgfortran/generated/iall_i8.c
+@@ -345,7 +345,7 @@ miall_i8 (gfc_array_i8 * const restrict retarray,
+       msrc = mbase;
+       {
+ 
+-  result = 0;
++  result = (GFC_INTEGER_8) -1;
+ 	for (n = 0; n < len; n++, src += delta, msrc += mdelta)
+ 	  {
+ 
 diff --git a/libgfortran/intrinsics/env.c b/libgfortran/intrinsics/env.c
 index d62116d5e5b..00b1662443e 100644
 --- a/libgfortran/intrinsics/env.c
@@ -29992,6 +30232,19 @@ index c63db4e77ef..9db748898c4 100644
      nbefore = 1;
    /* Scan for trailing zeros to see if we really need to round it.  */
    for(i = nbefore + nafter; i < ndigits; i++)
+diff --git a/libgfortran/m4/iall.m4 b/libgfortran/m4/iall.m4
+index 41c8c268586..7de1ceb4925 100644
+--- a/libgfortran/m4/iall.m4
++++ b/libgfortran/m4/iall.m4
+@@ -35,7 +35,7 @@ ARRAY_FUNCTION(0,
+ `  result &= *src;')
+ 
+ MASKED_ARRAY_FUNCTION(0,
+-`  result = 0;',
++`  result = ('rtype_name`) -1;',
+ `  if (*msrc)
+     result &= *src;')
+ 
 diff --git a/libgfortran/runtime/error.c b/libgfortran/runtime/error.c
 index 0335a165edc..1dea2f0e5f8 100644
 --- a/libgfortran/runtime/error.c
