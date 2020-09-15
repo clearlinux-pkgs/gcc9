@@ -72,7 +72,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (186):
+GCC Administrator (187):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -316,7 +317,7 @@ Iain Sandoe (1):
 Ian Lance Taylor (1):
       go.test: update issue4085b.go to version from Go 1.13
 
-Jakub Jelinek (41):
+Jakub Jelinek (42):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -358,6 +359,7 @@ Jakub Jelinek (41):
       libstdc++: Update {x86_64,i?86,powerpc64,s390x,aarch64}-linux baselines for GCC 10.1
       testsuite: Improve g++.dg/ext/attr-parm-1.C testcase [PR94946]
       aarch64: Fix up __aarch64_cas16_acq_rel fallback
+      i386: Fix up vector mul and div with broadcasts in -masm=intel mode
 
 Jason Merrill (12):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -10383,9 +10385,27 @@ index 698c31a0a97..237c0054a09 100644
        tmp = gen_rtx_IF_THEN_ELSE (VOIDmode, tmp,
  				  gen_rtx_LABEL_REF (VOIDmode, noadj_label),
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 18cc39ae521..cbcbe3846ca 100644
+index 18cc39ae521..3b51fef56f2 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
+@@ -1829,7 +1829,7 @@
+ 	     (match_operand:<ssescalarmode> 1 "memory_operand" "m"))
+ 	  (match_operand:VF_AVX512 2 "register_operand" "v")))]
+   "TARGET_AVX512F && <mask_mode512bit_condition>"
+-  "vmul<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<mask_operand3>|%0<mask_operand3>, %2, %1<<avx512bcst>>}"
++  "vmul<ssemodesuffix>\t{%1<avx512bcst>, %2, %0<mask_operand3>|%0<mask_operand3>, %2, %1<avx512bcst>}"
+   [(set_attr "prefix" "evex")
+    (set_attr "type" "ssemul")
+    (set_attr "mode" "<MODE>")])
+@@ -1899,7 +1899,7 @@
+ 	  (vec_duplicate:VF_AVX512
+ 	     (match_operand:<ssescalarmode> 2 "memory_operand" "m"))))]
+   "TARGET_AVX512F && <mask_mode512bit_condition>"
+-  "vdiv<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<mask_operand3>|%0<mask_operand3>, %1, %2<<avx512bcst>>}"
++  "vdiv<ssemodesuffix>\t{%2<avx512bcst>, %1, %0<mask_operand3>|%0<mask_operand3>, %1, %2<avx512bcst>}"
+   [(set_attr "prefix" "evex")
+     (set_attr "type" "ssediv")
+    (set_attr "mode" "<MODE>")])
 @@ -2625,8 +2625,8 @@
  ;; Modes handled by reduc_sm{in,ax}* patterns.
  (define_mode_iterator REDUC_SSE_SMINMAX_MODE
@@ -22704,6 +22724,30 @@ index 00000000000..089e3f211b9
 +  for (i = 0; i < sizeof (v) / sizeof (v[0]); i++)
 +    if (v[i] != ((i & 16) ? 31 : 1) + (i & 1))
 +      abort ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-pr97028.c b/gcc/testsuite/gcc.target/i386/avx512f-pr97028.c
+new file mode 100644
+index 00000000000..2719108a411
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-pr97028.c
+@@ -0,0 +1,18 @@
++/* PR target/97028 */
++/* { dg-do assemble { target avx512f } } */
++/* { dg-require-effective-target masm_intel } */
++/* { dg-options "-O2 -mavx512f -masm=intel" } */
++
++#include <x86intrin.h>
++
++__m512
++foo (__m512 x, float *y)
++{
++  return _mm512_mul_ps (x, _mm512_set1_ps (*y));
++}
++
++__m512
++bar (__m512 x, float *y)
++{
++  return _mm512_div_ps (x, _mm512_set1_ps (*y));
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-pr93069.c b/gcc/testsuite/gcc.target/i386/avx512vl-pr93069.c
 new file mode 100644
