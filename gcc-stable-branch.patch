@@ -72,7 +72,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (188):
+GCC Administrator (189):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -265,6 +266,9 @@ GCC Administrator (188):
 Gerald Pfeifer (1):
       i386: Define __ILP32__ and _ILP32 for all 32-bit targets
 
+Gustavo Romero (1):
+      selftest: Work around GCC 4.2 PR33916 bug by optimizing the ctor [PR89494]
+
 H.J. Lu (8):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
@@ -274,6 +278,9 @@ H.J. Lu (8):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
       x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
+
+Haijian Zhang (1):
+      pr94780.c fails with ICE on aarch64 [PR94820]
 
 Harald Anlauf (23):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
@@ -318,7 +325,7 @@ Iain Sandoe (1):
 Ian Lance Taylor (1):
       go.test: update issue4085b.go to version from Go 1.13
 
-Jakub Jelinek (42):
+Jakub Jelinek (78):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -361,6 +368,42 @@ Jakub Jelinek (42):
       testsuite: Improve g++.dg/ext/attr-parm-1.C testcase [PR94946]
       aarch64: Fix up __aarch64_cas16_acq_rel fallback
       i386: Fix up vector mul and div with broadcasts in -masm=intel mode
+      c++: Further fix for -fsanitize=vptr [PR94325]
+      i386: Don't use AVX512F integral masks for V*TImode [PR94438]
+      vect: Fix up lowering of TRUNC_MOD_EXPR by negative constant [PR94524]
+      c++: Fix pasto in structured binding diagnostics [PR94571]
+      inliner: Don't ICE on NULL TYPE_DOMAIN [PR94621]
+      Fix -fcompare-debug issue in delete_insn_and_edges [PR94618]
+      ubsan: Avoid -Wpadded warnings [PR94641]
+      attribs: Don't diagnose attribute exclusions during error recovery [PR94705]
+      Shortcut identity VEC_PERM expansion [PR94710]
+      c++: Avoid -Wreturn-type warning if a template fn calls noreturn template fn [PR94742]
+      c-family: Fix ICE on __builtin_speculation_safe_value () [PR94755]
+      x86: Fix up ix86_atomic_assign_expand_fenv [PR94780]
+      tree: Fix up TREE_SIDE_EFFECTS on internal calls [PR94809]
+      rs6000: Fix rs6000_atomic_assign_expand_fenv [PR94826]
+      x86: Fix -O0 intrinsic *gather*/*scatter* macros [PR94832]
+      x86: Fix -O0 remaining intrinsic macros [PR94832]
+      tilegx: Unbreak build
+      c: Fix ICE with _Atomic side-effect in nested fn param decls [PR94842]
+      combine: Don't replace SET_SRC with REG_EQUAL note content if SET_SRC has side-effects [PR94873]
+      riscv: Fix up riscv_atomic_assign_expand_fenv [PR94950]
+      c++: Avoid strict_aliasing_warning on dependent types or expressions [PR94951]
+      Fix -fcompare-debug issue in purge_dead_edges [PR95080]
+      openmp: Fix placement of 2nd+ preparation statement for PHIs in simd clone lowering [PR95108]
+      c++: Try to complete decomp types [PR95328]
+      fold-const: Fix A <= 0 ? A : -A folding [PR95810]
+      c-family: Use TYPE_OVERFLOW_UNDEFINED instead of !TYPE_UNSIGNED in pointer_sum [PR95903]
+      tree-cfg: Fix ICE with switch stmt to unreachable opt and forced labels [PR95857]
+      fix _mm512_{,mask_}cmp*_p[ds]_mask at -O0 [PR96174]
+      veclower: Don't ICE on .VEC_CONVERT calls with no lhs [PR96426]
+      openmp: Handle reduction clauses on host teams construct [PR96459]
+      openmp: Handle clauses with gimple sequences in convert_nonlocal_omp_clauses properly
+      c-family: Fix ICE in get_atomic_generic_size [PR96545]
+      c: Fix -Wunused-but-set-* warning with _Generic [PR96571]
+      gimple: Ignore *0 = {CLOBBER} in path isolation [PR96722]
+      dwarf2out: Fix up dwarf2out_next_real_insn caching [PR96729]
+      c++: Disable -frounding-math during manifestly constant evaluation [PR96862]
 
 Jason Merrill (12):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -638,6 +681,9 @@ Xionghu Luo (1):
 
 Zackery Spytz (1):
       doc: Fix a typo in the documentation of the copy attribute
+
+liuhongt (1):
+      If -mavx implies -mxsave, then -mno-xsave should imply -mno-avx.
 
 diff --git a/ChangeLog b/ChangeLog
 index 9605d767a80..30c7aaf6cc0 100644
@@ -5460,10 +5506,446 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..3c2254e35b4 100644
+index d8e53874e68..e2b77d3adf5 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1357 @@
+@@ -1,3 +1,1793 @@
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/96729
++	* dwarf2out.c (dwarf2out_next_real_insn): Adjust function comment.
++	(dwarf2out_var_location): Look for next_note only if next_real is
++	non-NULL, in that case look for the first non-deleted
++	NOTE_INSN_VAR_LOCATION between loc_note and next_real, if any.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-25  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/96722
++	* gimple.c (infer_nonnull_range): Formatting fix.
++	(infer_nonnull_range_by_dereference): Return false for clobber stmts.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR fortran/93553
++	* tree-nested.c (convert_nonlocal_omp_clauses): For
++	OMP_CLAUSE_REDUCTION, OMP_CLAUSE_LASTPRIVATE and OMP_CLAUSE_LINEAR
++	save info->new_local_var_chain around walks of the clause gimple
++	sequences and declare_vars if needed into the sequence.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/96459
++	* omp-low.c (lower_omp_taskreg): Call lower_reduction_clauses even in
++	for host teams.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-04  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/96426
++	* tree-vect-generic.c (expand_vector_conversion): Replace .VEC_CONVERT
++	call with GIMPLE_NOP if there is no lhs.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-07-15  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/96174
++	* config/i386/avx512fintrin.h (_mm512_cmpeq_pd_mask,
++	_mm512_mask_cmpeq_pd_mask, _mm512_cmplt_pd_mask,
++	_mm512_mask_cmplt_pd_mask, _mm512_cmple_pd_mask,
++	_mm512_mask_cmple_pd_mask, _mm512_cmpunord_pd_mask,
++	_mm512_mask_cmpunord_pd_mask, _mm512_cmpneq_pd_mask,
++	_mm512_mask_cmpneq_pd_mask, _mm512_cmpnlt_pd_mask,
++	_mm512_mask_cmpnlt_pd_mask, _mm512_cmpnle_pd_mask,
++	_mm512_mask_cmpnle_pd_mask, _mm512_cmpord_pd_mask,
++	_mm512_mask_cmpord_pd_mask, _mm512_cmpeq_ps_mask,
++	_mm512_mask_cmpeq_ps_mask, _mm512_cmplt_ps_mask,
++	_mm512_mask_cmplt_ps_mask, _mm512_cmple_ps_mask,
++	_mm512_mask_cmple_ps_mask, _mm512_cmpunord_ps_mask,
++	_mm512_mask_cmpunord_ps_mask, _mm512_cmpneq_ps_mask,
++	_mm512_mask_cmpneq_ps_mask, _mm512_cmpnlt_ps_mask,
++	_mm512_mask_cmpnlt_ps_mask, _mm512_cmpnle_ps_mask,
++	_mm512_mask_cmpnle_ps_mask, _mm512_cmpord_ps_mask,
++	_mm512_mask_cmpord_ps_mask): Move outside of __OPTIMIZE__ guarded
++	section.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-07-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/95857
++	* tree-cfg.c (group_case_labels_stmt): When removing an unreachable
++	base_bb, remember all forced and non-local labels on it and later
++	treat those as if they have NULL label_to_block.  Formatting fix.
++	Fix a comment typo.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-06-24  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/95810
++	* fold-const.c (fold_cond_expr_with_comparison): Optimize
++	A <= 0 ? A : -A into (type)-absu(A) rather than -abs(A).
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/95108
++	* omp-simd-clone.c (struct modify_stmt_info): Add after_stmt member.
++	(ipa_simd_modify_stmt_ops): For PHIs, only add before first stmt in
++	entry block if info->after_stmt is NULL, otherwise add after that stmt
++	and update it after adding each stmt.
++	(ipa_simd_modify_function_body): Initialize info.after_stmt.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-13  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/95080
++	* cfgrtl.c (purge_dead_edges): Skip over debug and note insns even
++	if the last insn is a note.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94950
++	* config/riscv/riscv-builtins.c (riscv_atomic_assign_expand_fenv): Use
++	TARGET_EXPR instead of MODIFY_EXPR for first assignment to old_flags.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/94873
++	* combine.c (combine_instructions): Don't optimize using REG_EQUAL
++	note if SET_SRC (set) has side-effects.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-02  Jakub Jelinek  <jakub@redhat.com>
++
++	* config/tilegx/tilegx.md
++	(insn_stnt<I124MODE:n>_add<I48MODE:bitsuffix>): Use <I124MODE:n>
++	rather than just <n>.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94832
++	* config/i386/avx512bwintrin.h (_mm512_alignr_epi8,
++	_mm512_mask_alignr_epi8, _mm512_maskz_alignr_epi8): Wrap macro operands
++	used in casts into parens.
++	* config/i386/avx512fintrin.h (_mm512_cvt_roundps_ph, _mm512_cvtps_ph,
++	_mm512_mask_cvt_roundps_ph, _mm512_mask_cvtps_ph,
++	_mm512_maskz_cvt_roundps_ph, _mm512_maskz_cvtps_ph,
++	_mm512_mask_cmp_epi64_mask, _mm512_mask_cmp_epi32_mask,
++	_mm512_mask_cmp_epu64_mask, _mm512_mask_cmp_epu32_mask,
++	_mm512_mask_cmp_round_pd_mask, _mm512_mask_cmp_round_ps_mask,
++	_mm512_mask_cmp_pd_mask, _mm512_mask_cmp_ps_mask): Likewise.
++	* config/i386/avx512vlbwintrin.h (_mm256_mask_alignr_epi8,
++	_mm256_maskz_alignr_epi8, _mm_mask_alignr_epi8, _mm_maskz_alignr_epi8,
++	_mm256_mask_cmp_epu8_mask): Likewise.
++	* config/i386/avx512vlintrin.h (_mm_mask_cvtps_ph, _mm_maskz_cvtps_ph,
++	_mm256_mask_cvtps_ph, _mm256_maskz_cvtps_ph): Likewise.
++	* config/i386/f16cintrin.h (_mm_cvtps_ph, _mm256_cvtps_ph): Likewise.
++	* config/i386/shaintrin.h (_mm_sha1rnds4_epu32): Likewise.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94832
++	* config/i386/avx2intrin.h (_mm_mask_i32gather_pd,
++	_mm256_mask_i32gather_pd, _mm_mask_i64gather_pd,
++	_mm256_mask_i64gather_pd, _mm_mask_i32gather_ps,
++	_mm256_mask_i32gather_ps, _mm_mask_i64gather_ps,
++	_mm256_mask_i64gather_ps, _mm_i32gather_epi64,
++	_mm_mask_i32gather_epi64, _mm256_i32gather_epi64,
++	_mm256_mask_i32gather_epi64, _mm_i64gather_epi64,
++	_mm_mask_i64gather_epi64, _mm256_i64gather_epi64,
++	_mm256_mask_i64gather_epi64, _mm_i32gather_epi32,
++	_mm_mask_i32gather_epi32, _mm256_i32gather_epi32,
++	_mm256_mask_i32gather_epi32, _mm_i64gather_epi32,
++	_mm_mask_i64gather_epi32, _mm256_i64gather_epi32,
++	_mm256_mask_i64gather_epi32): Surround macro parameter uses with
++	parens.
++	(_mm_i32gather_pd, _mm256_i32gather_pd, _mm_i64gather_pd,
++	_mm256_i64gather_pd, _mm_i32gather_ps, _mm256_i32gather_ps,
++	_mm_i64gather_ps, _mm256_i64gather_ps): Likewise.  Don't use
++	as mask vector containing -1.0 or -1.0f elts, but instead vector
++	with all bits set using _mm*_cmpeq_p? with zero operands.
++	* config/i386/avx512fintrin.h (_mm512_i32gather_ps,
++	_mm512_mask_i32gather_ps, _mm512_i32gather_pd,
++	_mm512_mask_i32gather_pd, _mm512_i64gather_ps,
++	_mm512_mask_i64gather_ps, _mm512_i64gather_pd,
++	_mm512_mask_i64gather_pd, _mm512_i32gather_epi32,
++	_mm512_mask_i32gather_epi32, _mm512_i32gather_epi64,
++	_mm512_mask_i32gather_epi64, _mm512_i64gather_epi32,
++	_mm512_mask_i64gather_epi32, _mm512_i64gather_epi64,
++	_mm512_mask_i64gather_epi64, _mm512_i32scatter_ps,
++	_mm512_mask_i32scatter_ps, _mm512_i32scatter_pd,
++	_mm512_mask_i32scatter_pd, _mm512_i64scatter_ps,
++	_mm512_mask_i64scatter_ps, _mm512_i64scatter_pd,
++	_mm512_mask_i64scatter_pd, _mm512_i32scatter_epi32,
++	_mm512_mask_i32scatter_epi32, _mm512_i32scatter_epi64,
++	_mm512_mask_i32scatter_epi64, _mm512_i64scatter_epi32,
++	_mm512_mask_i64scatter_epi32, _mm512_i64scatter_epi64,
++	_mm512_mask_i64scatter_epi64): Surround macro parameter uses with
++	parens.
++	* config/i386/avx512pfintrin.h (_mm512_prefetch_i32gather_pd,
++	_mm512_prefetch_i32gather_ps, _mm512_mask_prefetch_i32gather_pd,
++	_mm512_mask_prefetch_i32gather_ps, _mm512_prefetch_i64gather_pd,
++	_mm512_prefetch_i64gather_ps, _mm512_mask_prefetch_i64gather_pd,
++	_mm512_mask_prefetch_i64gather_ps, _mm512_prefetch_i32scatter_pd,
++	_mm512_prefetch_i32scatter_ps, _mm512_mask_prefetch_i32scatter_pd,
++	_mm512_mask_prefetch_i32scatter_ps, _mm512_prefetch_i64scatter_pd,
++	_mm512_prefetch_i64scatter_ps, _mm512_mask_prefetch_i64scatter_pd,
++	_mm512_mask_prefetch_i64scatter_ps): Likewise.
++	* config/i386/avx512vlintrin.h (_mm256_mmask_i32gather_ps,
++	_mm_mmask_i32gather_ps, _mm256_mmask_i32gather_pd,
++	_mm_mmask_i32gather_pd, _mm256_mmask_i64gather_ps,
++	_mm_mmask_i64gather_ps, _mm256_mmask_i64gather_pd,
++	_mm_mmask_i64gather_pd, _mm256_mmask_i32gather_epi32,
++	_mm_mmask_i32gather_epi32, _mm256_mmask_i32gather_epi64,
++	_mm_mmask_i32gather_epi64, _mm256_mmask_i64gather_epi32,
++	_mm_mmask_i64gather_epi32, _mm256_mmask_i64gather_epi64,
++	_mm_mmask_i64gather_epi64, _mm256_i32scatter_ps,
++	_mm256_mask_i32scatter_ps, _mm_i32scatter_ps, _mm_mask_i32scatter_ps,
++	_mm256_i32scatter_pd, _mm256_mask_i32scatter_pd, _mm_i32scatter_pd,
++	_mm_mask_i32scatter_pd, _mm256_i64scatter_ps,
++	_mm256_mask_i64scatter_ps, _mm_i64scatter_ps, _mm_mask_i64scatter_ps,
++	_mm256_i64scatter_pd, _mm256_mask_i64scatter_pd, _mm_i64scatter_pd,
++	_mm_mask_i64scatter_pd, _mm256_i32scatter_epi32,
++	_mm256_mask_i32scatter_epi32, _mm_i32scatter_epi32,
++	_mm_mask_i32scatter_epi32, _mm256_i32scatter_epi64,
++	_mm256_mask_i32scatter_epi64, _mm_i32scatter_epi64,
++	_mm_mask_i32scatter_epi64, _mm256_i64scatter_epi32,
++	_mm256_mask_i64scatter_epi32, _mm_i64scatter_epi32,
++	_mm_mask_i64scatter_epi32, _mm256_i64scatter_epi64,
++	_mm256_mask_i64scatter_epi64, _mm_i64scatter_epi64,
++	_mm_mask_i64scatter_epi64): Likewise.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94826
++	* config/rs6000/rs6000.c (rs6000_atomic_assign_expand_fenv): Use
++	TARGET_EXPR instead of MODIFY_EXPR for first assignment to
++	fenv_var, fenv_clear and old_fenv variables.  For fenv_addr
++	take address of TARGET_EXPR of fenv_var with void_node initializer.
++	Formatting fixes.
++
++2020-09-16  Haijian Zhang  <z.zhanghaijian@huawei.com>
++
++	Backported from master:
++	2020-04-29  Haijian Zhang  <z.zhanghaijian@huawei.com>
++
++	PR target/94820
++	* config/aarch64/aarch64-builtins.c
++	(aarch64_atomic_assign_expand_fenv): Use TARGET_EXPR instead of
++	MODIFY_EXPR for first assignment to fenv_cr, fenv_sr and
++	new_fenv_var.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94809
++	* tree.c (build_call_expr_internal_loc_array): Call
++	process_call_operands.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94780
++	* config/i386/i386.c (ix86_atomic_assign_expand_fenv): Use
++	TARGET_EXPR instead of MODIFY_EXPR for first assignment to
++	sw_var, exceptions_var, mxcsr_orig_var and mxcsr_mod_var.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94710
++	* optabs.c (expand_vec_perm_const): For shift_amt const0_rtx
++	just return v2.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94705
++	* attribs.c (decl_attribute): Don't diagnose attribute exclusions
++	if last_decl is error_mark_node or has such a TREE_TYPE.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94641
++	* stor-layout.c (place_field, finalize_record_size): Don't emit
++	-Wpadded warning on TYPE_ARTIFICIAL rli->t.
++	* ubsan.c (ubsan_get_type_descriptor_type,
++	ubsan_get_source_location_type, ubsan_create_data): Set
++	TYPE_ARTIFICIAL.
++	* asan.c (asan_global_struct): Likewise.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/94618
++	* cfgrtl.c (delete_insn_and_edges): Set purge not just when
++	insn is the BB_END of its block, but also when it is only followed
++	by DEBUG_INSNs in its block.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94621
++	* tree-inline.c (remap_type_1): Don't dereference NULL TYPE_DOMAIN.
++	Move id->adjust_array_error_bounds check first in the condition.
++
++2020-09-16  Gustavo Romero  <gromero@linux.ibm.com>
++
++	Backported from master:
++	2020-04-15  Gustavo Romero  <gromero@linux.ibm.com>
++
++	PR bootstrap/89494
++	* dumpfile.c (selftest::temp_dump_context::temp_dump_context):
++	Don't construct a dump_context temporary to call static method.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94524
++	* tree-vect-generic.c (expand_vector_divmod): If any elt of op1 is
++	negative for signed TRUNC_MOD_EXPR, multiply with absolute value of
++	op1 rather than op1 itself at the end.  Punt for signed modulo by
++	most negative constant.
++	* tree-vect-patterns.c (vect_recog_divmod_pattern): Punt for signed
++	modulo by most negative constant.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94438
++	* config/i386/i386.c (ix86_get_mask_mode): Only use int mask for elem_size
++	1, 2, 4 and 8.
++
++2020-09-16  Sylvia Taylor  <sylvia.taylor@arm.com>
++
++	Backported from master:
++	2019-08-22  Sylvia Taylor  <sylvia.taylor@arm.com>
++
++	* config/aarch64/aarch64-simd-builtins.def:
++	(ld1x4): New.
++	(st1x4): Likewise.
++	* config/aarch64/aarch64-simd.md:
++	(aarch64_ld1x4<VALLDIF:mode>): New pattern.
++	(aarch64_st1x4<VALLDIF:mode>): Likewise.
++	(aarch64_ld1_x4_<mode>): Likewise.
++	(aarch64_st1_x4_<mode>): Likewise.
++	* config/aarch64/arm_neon.h:
++	(vld1_s8_x4): New function.
++	(vld1q_s8_x4): Likewise.
++	(vld1_s16_x4): Likewise.
++	(vld1q_s16_x4): Likewise.
++	(vld1_s32_x4): Likewise.
++	(vld1q_s32_x4): Likewise.
++	(vld1_u8_x4): Likewise.
++	(vld1q_u8_x4): Likewise.
++	(vld1_u16_x4): Likewise.
++	(vld1q_u16_x4): Likewise.
++	(vld1_u32_x4): Likewise.
++	(vld1q_u32_x4): Likewise.
++	(vld1_f16_x4): Likewise.
++	(vld1q_f16_x4): Likewise.
++	(vld1_f32_x4): Likewise.
++	(vld1q_f32_x4): Likewise.
++	(vld1_p8_x4): Likewise.
++	(vld1q_p8_x4): Likewise.
++	(vld1_p16_x4): Likewise.
++	(vld1q_p16_x4): Likewise.
++	(vld1_s64_x4): Likewise.
++	(vld1_u64_x4): Likewise.
++	(vld1_p64_x4): Likewise.
++	(vld1q_s64_x4): Likewise.
++	(vld1q_u64_x4): Likewise.
++	(vld1q_p64_x4): Likewise.
++	(vld1_f64_x4): Likewise.
++	(vld1q_f64_x4): Likewise.
++	(vst1_s8_x4): Likewise.
++	(vst1q_s8_x4): Likewise.
++	(vst1_s16_x4): Likewise.
++	(vst1q_s16_x4): Likewise.
++	(vst1_s32_x4): Likewise.
++	(vst1q_s32_x4): Likewise.
++	(vst1_u8_x4): Likewise.
++	(vst1q_u8_x4): Likewise.
++	(vst1_u16_x4): Likewise.
++	(vst1q_u16_x4): Likewise.
++	(vst1_u32_x4): Likewise.
++	(vst1q_u32_x4): Likewise.
++	(vst1_f16_x4): Likewise.
++	(vst1q_f16_x4): Likewise.
++	(vst1_f32_x4): Likewise.
++	(vst1q_f32_x4): Likewise.
++	(vst1_p8_x4): Likewise.
++	(vst1q_p8_x4): Likewise.
++	(vst1_p16_x4): Likewise.
++	(vst1q_p16_x4): Likewise.
++	(vst1_s64_x4): Likewise.
++	(vst1_u64_x4): Likewise.
++	(vst1_p64_x4): Likewise.
++	(vst1q_s64_x4): Likewise.
++	(vst1q_u64_x4): Likewise.
++	(vst1q_p64_x4): Likewise.
++	(vst1_f64_x4): Likewise.
++	(vst1q_f64_x4): Likewise.
++
 +2020-09-15  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	* config/rs6000/rs6000.c (rs6000_init_builtin): Update V2DI_type_node
@@ -6988,7 +7470,7 @@ index fe6464fd601..3dbf7974a67 100644
  #include <windows.h>
  
 diff --git a/gcc/asan.c b/gcc/asan.c
-index 3b800b26b69..2baf06ffa7c 100644
+index 3b800b26b69..7c392547c0e 100644
 --- a/gcc/asan.c
 +++ b/gcc/asan.c
 @@ -1597,8 +1597,25 @@ asan_emit_stack_protection (rtx base, rtx pbase, unsigned int alignb,
@@ -7019,6 +7501,28 @@ index 3b800b26b69..2baf06ffa7c 100644
        else if (use_after_return_class >= 5
  	       || !set_storage_via_setmem (shadow_mem,
  					   GEN_INT (sz),
+@@ -2660,6 +2677,7 @@ asan_global_struct (void)
+   TYPE_FIELDS (ret) = fields[0];
+   TYPE_NAME (ret) = type_decl;
+   TYPE_STUB_DECL (ret) = type_decl;
++  TYPE_ARTIFICIAL (ret) = 1;
+   layout_type (ret);
+   return ret;
+ }
+diff --git a/gcc/attribs.c b/gcc/attribs.c
+index 4441922543f..ee2f03c07d7 100644
+--- a/gcc/attribs.c
++++ b/gcc/attribs.c
+@@ -682,7 +682,8 @@ decl_attributes (tree *node, tree attributes, int flags,
+ 	 reject incompatible attributes.  */
+       bool built_in = flags & ATTR_FLAG_BUILT_IN;
+       if (spec->exclude
+-	  && (flag_checking || !built_in))
++	  && (flag_checking || !built_in)
++	  && !error_operand_p (last_decl))
+ 	{
+ 	  /* Always check attributes on user-defined functions.
+ 	     Check them on built-ins only when -fchecking is set.
 diff --git a/gcc/builtins.c b/gcc/builtins.c
 index ed11f79ff0b..e8e43f53ec6 100644
 --- a/gcc/builtins.c
@@ -7061,11 +7565,113 @@ index ed11f79ff0b..e8e43f53ec6 100644
  	}
  
        if (!len)
+diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
+index 1baceaa1bd5..a2e701e162c 100644
+--- a/gcc/c-family/ChangeLog
++++ b/gcc/c-family/ChangeLog
+@@ -1,3 +1,32 @@
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/96545
++	* c-common.c (get_atomic_generic_size): Require that first argument's
++	type points to a complete type and use tree_fits_uhwi_p instead of
++	just INTEGER_CST TREE_CODE check for the TYPE_SIZE_UNIT.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-06-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/95903
++	* c-common.c (pointer_int_sum): Use TYPE_OVERFLOW_UNDEFINED instead of
++	!TYPE_UNSIGNED check to see if we can apply distributive law and handle
++	smaller precision intop operands separately.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94755
++	* c-common.c (resolve_overloaded_builtin): Return error_mark_node for
++	fncode == BUILT_IN_NONE before initialization of first_param.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/gcc/c-family/c-common.c b/gcc/c-family/c-common.c
+index d220e813564..485e2076f68 100644
+--- a/gcc/c-family/c-common.c
++++ b/gcc/c-family/c-common.c
+@@ -3150,7 +3150,7 @@ pointer_int_sum (location_t loc, enum tree_code resultcode,
+       /* If the constant is unsigned, and smaller than the pointer size,
+ 	 then we must skip this optimization.  This is because it could cause
+ 	 an overflow error if the constant is negative but INTOP is not.  */
+-      && (!TYPE_UNSIGNED (TREE_TYPE (intop))
++      && (TYPE_OVERFLOW_UNDEFINED (TREE_TYPE (intop))
+ 	  || (TYPE_PRECISION (TREE_TYPE (intop))
+ 	      == TYPE_PRECISION (TREE_TYPE (ptrop)))))
+     {
+@@ -6891,8 +6891,15 @@ get_atomic_generic_size (location_t loc, tree function,
+       return 0;
+     }
+ 
++  if (!COMPLETE_TYPE_P (TREE_TYPE (type_0)))
++    {
++      error_at (loc, "argument 1 of %qE must be a pointer to a complete type",
++		function);
++      return 0;
++    }
++
+   /* Types must be compile time constant sizes. */
+-  if (TREE_CODE ((TYPE_SIZE_UNIT (TREE_TYPE (type_0)))) != INTEGER_CST)
++  if (!tree_fits_uhwi_p ((TYPE_SIZE_UNIT (TREE_TYPE (type_0)))))
+     {
+       error_at (loc, 
+ 		"argument 1 of %qE must be a pointer to a constant size type",
+@@ -7348,9 +7355,11 @@ resolve_overloaded_builtin (location_t loc, tree function,
+ 	enum built_in_function fncode
+ 	  = speculation_safe_value_resolve_call (function, params);;
+ 
++	if (fncode == BUILT_IN_NONE)
++	  return error_mark_node;
++
+ 	first_param = (*params)[0];
+-	if (fncode == BUILT_IN_NONE
+-	    || !speculation_safe_value_resolve_params (loc, function, params))
++	if (!speculation_safe_value_resolve_params (loc, function, params))
+ 	  return error_mark_node;
+ 
+ 	if (targetm.have_speculation_safe_value (true))
 diff --git a/gcc/c/ChangeLog b/gcc/c/ChangeLog
-index c38f1d73605..3439f6d4e65 100644
+index c38f1d73605..05430eeef18 100644
 --- a/gcc/c/ChangeLog
 +++ b/gcc/c/ChangeLog
-@@ -1,3 +1,49 @@
+@@ -1,3 +1,70 @@
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-18  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/96571
++	* c-parser.c (c_parser_generic_selection): Change match_found from bool
++	to int, holding index of the match.  Call mark_exp_read on the selector
++	expression and on expressions other than the selected one.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94842
++	* c-decl.c (set_labels_context_r): In addition to context-less
++	LABEL_DECLs adjust also LABEL_DECLs with context equal to
++	parent function if any.
++	(store_parm_decls): Adjust comment.
++
 +2020-04-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	PR c++/94512
@@ -7116,7 +7722,7 @@ index c38f1d73605..3439f6d4e65 100644
  
  	* GCC 9.3.0 released.
 diff --git a/gcc/c/c-decl.c b/gcc/c/c-decl.c
-index 859a6241258..caa2b75ac6d 100644
+index 859a6241258..80071112130 100644
 --- a/gcc/c/c-decl.c
 +++ b/gcc/c/c-decl.c
 @@ -3272,7 +3272,8 @@ pushdecl (tree x)
@@ -7213,7 +7819,42 @@ index 859a6241258..caa2b75ac6d 100644
    /* If this enum is defined inside a struct, add it to
       struct_types.  */
    if (warn_cxx_compat
-@@ -9593,7 +9597,7 @@ temp_pop_parm_decls (void)
+@@ -9460,15 +9464,18 @@ store_parm_decls_from (struct c_arg_info *arg_info)
+   store_parm_decls ();
+ }
+ 
+-/* Called by walk_tree to look for and update context-less labels.  */
++/* Called by walk_tree to look for and update context-less labels
++   or labels with context in the parent function.  */
+ 
+ static tree
+ set_labels_context_r (tree *tp, int *walk_subtrees, void *data)
+ {
++  tree ctx = static_cast<tree>(data);
+   if (TREE_CODE (*tp) == LABEL_EXPR
+-      && DECL_CONTEXT (LABEL_EXPR_LABEL (*tp)) == NULL_TREE)
++      && (DECL_CONTEXT (LABEL_EXPR_LABEL (*tp)) == NULL_TREE
++	  || DECL_CONTEXT (LABEL_EXPR_LABEL (*tp)) == DECL_CONTEXT (ctx)))
+     {
+-      DECL_CONTEXT (LABEL_EXPR_LABEL (*tp)) = static_cast<tree>(data);
++      DECL_CONTEXT (LABEL_EXPR_LABEL (*tp)) = ctx;
+       *walk_subtrees = 0;
+     }
+ 
+@@ -9539,7 +9546,11 @@ store_parm_decls (void)
+ 	 gotos, labels, etc.  Because at that time the function decl
+ 	 for F has not been created yet, those labels do not have any
+ 	 function context.  But we have the fndecl now, so update the
+-	 labels accordingly.  gimplify_expr would crash otherwise.  */
++	 labels accordingly.  gimplify_expr would crash otherwise.
++	 Or with nested functions the labels could be created with parent
++	 function's context, while when the statement is emitted at the
++	 start of the nested function, it needs the nested function's
++	 context.  */
+       walk_tree_without_duplicates (&arg_info->pending_sizes,
+ 				    set_labels_context_r, fndecl);
+       add_stmt (arg_info->pending_sizes);
+@@ -9593,7 +9604,7 @@ temp_pop_parm_decls (void)
     This is called after parsing the body of the function definition.  */
  
  void
@@ -7222,7 +7863,7 @@ index 859a6241258..caa2b75ac6d 100644
  {
    tree fndecl = current_function_decl;
    
-@@ -9689,7 +9693,7 @@ finish_function (void)
+@@ -9689,7 +9700,7 @@ finish_function (void)
  
    /* Store the end of the function, so that we get good line number
       info for the epilogue.  */
@@ -7232,7 +7873,7 @@ index 859a6241258..caa2b75ac6d 100644
    /* Finalize the ELF visibility for the function.  */
    c_determine_visibility (fndecl);
 diff --git a/gcc/c/c-parser.c b/gcc/c/c-parser.c
-index aafe8d1740b..d0139ab4b86 100644
+index aafe8d1740b..09c8f4e41c1 100644
 --- a/gcc/c/c-parser.c
 +++ b/gcc/c/c-parser.c
 @@ -1402,8 +1402,8 @@ static struct c_expr c_parser_braced_init (c_parser *, tree, bool,
@@ -7394,7 +8035,68 @@ index aafe8d1740b..d0139ab4b86 100644
  }
  
  /* Parse all consecutive labels. */
-@@ -17624,9 +17631,9 @@ c_parser_omp_parallel (location_t loc, c_parser *parser,
+@@ -7777,7 +7784,7 @@ c_parser_generic_selection (c_parser *parser)
+   struct c_expr selector, error_expr;
+   tree selector_type;
+   struct c_generic_association matched_assoc;
+-  bool match_found = false;
++  int match_found = -1;
+   location_t generic_loc, selector_loc;
+ 
+   error_expr.original_code = ERROR_MARK;
+@@ -7812,6 +7819,7 @@ c_parser_generic_selection (c_parser *parser)
+       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
+       return selector;
+     }
++  mark_exp_read (selector.value);
+   selector_type = TREE_TYPE (selector.value);
+   /* In ISO C terms, rvalues (including the controlling expression of
+      _Generic) do not have qualified types.  */
+@@ -7911,18 +7919,18 @@ c_parser_generic_selection (c_parser *parser)
+ 
+       if (assoc.type == NULL_TREE)
+ 	{
+-	  if (!match_found)
++	  if (match_found < 0)
+ 	    {
+ 	      matched_assoc = assoc;
+-	      match_found = true;
++	      match_found = associations.length ();
+ 	    }
+ 	}
+       else if (comptypes (assoc.type, selector_type))
+ 	{
+-	  if (!match_found || matched_assoc.type == NULL_TREE)
++	  if (match_found < 0 || matched_assoc.type == NULL_TREE)
+ 	    {
+ 	      matched_assoc = assoc;
+-	      match_found = true;
++	      match_found = associations.length ();
+ 	    }
+ 	  else
+ 	    {
+@@ -7940,13 +7948,19 @@ c_parser_generic_selection (c_parser *parser)
+       c_parser_consume_token (parser);
+     }
+ 
++  unsigned int ix;
++  struct c_generic_association *iter;
++  FOR_EACH_VEC_ELT (associations, ix, iter)
++    if (ix != (unsigned) match_found)
++      mark_exp_read (iter->expression.value);
++
+   if (!parens.require_close (parser))
+     {
+       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
+       return error_expr;
+     }
+ 
+-  if (!match_found)
++  if (match_found < 0)
+     {
+       error_at (selector_loc, "%<_Generic%> selector of type %qT is not "
+ 		"compatible with any association",
+@@ -17624,9 +17638,9 @@ c_parser_omp_parallel (location_t loc, c_parser *parser,
  	  stmt = c_finish_omp_parallel (loc,
  					cclauses[C_OMP_CLAUSE_SPLIT_PARALLEL],
  					block);
@@ -7405,7 +8107,7 @@ index aafe8d1740b..d0139ab4b86 100644
  	  return stmt;
  	}
        else if (!flag_openmp)  /* flag_openmp_simd  */
-@@ -19920,13 +19927,13 @@ c_parse_file (void)
+@@ -19920,13 +19934,13 @@ c_parse_file (void)
  
     Take ownership of START_WITH_PASS, if non-NULL.  */
  
@@ -7421,7 +8123,7 @@ index aafe8d1740b..d0139ab4b86 100644
      }
  
    location_t start_loc = c_parser_peek_token (parser)->location;
-@@ -19948,7 +19955,7 @@ c_parser_parse_rtl_body (c_parser *parser, char *start_with_pass)
+@@ -19948,7 +19962,7 @@ c_parser_parse_rtl_body (c_parser *parser, char *start_with_pass)
  	case CPP_EOF:
  	  error_at (start_loc, "no closing brace");
  	  free (start_with_pass);
@@ -7430,7 +8132,7 @@ index aafe8d1740b..d0139ab4b86 100644
  	default:
  	  break;
  	}
-@@ -19966,7 +19973,7 @@ c_parser_parse_rtl_body (c_parser *parser, char *start_with_pass)
+@@ -19966,7 +19980,7 @@ c_parser_parse_rtl_body (c_parser *parser, char *start_with_pass)
    if (!read_rtl_function_body_from_file_range (start_loc, end_loc))
      {
        free (start_with_pass);
@@ -7439,7 +8141,7 @@ index aafe8d1740b..d0139ab4b86 100644
      }
  
   /*  If a pass name was provided for START_WITH_PASS, run the backend
-@@ -19974,6 +19981,7 @@ c_parser_parse_rtl_body (c_parser *parser, char *start_with_pass)
+@@ -19974,6 +19988,7 @@ c_parser_parse_rtl_body (c_parser *parser, char *start_with_pass)
       ownership of START_WITH_PASS.  */
    if (start_with_pass)
      run_rtl_passes (start_with_pass);
@@ -7517,6 +8219,44 @@ index bfee48ed8cc..3980a9b45f5 100644
              need_forwarder_block = true;
            /* If we want fallthru preheaders, also create forwarder block when
               preheader ends with a jump or has predecessors from loop.  */
+diff --git a/gcc/cfgrtl.c b/gcc/cfgrtl.c
+index 08e534f2485..d6a8dc7c053 100644
+--- a/gcc/cfgrtl.c
++++ b/gcc/cfgrtl.c
+@@ -224,10 +224,20 @@ delete_insn_and_edges (rtx_insn *insn)
+ {
+   bool purge = false;
+ 
+-  if (INSN_P (insn)
+-      && BLOCK_FOR_INSN (insn)
+-      && BB_END (BLOCK_FOR_INSN (insn)) == insn)
+-    purge = true;
++  if (INSN_P (insn) && BLOCK_FOR_INSN (insn))
++    {
++      basic_block bb = BLOCK_FOR_INSN (insn);
++      if (BB_END (bb) == insn)
++	purge = true;
++      else if (DEBUG_INSN_P (BB_END (bb)))
++	for (rtx_insn *dinsn = NEXT_INSN (insn);
++	     DEBUG_INSN_P (dinsn); dinsn = NEXT_INSN (dinsn))
++	  if (BB_END (bb) == dinsn)
++	    {
++	      purge = true;
++	      break;
++	    }
++    }
+   delete_insn (insn);
+   if (purge)
+     return purge_dead_edges (BLOCK_FOR_INSN (insn));
+@@ -3058,7 +3068,7 @@ purge_dead_edges (basic_block bb)
+   bool found;
+   edge_iterator ei;
+ 
+-  if (DEBUG_INSN_P (insn) && insn != BB_HEAD (bb))
++  if ((DEBUG_INSN_P (insn) || NOTE_P (insn)) && insn != BB_HEAD (bb))
+     do
+       insn = PREV_INSN (insn);
+     while ((DEBUG_INSN_P (insn) || NOTE_P (insn)) && insn != BB_HEAD (bb));
 diff --git a/gcc/cgraphunit.c b/gcc/cgraphunit.c
 index 4a27867b82c..0f933bdc758 100644
 --- a/gcc/cgraphunit.c
@@ -7543,6 +8283,18 @@ index 4a27867b82c..0f933bdc758 100644
        /* This symbol is effectively an "extern" declaration now.  */
        TREE_PUBLIC (decl) = 1;
      }
+diff --git a/gcc/combine.c b/gcc/combine.c
+index 48a60eb0206..ab8463bf27b 100644
+--- a/gcc/combine.c
++++ b/gcc/combine.c
+@@ -1488,6 +1488,7 @@ combine_instructions (rtx_insn *f, unsigned int nregs)
+ 	      if ((set = single_set (temp)) != 0
+ 		  && (note = find_reg_equal_equiv_note (temp)) != 0
+ 		  && (note = XEXP (note, 0), GET_CODE (note)) != EXPR_LIST
++		  && ! side_effects_p (SET_SRC (set))
+ 		  /* Avoid using a register that may already been marked
+ 		     dead by an earlier instruction.  */
+ 		  && ! unmentioned_reg_p (note, SET_SRC (set))
 diff --git a/gcc/common/config/aarch64/aarch64-common.c b/gcc/common/config/aarch64/aarch64-common.c
 index bab3ab3fa36..bc59d646a4c 100644
 --- a/gcc/common/config/aarch64/aarch64-common.c
@@ -7585,6 +8337,26 @@ index bab3ab3fa36..bc59d646a4c 100644
  	isa_flag_bits |= opt->flag_canonical;
        }
      }
+diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
+index 087bb1520ed..c7841939e89 100644
+--- a/gcc/common/config/i386/i386-common.c
++++ b/gcc/common/config/i386/i386-common.c
+@@ -182,12 +182,13 @@ along with GCC; see the file COPYING3.  If not see
+ #define OPTION_MASK_ISA_AVX_UNSET \
+   (OPTION_MASK_ISA_AVX | OPTION_MASK_ISA_FMA_UNSET \
+    | OPTION_MASK_ISA_FMA4_UNSET | OPTION_MASK_ISA_F16C_UNSET \
+-   | OPTION_MASK_ISA_AVX2_UNSET | OPTION_MASK_ISA_XSAVE_UNSET)
++   | OPTION_MASK_ISA_AVX2_UNSET )
+ #define OPTION_MASK_ISA_FMA_UNSET OPTION_MASK_ISA_FMA
+ #define OPTION_MASK_ISA_FXSR_UNSET OPTION_MASK_ISA_FXSR
+ #define OPTION_MASK_ISA_XSAVE_UNSET \
+   (OPTION_MASK_ISA_XSAVE | OPTION_MASK_ISA_XSAVEOPT_UNSET \
+-   | OPTION_MASK_ISA_XSAVES_UNSET | OPTION_MASK_ISA_XSAVEC_UNSET)
++   | OPTION_MASK_ISA_XSAVES_UNSET | OPTION_MASK_ISA_XSAVEC_UNSET \
++   | OPTION_MASK_ISA_AVX_UNSET)
+ #define OPTION_MASK_ISA_XSAVEOPT_UNSET OPTION_MASK_ISA_XSAVEOPT
+ #define OPTION_MASK_ISA_AVX2_UNSET \
+   (OPTION_MASK_ISA_AVX2 | OPTION_MASK_ISA_AVX512F_UNSET)
 diff --git a/gcc/config.in b/gcc/config.in
 index a718ceaf3da..bfef2340339 100644
 --- a/gcc/config.in
@@ -7670,6 +8442,39 @@ index e519a0f0ac1..7da89074ce0 100644
    timevar_pop (TV_MACH_DEP);
    return 0;
  }
+diff --git a/gcc/config/aarch64/aarch64-builtins.c b/gcc/config/aarch64/aarch64-builtins.c
+index d7b1b7bd686..15e23f47af1 100644
+--- a/gcc/config/aarch64/aarch64-builtins.c
++++ b/gcc/config/aarch64/aarch64-builtins.c
+@@ -1945,10 +1945,12 @@ aarch64_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+   mask_sr = build_int_cst (unsigned_type_node,
+ 			   ~(AARCH64_FE_ALL_EXCEPT));
+ 
+-  ld_fenv_cr = build2 (MODIFY_EXPR, unsigned_type_node,
+-		       fenv_cr, build_call_expr (get_fpcr, 0));
+-  ld_fenv_sr = build2 (MODIFY_EXPR, unsigned_type_node,
+-		       fenv_sr, build_call_expr (get_fpsr, 0));
++  ld_fenv_cr = build4 (TARGET_EXPR, unsigned_type_node,
++		       fenv_cr, build_call_expr (get_fpcr, 0),
++		       NULL_TREE, NULL_TREE);
++  ld_fenv_sr = build4 (TARGET_EXPR, unsigned_type_node,
++		       fenv_sr, build_call_expr (get_fpsr, 0),
++		       NULL_TREE, NULL_TREE);
+ 
+   masked_fenv_cr = build2 (BIT_AND_EXPR, unsigned_type_node, fenv_cr, mask_cr);
+   masked_fenv_sr = build2 (BIT_AND_EXPR, unsigned_type_node, fenv_sr, mask_sr);
+@@ -1980,8 +1982,9 @@ aarch64_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+        __atomic_feraiseexcept (new_fenv_var);  */
+ 
+   new_fenv_var = create_tmp_var_raw (unsigned_type_node);
+-  reload_fenv = build2 (MODIFY_EXPR, unsigned_type_node,
+-			new_fenv_var, build_call_expr (get_fpsr, 0));
++  reload_fenv = build4 (TARGET_EXPR, unsigned_type_node,
++			new_fenv_var, build_call_expr (get_fpsr, 0),
++			NULL_TREE, NULL_TREE);
+   restore_fnenv = build_call_expr (set_fpsr, 1, fenv_sr);
+   atomic_feraiseexcept = builtin_decl_implicit (BUILT_IN_ATOMIC_FERAISEEXCEPT);
+   update_call = build_call_expr (atomic_feraiseexcept, 1,
 diff --git a/gcc/config/aarch64/aarch64-c.c b/gcc/config/aarch64/aarch64-c.c
 index 6d5acb02fc6..f22ad437548 100644
 --- a/gcc/config/aarch64/aarch64-c.c
@@ -10666,6 +11471,1621 @@ index 041e2db343f..8f051f87c0f 100644
     (set_attr "type" "multiple")]
  )
  
+diff --git a/gcc/config/i386/avx2intrin.h b/gcc/config/i386/avx2intrin.h
+index c9b6f9bc868..abae781deda 100644
+--- a/gcc/config/i386/avx2intrin.h
++++ b/gcc/config/i386/avx2intrin.h
+@@ -1670,234 +1670,246 @@ _mm256_mask_i64gather_epi32 (__m128i __src, int const *__base,
+ #else /* __OPTIMIZE__ */
+ #define _mm_i32gather_pd(BASE, INDEX, SCALE)				\
+   (__m128d) __builtin_ia32_gathersiv2df ((__v2df) _mm_setzero_pd (),	\
+-					 (double const *)BASE,		\
+-					 (__v4si)(__m128i)INDEX,	\
+-					 (__v2df)_mm_set1_pd(		\
+-					   (double)(long long int) -1), \
+-					 (int)SCALE)
+-
+-#define _mm_mask_i32gather_pd(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m128d) __builtin_ia32_gathersiv2df ((__v2df)(__m128d)SRC,	 \
+-					 (double const *)BASE,	 \
+-					 (__v4si)(__m128i)INDEX, \
+-					 (__v2df)(__m128d)MASK,	 \
+-					 (int)SCALE)
++					 (double const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__v2df)			\
++					 _mm_cmpeq_pd (_mm_setzero_pd (),\
++						       _mm_setzero_pd ()),\
++					 (int) (SCALE))
++
++#define _mm_mask_i32gather_pd(SRC, BASE, INDEX, MASK, SCALE)	 	\
++  (__m128d) __builtin_ia32_gathersiv2df ((__v2df)(__m128d) (SRC),	\
++					 (double const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__v2df)(__m128d) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm256_i32gather_pd(BASE, INDEX, SCALE)				\
+   (__m256d) __builtin_ia32_gathersiv4df ((__v4df) _mm256_setzero_pd (),	\
+-					 (double const *)BASE,		\
+-					 (__v4si)(__m128i)INDEX,	\
+-					 (__v4df)_mm256_set1_pd(	\
+-					   (double)(long long int) -1), \
+-					 (int)SCALE)
+-
+-#define _mm256_mask_i32gather_pd(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m256d) __builtin_ia32_gathersiv4df ((__v4df)(__m256d)SRC,	 \
+-					 (double const *)BASE,	 \
+-					 (__v4si)(__m128i)INDEX, \
+-					 (__v4df)(__m256d)MASK,	 \
+-					 (int)SCALE)
++					 (double const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__v4df)			\
++					 _mm256_cmp_pd (_mm256_setzero_pd (),\
++							_mm256_setzero_pd (),\
++							_CMP_EQ_OQ),	\
++					 (int) (SCALE))
++
++#define _mm256_mask_i32gather_pd(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m256d) __builtin_ia32_gathersiv4df ((__v4df)(__m256d) (SRC),	\
++					 (double const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__v4df)(__m256d) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm_i64gather_pd(BASE, INDEX, SCALE)				\
+   (__m128d) __builtin_ia32_gatherdiv2df ((__v2df) _mm_setzero_pd (),	\
+-					 (double const *)BASE,		\
+-					 (__v2di)(__m128i)INDEX,	\
+-					 (__v2df)_mm_set1_pd(		\
+-					   (double)(long long int) -1), \
+-					 (int)SCALE)
+-
+-#define _mm_mask_i64gather_pd(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m128d) __builtin_ia32_gatherdiv2df ((__v2df)(__m128d)SRC,	 \
+-					 (double const *)BASE,	 \
+-					 (__v2di)(__m128i)INDEX, \
+-					 (__v2df)(__m128d)MASK,	 \
+-					 (int)SCALE)
++					 (double const *) (BASE),	\
++					 (__v2di)(__m128i) (INDEX),	\
++					 (__v2df)			\
++					 _mm_cmpeq_pd (_mm_setzero_pd (),\
++						       _mm_setzero_pd ()),\
++					 (int) (SCALE))
++
++#define _mm_mask_i64gather_pd(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m128d) __builtin_ia32_gatherdiv2df ((__v2df)(__m128d) (SRC),	\
++					 (double const *) (BASE),	\
++					 (__v2di)(__m128i) (INDEX),	\
++					 (__v2df)(__m128d) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm256_i64gather_pd(BASE, INDEX, SCALE)				\
+   (__m256d) __builtin_ia32_gatherdiv4df ((__v4df) _mm256_setzero_pd (),	\
+-					 (double const *)BASE,		\
+-					 (__v4di)(__m256i)INDEX,	\
+-					 (__v4df)_mm256_set1_pd(	\
+-					   (double)(long long int) -1), \
+-					 (int)SCALE)
+-
+-#define _mm256_mask_i64gather_pd(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m256d) __builtin_ia32_gatherdiv4df ((__v4df)(__m256d)SRC,	 \
+-					 (double const *)BASE,	 \
+-					 (__v4di)(__m256i)INDEX, \
+-					 (__v4df)(__m256d)MASK,	 \
+-					 (int)SCALE)
++					 (double const *) (BASE),	\
++					 (__v4di)(__m256i) (INDEX),	\
++					 (__v4df)			\
++					 _mm256_cmp_pd (_mm256_setzero_pd (),\
++							_mm256_setzero_pd (),\
++							_CMP_EQ_OQ),	\
++					 (int) (SCALE))
++
++#define _mm256_mask_i64gather_pd(SRC, BASE, INDEX, MASK, SCALE)	 	\
++  (__m256d) __builtin_ia32_gatherdiv4df ((__v4df)(__m256d) (SRC),	\
++					 (double const *) (BASE),	\
++					 (__v4di)(__m256i) (INDEX),	\
++					 (__v4df)(__m256d) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm_i32gather_ps(BASE, INDEX, SCALE)				\
+   (__m128) __builtin_ia32_gathersiv4sf ((__v4sf) _mm_setzero_ps (),	\
+-					(float const *)BASE,		\
+-					(__v4si)(__m128i)INDEX,		\
+-					_mm_set1_ps ((float)(int) -1),	\
+-					(int)SCALE)
+-
+-#define _mm_mask_i32gather_ps(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m128) __builtin_ia32_gathersiv4sf ((__v4sf)(__m128)SRC,	 \
+-					(float const *)BASE,	 \
+-					(__v4si)(__m128i)INDEX,	 \
+-					(__v4sf)(__m128)MASK,	 \
+-					(int)SCALE)
+-
+-#define _mm256_i32gather_ps(BASE, INDEX, SCALE)			       \
+-  (__m256) __builtin_ia32_gathersiv8sf ((__v8sf) _mm256_setzero_ps (), \
+-					(float const *)BASE,	       \
+-					(__v8si)(__m256i)INDEX,	       \
+-					(__v8sf)_mm256_set1_ps (       \
+-					  (float)(int) -1),	       \
+-					(int)SCALE)
+-
+-#define _mm256_mask_i32gather_ps(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m256) __builtin_ia32_gathersiv8sf ((__v8sf)(__m256)SRC,	\
+-					(float const *)BASE,	\
+-					(__v8si)(__m256i)INDEX, \
+-					(__v8sf)(__m256)MASK,	\
+-					(int)SCALE)
++					(float const *) (BASE),		\
++					(__v4si)(__m128i) (INDEX),	\
++					(__v4sf)			\
++					_mm_cmpeq_ps (_mm_setzero_ps (),\
++						      _mm_setzero_ps ()),\
++					(int) (SCALE))
++
++#define _mm_mask_i32gather_ps(SRC, BASE, INDEX, MASK, SCALE)	 	\
++  (__m128) __builtin_ia32_gathersiv4sf ((__v4sf)(__m128) (SRC),		\
++					(float const *) (BASE),		\
++					(__v4si)(__m128i) (INDEX),	\
++					(__v4sf)(__m128) (MASK),	\
++					(int) (SCALE))
++
++#define _mm256_i32gather_ps(BASE, INDEX, SCALE)				\
++  (__m256) __builtin_ia32_gathersiv8sf ((__v8sf) _mm256_setzero_ps (),	\
++					(float const *) (BASE),		\
++					(__v8si)(__m256i) (INDEX),	\
++					(__v8sf)			\
++					_mm256_cmp_ps (_mm256_setzero_ps (),\
++						       _mm256_setzero_ps (),\
++						       _CMP_EQ_OQ),	\
++					(int) (SCALE))
++
++#define _mm256_mask_i32gather_ps(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m256) __builtin_ia32_gathersiv8sf ((__v8sf)(__m256) (SRC),		\
++					(float const *) (BASE),		\
++					(__v8si)(__m256i) (INDEX),	\
++					(__v8sf)(__m256) (MASK),	\
++					(int) (SCALE))
+ 
+ #define _mm_i64gather_ps(BASE, INDEX, SCALE)				\
+   (__m128) __builtin_ia32_gatherdiv4sf ((__v4sf) _mm_setzero_pd (),	\
+-					(float const *)BASE,		\
+-					(__v2di)(__m128i)INDEX,		\
+-					(__v4sf)_mm_set1_ps (		\
+-					  (float)(int) -1),		\
+-					(int)SCALE)
+-
+-#define _mm_mask_i64gather_ps(SRC, BASE, INDEX, MASK, SCALE)	 \
+-  (__m128) __builtin_ia32_gatherdiv4sf ((__v4sf)(__m128)SRC,	 \
+-					(float const *)BASE,	 \
+-					(__v2di)(__m128i)INDEX,	 \
+-					(__v4sf)(__m128)MASK,	 \
+-					(int)SCALE)
++					(float const *) (BASE),		\
++					(__v2di)(__m128i) (INDEX),	\
++					(__v4sf)			\
++					_mm_cmpeq_ps (_mm_setzero_ps (),\
++						      _mm_setzero_ps ()),\
++					(int) (SCALE))
++
++#define _mm_mask_i64gather_ps(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m128) __builtin_ia32_gatherdiv4sf ((__v4sf)(__m128) (SRC),		\
++					(float const *) (BASE),		\
++					(__v2di)(__m128i) (INDEX),	\
++					(__v4sf)(__m128) (MASK),	\
++					(int) (SCALE))
+ 
+ #define _mm256_i64gather_ps(BASE, INDEX, SCALE)				\
+   (__m128) __builtin_ia32_gatherdiv4sf256 ((__v4sf) _mm_setzero_ps (),	\
+-					   (float const *)BASE,		\
+-					   (__v4di)(__m256i)INDEX,	\
+-					   (__v4sf)_mm_set1_ps(		\
+-					     (float)(int) -1),		\
+-					   (int)SCALE)
+-
+-#define _mm256_mask_i64gather_ps(SRC, BASE, INDEX, MASK, SCALE)	   \
+-  (__m128) __builtin_ia32_gatherdiv4sf256 ((__v4sf)(__m128)SRC,	   \
+-					   (float const *)BASE,	   \
+-					   (__v4di)(__m256i)INDEX, \
+-					   (__v4sf)(__m128)MASK,   \
+-					   (int)SCALE)
++					   (float const *) (BASE),	\
++					   (__v4di)(__m256i) (INDEX),	\
++					   (__v4sf)			\
++					   _mm_cmpeq_ps (_mm_setzero_ps (),\
++							 _mm_setzero_ps ()),\
++					   (int) (SCALE))
++
++#define _mm256_mask_i64gather_ps(SRC, BASE, INDEX, MASK, SCALE)	   	\
++  (__m128) __builtin_ia32_gatherdiv4sf256 ((__v4sf)(__m128) (SRC),	\
++					   (float const *) (BASE),	\
++					   (__v4di)(__m256i) (INDEX),	\
++					   (__v4sf)(__m128) (MASK),	\
++					   (int) (SCALE))
+ 
+ #define _mm_i32gather_epi64(BASE, INDEX, SCALE)				\
+   (__m128i) __builtin_ia32_gathersiv2di ((__v2di) _mm_setzero_si128 (), \
+-					 (long long const *)BASE,	\
+-					 (__v4si)(__m128i)INDEX,	\
++					 (long long const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
+ 					 (__v2di)_mm_set1_epi64x (-1),	\
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm_mask_i32gather_epi64(SRC, BASE, INDEX, MASK, SCALE)	  \
+-  (__m128i) __builtin_ia32_gathersiv2di ((__v2di)(__m128i)SRC,	  \
+-					 (long long const *)BASE, \
+-					 (__v4si)(__m128i)INDEX,  \
+-					 (__v2di)(__m128i)MASK,	  \
+-					 (int)SCALE)
++#define _mm_mask_i32gather_epi64(SRC, BASE, INDEX, MASK, SCALE)	  	\
++  (__m128i) __builtin_ia32_gathersiv2di ((__v2di)(__m128i) (SRC),	\
++					 (long long const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__v2di)(__m128i) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm256_i32gather_epi64(BASE, INDEX, SCALE)			   \
+   (__m256i) __builtin_ia32_gathersiv4di ((__v4di) _mm256_setzero_si256 (), \
+-					 (long long const *)BASE,	   \
+-					 (__v4si)(__m128i)INDEX,	   \
++					 (long long const *) (BASE),	   \
++					 (__v4si)(__m128i) (INDEX),	   \
+ 					 (__v4di)_mm256_set1_epi64x (-1),  \
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm256_mask_i32gather_epi64(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m256i) __builtin_ia32_gathersiv4di ((__v4di)(__m256i)SRC,	   \
+-					 (long long const *)BASE,  \
+-					 (__v4si)(__m128i)INDEX,   \
+-					 (__v4di)(__m256i)MASK,	   \
+-					 (int)SCALE)
++#define _mm256_mask_i32gather_epi64(SRC, BASE, INDEX, MASK, SCALE)	\
++  (__m256i) __builtin_ia32_gathersiv4di ((__v4di)(__m256i) (SRC),	\
++					 (long long const *) (BASE),	\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__v4di)(__m256i) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm_i64gather_epi64(BASE, INDEX, SCALE)				\
+   (__m128i) __builtin_ia32_gatherdiv2di ((__v2di) _mm_setzero_si128 (), \
+-					 (long long const *)BASE,	\
+-					 (__v2di)(__m128i)INDEX,	\
++					 (long long const *) (BASE),	\
++					 (__v2di)(__m128i) (INDEX),	\
+ 					 (__v2di)_mm_set1_epi64x (-1),	\
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm_mask_i64gather_epi64(SRC, BASE, INDEX, MASK, SCALE)	  \
+-  (__m128i) __builtin_ia32_gatherdiv2di ((__v2di)(__m128i)SRC,	  \
+-					 (long long const *)BASE, \
+-					 (__v2di)(__m128i)INDEX,  \
+-					 (__v2di)(__m128i)MASK,	  \
+-					 (int)SCALE)
++#define _mm_mask_i64gather_epi64(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m128i) __builtin_ia32_gatherdiv2di ((__v2di)(__m128i) (SRC),	\
++					 (long long const *) (BASE),	\
++					 (__v2di)(__m128i) (INDEX),	\
++					 (__v2di)(__m128i) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm256_i64gather_epi64(BASE, INDEX, SCALE)			   \
+   (__m256i) __builtin_ia32_gatherdiv4di ((__v4di) _mm256_setzero_si256 (), \
+-					 (long long const *)BASE,	   \
+-					 (__v4di)(__m256i)INDEX,	   \
++					 (long long const *) (BASE),	   \
++					 (__v4di)(__m256i) (INDEX),	   \
+ 					 (__v4di)_mm256_set1_epi64x (-1),  \
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm256_mask_i64gather_epi64(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m256i) __builtin_ia32_gatherdiv4di ((__v4di)(__m256i)SRC,	   \
+-					 (long long const *)BASE,  \
+-					 (__v4di)(__m256i)INDEX,   \
+-					 (__v4di)(__m256i)MASK,	   \
+-					 (int)SCALE)
++#define _mm256_mask_i64gather_epi64(SRC, BASE, INDEX, MASK, SCALE) 	\
++  (__m256i) __builtin_ia32_gatherdiv4di ((__v4di)(__m256i) (SRC),	\
++					 (long long const *) (BASE),	\
++					 (__v4di)(__m256i) (INDEX),	\
++					 (__v4di)(__m256i) (MASK),	\
++					 (int) (SCALE))
+ 
+ #define _mm_i32gather_epi32(BASE, INDEX, SCALE)				\
+   (__m128i) __builtin_ia32_gathersiv4si ((__v4si) _mm_setzero_si128 (),	\
+-					 (int const *)BASE,		\
+-					 (__v4si)(__m128i)INDEX,	\
++					 (int const *) (BASE),		\
++					 (__v4si)(__m128i) (INDEX),	\
+ 					 (__v4si)_mm_set1_epi32 (-1),	\
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm_mask_i32gather_epi32(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m128i) __builtin_ia32_gathersiv4si ((__v4si)(__m128i)SRC,	\
+-					(int const *)BASE,	\
+-					(__v4si)(__m128i)INDEX, \
+-					(__v4si)(__m128i)MASK,	\
+-					(int)SCALE)
++#define _mm_mask_i32gather_epi32(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m128i) __builtin_ia32_gathersiv4si ((__v4si)(__m128i) (SRC),	\
++					(int const *) (BASE),		\
++					(__v4si)(__m128i) (INDEX),	\
++					(__v4si)(__m128i) (MASK),	\
++					(int) (SCALE))
+ 
+ #define _mm256_i32gather_epi32(BASE, INDEX, SCALE)			   \
+   (__m256i) __builtin_ia32_gathersiv8si ((__v8si) _mm256_setzero_si256 (), \
+-					 (int const *)BASE,		   \
+-					 (__v8si)(__m256i)INDEX,	   \
++					 (int const *) (BASE),		   \
++					 (__v8si)(__m256i) (INDEX),	   \
+ 					 (__v8si)_mm256_set1_epi32 (-1),   \
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm256_mask_i32gather_epi32(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m256i) __builtin_ia32_gathersiv8si ((__v8si)(__m256i)SRC,	   \
+-					(int const *)BASE,	   \
+-					(__v8si)(__m256i)INDEX,	   \
+-					(__v8si)(__m256i)MASK,	   \
+-					(int)SCALE)
++#define _mm256_mask_i32gather_epi32(SRC, BASE, INDEX, MASK, SCALE)	\
++  (__m256i) __builtin_ia32_gathersiv8si ((__v8si)(__m256i) (SRC),	\
++					(int const *) (BASE),	   	\
++					(__v8si)(__m256i) (INDEX),	\
++					(__v8si)(__m256i) (MASK),	\
++					(int) (SCALE))
+ 
+ #define _mm_i64gather_epi32(BASE, INDEX, SCALE)				\
+   (__m128i) __builtin_ia32_gatherdiv4si ((__v4si) _mm_setzero_si128 (),	\
+-					 (int const *)BASE,		\
+-					 (__v2di)(__m128i)INDEX,	\
++					 (int const *) (BASE),		\
++					 (__v2di)(__m128i) (INDEX),	\
+ 					 (__v4si)_mm_set1_epi32 (-1),	\
+-					 (int)SCALE)
++					 (int) (SCALE))
+ 
+-#define _mm_mask_i64gather_epi32(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m128i) __builtin_ia32_gatherdiv4si ((__v4si)(__m128i)SRC,	\
+-					(int const *)BASE,	\
+-					(__v2di)(__m128i)INDEX, \
+-					(__v4si)(__m128i)MASK,	\
+-					(int)SCALE)
++#define _mm_mask_i64gather_epi32(SRC, BASE, INDEX, MASK, SCALE)		\
++  (__m128i) __builtin_ia32_gatherdiv4si ((__v4si)(__m128i) (SRC),	\
++					(int const *) (BASE),		\
++					(__v2di)(__m128i) (INDEX),	\
++					(__v4si)(__m128i) (MASK),	\
++					(int) (SCALE))
+ 
+ #define _mm256_i64gather_epi32(BASE, INDEX, SCALE)			   \
+   (__m128i) __builtin_ia32_gatherdiv4si256 ((__v4si) _mm_setzero_si128 (), \
+-					    (int const *)BASE,		   \
+-					    (__v4di)(__m256i)INDEX,	   \
++					    (int const *) (BASE),	   \
++					    (__v4di)(__m256i) (INDEX),	   \
+ 					    (__v4si)_mm_set1_epi32(-1),	   \
+-					    (int)SCALE)
+-
+-#define _mm256_mask_i64gather_epi32(SRC, BASE, INDEX, MASK, SCALE) \
+-  (__m128i) __builtin_ia32_gatherdiv4si256 ((__v4si)(__m128i)SRC,  \
+-					   (int const *)BASE,	   \
+-					   (__v4di)(__m256i)INDEX, \
+-					   (__v4si)(__m128i)MASK,  \
+-					   (int)SCALE)
++					    (int) (SCALE))
++
++#define _mm256_mask_i64gather_epi32(SRC, BASE, INDEX, MASK, SCALE)	\
++  (__m128i) __builtin_ia32_gatherdiv4si256 ((__v4si)(__m128i) (SRC),	\
++					   (int const *) (BASE),	\
++					   (__v4di)(__m256i) (INDEX),	\
++					   (__v4si)(__m128i) (MASK),	\
++					   (int) (SCALE))
+ #endif  /* __OPTIMIZE__ */
+ 
+ #ifdef __DISABLE_AVX2__
+diff --git a/gcc/config/i386/avx512bwintrin.h b/gcc/config/i386/avx512bwintrin.h
+index cf5f885086d..70bf19eadc7 100644
+--- a/gcc/config/i386/avx512bwintrin.h
++++ b/gcc/config/i386/avx512bwintrin.h
+@@ -3128,16 +3128,16 @@ _mm512_bsrli_epi128 (__m512i __A, const int __N)
+ #define _mm512_alignr_epi8(X, Y, N)						    \
+   ((__m512i) __builtin_ia32_palignr512 ((__v8di)(__m512i)(X),			    \
+ 					(__v8di)(__m512i)(Y),			    \
+-					(int)(N * 8)))
++					(int)((N) * 8)))
+ 
+ #define _mm512_mask_alignr_epi8(W, U, X, Y, N)					    \
+   ((__m512i) __builtin_ia32_palignr512_mask ((__v8di)(__m512i)(X),		    \
+-					    (__v8di)(__m512i)(Y), (int)(N * 8),	    \
++					    (__v8di)(__m512i)(Y), (int)((N) * 8),   \
+ 					    (__v8di)(__m512i)(W), (__mmask64)(U)))
+ 
+ #define _mm512_maskz_alignr_epi8(U, X, Y, N)					    \
+   ((__m512i) __builtin_ia32_palignr512_mask ((__v8di)(__m512i)(X),		    \
+-					     (__v8di)(__m512i)(Y), (int)(N * 8),    \
++					     (__v8di)(__m512i)(Y), (int)((N) * 8),  \
+ 					     (__v8di)(__m512i)			    \
+ 					     _mm512_setzero_si512 (),		    \
+ 					     (__mmask64)(U)))
+diff --git a/gcc/config/i386/avx512fintrin.h b/gcc/config/i386/avx512fintrin.h
+index e35eedb9268..6ca90d344e9 100644
+--- a/gcc/config/i386/avx512fintrin.h
++++ b/gcc/config/i386/avx512fintrin.h
+@@ -8542,22 +8542,22 @@ _mm512_maskz_cvtps_ph (__mmask16 __W, __m512 __A, const int __I)
+     (__m512)__builtin_ia32_vcvtph2ps512_mask((__v16hi)(A), (__v16sf)_mm512_setzero_ps(), U, B)
+ 
+ #define _mm512_cvt_roundps_ph(A, I)						 \
+-  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) A, (int) (I),\
++  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) (A), (int) (I),\
+     (__v16hi)_mm256_undefined_si256 (), -1))
+ #define _mm512_cvtps_ph(A, I)						 \
+-  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) A, (int) (I),\
++  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) (A), (int) (I),\
+     (__v16hi)_mm256_undefined_si256 (), -1))
+ #define _mm512_mask_cvt_roundps_ph(U, W, A, I)				 \
+-  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) A, (int) (I),\
++  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) (A), (int) (I),\
+     (__v16hi)(__m256i)(U), (__mmask16) (W)))
+ #define _mm512_mask_cvtps_ph(U, W, A, I)				 \
+-  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) A, (int) (I),\
++  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) (A), (int) (I),\
+     (__v16hi)(__m256i)(U), (__mmask16) (W)))
+ #define _mm512_maskz_cvt_roundps_ph(W, A, I)					 \
+-  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) A, (int) (I),\
++  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) (A), (int) (I),\
+     (__v16hi)_mm256_setzero_si256 (), (__mmask16) (W)))
+ #define _mm512_maskz_cvtps_ph(W, A, I)					 \
+-  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) A, (int) (I),\
++  ((__m256i) __builtin_ia32_vcvtps2ph512_mask ((__v16sf)(__m512) (A), (int) (I),\
+     (__v16hi)_mm256_setzero_si256 (), (__mmask16) (W)))
+ #endif
+ 
+@@ -9946,32 +9946,32 @@ _mm_mask_cmp_round_ss_mask (__mmask8 __M, __m128 __X, __m128 __Y,
+ #define _mm512_mask_cmp_epi64_mask(M, X, Y, P)				\
+   ((__mmask8) __builtin_ia32_cmpq512_mask ((__v8di)(__m512i)(X),	\
+ 					   (__v8di)(__m512i)(Y), (int)(P),\
+-					   (__mmask8)M))
++					   (__mmask8)(M)))
+ 
+ #define _mm512_mask_cmp_epi32_mask(M, X, Y, P)				\
+   ((__mmask16) __builtin_ia32_cmpd512_mask ((__v16si)(__m512i)(X),	\
+ 					    (__v16si)(__m512i)(Y), (int)(P), \
+-					    (__mmask16)M))
++					    (__mmask16)(M)))
+ 
+ #define _mm512_mask_cmp_epu64_mask(M, X, Y, P)				\
+   ((__mmask8) __builtin_ia32_ucmpq512_mask ((__v8di)(__m512i)(X),	\
+ 					    (__v8di)(__m512i)(Y), (int)(P),\
+-					    (__mmask8)M))
++					    (__mmask8)(M)))
+ 
+ #define _mm512_mask_cmp_epu32_mask(M, X, Y, P)				\
+   ((__mmask16) __builtin_ia32_ucmpd512_mask ((__v16si)(__m512i)(X),	\
+ 					     (__v16si)(__m512i)(Y), (int)(P), \
+-					     (__mmask16)M))
++					     (__mmask16)(M)))
+ 
+ #define _mm512_mask_cmp_round_pd_mask(M, X, Y, P, R)			\
+   ((__mmask8) __builtin_ia32_cmppd512_mask ((__v8df)(__m512d)(X),	\
+ 					    (__v8df)(__m512d)(Y), (int)(P),\
+-					    (__mmask8)M, R))
++					    (__mmask8)(M), R))
+ 
+ #define _mm512_mask_cmp_round_ps_mask(M, X, Y, P, R)			\
+   ((__mmask16) __builtin_ia32_cmpps512_mask ((__v16sf)(__m512)(X),	\
+ 					     (__v16sf)(__m512)(Y), (int)(P),\
+-					     (__mmask16)M, R))
++					     (__mmask16)(M), R))
+ 
+ #define _mm_cmp_round_sd_mask(X, Y, P, R)				\
+   ((__mmask8) __builtin_ia32_cmpsd_mask ((__v2df)(__m128d)(X),		\
+@@ -10333,179 +10333,189 @@ _mm512_mask_i64scatter_epi64 (void *__addr, __mmask8 __mask,
+ #else
+ #define _mm512_i32gather_ps(INDEX, ADDR, SCALE)				\
+   (__m512) __builtin_ia32_gathersiv16sf ((__v16sf)_mm512_undefined_ps(),\
+-					 (void const *)ADDR,		\
+-					 (__v16si)(__m512i)INDEX,	\
+-					 (__mmask16)0xFFFF, (int)SCALE)
++					 (void const *) (ADDR),		\
++					 (__v16si)(__m512i) (INDEX),	\
++					 (__mmask16)0xFFFF,		\
++					 (int) (SCALE))
+ 
+ #define _mm512_mask_i32gather_ps(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m512) __builtin_ia32_gathersiv16sf ((__v16sf)(__m512)V1OLD,	\
+-					 (void const *)ADDR,		\
+-					 (__v16si)(__m512i)INDEX,	\
+-					 (__mmask16)MASK, (int)SCALE)
++  (__m512) __builtin_ia32_gathersiv16sf ((__v16sf)(__m512) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v16si)(__m512i) (INDEX),	\
++					 (__mmask16) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm512_i32gather_pd(INDEX, ADDR, SCALE)				\
+   (__m512d) __builtin_ia32_gathersiv8df ((__v8df)_mm512_undefined_pd(),	\
+-					 (void const *)ADDR,		\
+-					 (__v8si)(__m256i)INDEX,	\
+-					 (__mmask8)0xFF, (int)SCALE)
++					 (void const *) (ADDR),		\
++					 (__v8si)(__m256i) (INDEX),	\
++					 (__mmask8)0xFF, (int) (SCALE))
+ 
+ #define _mm512_mask_i32gather_pd(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m512d) __builtin_ia32_gathersiv8df ((__v8df)(__m512d)V1OLD,	\
+-					 (void const *)ADDR,		\
+-					 (__v8si)(__m256i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m512d) __builtin_ia32_gathersiv8df ((__v8df)(__m512d) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v8si)(__m256i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm512_i64gather_ps(INDEX, ADDR, SCALE)				\
+   (__m256) __builtin_ia32_gatherdiv16sf ((__v8sf)_mm256_undefined_ps(),	\
+-					 (void const *)ADDR,		\
+-					 (__v8di)(__m512i)INDEX,	\
+-					 (__mmask8)0xFF, (int)SCALE)
++					 (void const *) (ADDR),		\
++					 (__v8di)(__m512i) (INDEX),	\
++					 (__mmask8)0xFF, (int) (SCALE))
+ 
+ #define _mm512_mask_i64gather_ps(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256) __builtin_ia32_gatherdiv16sf ((__v8sf)(__m256)V1OLD,		\
+-					 (void const *)ADDR,		\
+-					 (__v8di)(__m512i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m256) __builtin_ia32_gatherdiv16sf ((__v8sf)(__m256) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v8di)(__m512i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm512_i64gather_pd(INDEX, ADDR, SCALE)				\
+   (__m512d) __builtin_ia32_gatherdiv8df ((__v8df)_mm512_undefined_pd(),	\
+-					 (void const *)ADDR,		\
+-					 (__v8di)(__m512i)INDEX,	\
+-					 (__mmask8)0xFF, (int)SCALE)
++					 (void const *) (ADDR),		\
++					 (__v8di)(__m512i) (INDEX),	\
++					 (__mmask8)0xFF, (int) (SCALE))
+ 
+ #define _mm512_mask_i64gather_pd(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m512d) __builtin_ia32_gatherdiv8df ((__v8df)(__m512d)V1OLD,	\
+-					 (void const *)ADDR,		\
+-					 (__v8di)(__m512i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m512d) __builtin_ia32_gatherdiv8df ((__v8df)(__m512d) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v8di)(__m512i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm512_i32gather_epi32(INDEX, ADDR, SCALE)			\
+-  (__m512i) __builtin_ia32_gathersiv16si ((__v16si)_mm512_undefined_epi32 (),	\
+-					  (void const *)ADDR,		\
+-					  (__v16si)(__m512i)INDEX,	\
+-					  (__mmask16)0xFFFF, (int)SCALE)
++  (__m512i) __builtin_ia32_gathersiv16si ((__v16si)_mm512_undefined_epi32 (),\
++					  (void const *) (ADDR),	\
++					  (__v16si)(__m512i) (INDEX),	\
++					  (__mmask16)0xFFFF,		\
++					  (int) (SCALE))
+ 
+ #define _mm512_mask_i32gather_epi32(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m512i) __builtin_ia32_gathersiv16si ((__v16si)(__m512i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v16si)(__m512i)INDEX,	\
+-					  (__mmask16)MASK, (int)SCALE)
++  (__m512i) __builtin_ia32_gathersiv16si ((__v16si)(__m512i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v16si)(__m512i) (INDEX),	\
++					  (__mmask16) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm512_i32gather_epi64(INDEX, ADDR, SCALE)			\
+-  (__m512i) __builtin_ia32_gathersiv8di ((__v8di)_mm512_undefined_epi32 (),	\
+-					 (void const *)ADDR,		\
+-					 (__v8si)(__m256i)INDEX,	\
+-					 (__mmask8)0xFF, (int)SCALE)
++  (__m512i) __builtin_ia32_gathersiv8di ((__v8di)_mm512_undefined_epi32 (),\
++					 (void const *) (ADDR),		\
++					 (__v8si)(__m256i) (INDEX),	\
++					 (__mmask8)0xFF, (int) (SCALE))
+ 
+ #define _mm512_mask_i32gather_epi64(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m512i) __builtin_ia32_gathersiv8di ((__v8di)(__m512i)V1OLD,	\
+-					 (void const *)ADDR,		\
+-					 (__v8si)(__m256i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
+-
+-#define _mm512_i64gather_epi32(INDEX, ADDR, SCALE)			  \
+-  (__m256i) __builtin_ia32_gatherdiv16si ((__v8si)_mm256_undefined_si256(), \
+-					  (void const *)ADDR,		  \
+-					  (__v8di)(__m512i)INDEX,	  \
+-					  (__mmask8)0xFF, (int)SCALE)
++  (__m512i) __builtin_ia32_gathersiv8di ((__v8di)(__m512i) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v8si)(__m256i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
++
++#define _mm512_i64gather_epi32(INDEX, ADDR, SCALE)			   \
++  (__m256i) __builtin_ia32_gatherdiv16si ((__v8si)_mm256_undefined_si256(),\
++					  (void const *) (ADDR),	   \
++					  (__v8di)(__m512i) (INDEX),	   \
++					  (__mmask8)0xFF, (int) (SCALE))
+ 
+ #define _mm512_mask_i64gather_epi32(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256i) __builtin_ia32_gatherdiv16si ((__v8si)(__m256i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v8di)(__m512i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m256i) __builtin_ia32_gatherdiv16si ((__v8si)(__m256i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v8di)(__m512i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm512_i64gather_epi64(INDEX, ADDR, SCALE)			\
+-  (__m512i) __builtin_ia32_gatherdiv8di ((__v8di)_mm512_undefined_epi32 (),	\
+-					 (void const *)ADDR,		\
+-					 (__v8di)(__m512i)INDEX,	\
+-					 (__mmask8)0xFF, (int)SCALE)
++  (__m512i) __builtin_ia32_gatherdiv8di ((__v8di)_mm512_undefined_epi32 (),\
++					 (void const *) (ADDR),		\
++					 (__v8di)(__m512i) (INDEX),	\
++					 (__mmask8)0xFF, (int) (SCALE))
+ 
+ #define _mm512_mask_i64gather_epi64(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m512i) __builtin_ia32_gatherdiv8di ((__v8di)(__m512i)V1OLD,	\
+-					 (void const *)ADDR,		\
+-					 (__v8di)(__m512i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m512i) __builtin_ia32_gatherdiv8di ((__v8di)(__m512i) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v8di)(__m512i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm512_i32scatter_ps(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv16sf ((void *)ADDR, (__mmask16)0xFFFF,	\
+-				 (__v16si)(__m512i)INDEX,		\
+-				 (__v16sf)(__m512)V1, (int)SCALE)
++  __builtin_ia32_scattersiv16sf ((void *) (ADDR), (__mmask16)0xFFFF,	\
++				 (__v16si)(__m512i) (INDEX),		\
++				 (__v16sf)(__m512) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i32scatter_ps(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv16sf ((void *)ADDR, (__mmask16)MASK,		\
+-				 (__v16si)(__m512i)INDEX,		\
+-				 (__v16sf)(__m512)V1, (int)SCALE)
++  __builtin_ia32_scattersiv16sf ((void *) (ADDR), (__mmask16) (MASK),	\
++				 (__v16si)(__m512i) (INDEX),		\
++				 (__v16sf)(__m512) (V1), (int) (SCALE))
+ 
+ #define _mm512_i32scatter_pd(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv8df ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8df)(__m512d)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8df ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8df)(__m512d) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i32scatter_pd(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv8df ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8df)(__m512d)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8df ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8df)(__m512d) (V1), (int) (SCALE))
+ 
+ #define _mm512_i64scatter_ps(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv16sf ((void *)ADDR, (__mmask8)0xFF,		\
+-				 (__v8di)(__m512i)INDEX,		\
+-				 (__v8sf)(__m256)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv16sf ((void *) (ADDR), (__mmask8)0xFF,	\
++				 (__v8di)(__m512i) (INDEX),		\
++				 (__v8sf)(__m256) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i64scatter_ps(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv16sf ((void *)ADDR, (__mmask16)MASK,		\
+-				 (__v8di)(__m512i)INDEX,		\
+-				 (__v8sf)(__m256)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv16sf ((void *) (ADDR), (__mmask16) (MASK),	\
++				 (__v8di)(__m512i) (INDEX),		\
++				 (__v8sf)(__m256) (V1), (int) (SCALE))
+ 
+ #define _mm512_i64scatter_pd(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv8df ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v8di)(__m512i)INDEX,			\
+-				(__v8df)(__m512d)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8df ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v8di)(__m512i) (INDEX),		\
++				(__v8df)(__m512d) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i64scatter_pd(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv8df ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v8di)(__m512i)INDEX,			\
+-				(__v8df)(__m512d)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8df ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v8di)(__m512i) (INDEX),		\
++				(__v8df)(__m512d) (V1), (int) (SCALE))
+ 
+ #define _mm512_i32scatter_epi32(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv16si ((void *)ADDR, (__mmask16)0xFFFF,	\
+-				 (__v16si)(__m512i)INDEX,		\
+-				 (__v16si)(__m512i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv16si ((void *) (ADDR), (__mmask16)0xFFFF,	\
++				 (__v16si)(__m512i) (INDEX),		\
++				 (__v16si)(__m512i) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i32scatter_epi32(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scattersiv16si ((void *)ADDR, (__mmask16)MASK,		\
+-				 (__v16si)(__m512i)INDEX,		\
+-				 (__v16si)(__m512i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv16si ((void *) (ADDR), (__mmask16) (MASK),	\
++				 (__v16si)(__m512i) (INDEX),		\
++				 (__v16si)(__m512i) (V1), (int) (SCALE))
+ 
+ #define _mm512_i32scatter_epi64(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv8di ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8di)(__m512i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8di ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8di)(__m512i) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i32scatter_epi64(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scattersiv8di ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8di)(__m512i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8di ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8di)(__m512i) (V1), (int) (SCALE))
+ 
+ #define _mm512_i64scatter_epi32(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv16si ((void *)ADDR, (__mmask8)0xFF,		\
+-				 (__v8di)(__m512i)INDEX,		\
+-				 (__v8si)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv16si ((void *) (ADDR), (__mmask8)0xFF,	\
++				 (__v8di)(__m512i) (INDEX),		\
++				 (__v8si)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i64scatter_epi32(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scatterdiv16si ((void *)ADDR, (__mmask8)MASK,		\
+-				 (__v8di)(__m512i)INDEX,		\
+-				 (__v8si)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv16si ((void *) (ADDR), (__mmask8) (MASK),	\
++				 (__v8di)(__m512i) (INDEX),		\
++				 (__v8si)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm512_i64scatter_epi64(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv8di ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v8di)(__m512i)INDEX,			\
+-				(__v8di)(__m512i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8di ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v8di)(__m512i) (INDEX),		\
++				(__v8di)(__m512i) (V1), (int) (SCALE))
+ 
+ #define _mm512_mask_i64scatter_epi64(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scatterdiv8di ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v8di)(__m512i)INDEX,			\
+-				(__v8di)(__m512i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8di ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v8di)(__m512i) (INDEX),		\
++				(__v8di)(__m512i) (V1), (int) (SCALE))
+ #endif
+ 
+ extern __inline __m512d
+@@ -14874,6 +14884,88 @@ _mm512_mask_cmp_pd_mask (__mmask8 __U, __m512d __X, __m512d __Y, const int __P)
+ 						  _MM_FROUND_CUR_DIRECTION);
+ }
+ 
++extern __inline __mmask8
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_cmp_sd_mask (__m128d __X, __m128d __Y, const int __P)
++{
++  return (__mmask8) __builtin_ia32_cmpsd_mask ((__v2df) __X,
++					       (__v2df) __Y, __P,
++					       (__mmask8) -1,
++					       _MM_FROUND_CUR_DIRECTION);
++}
++
++extern __inline __mmask8
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_mask_cmp_sd_mask (__mmask8 __M, __m128d __X, __m128d __Y, const int __P)
++{
++  return (__mmask8) __builtin_ia32_cmpsd_mask ((__v2df) __X,
++					       (__v2df) __Y, __P,
++					       (__mmask8) __M,
++					       _MM_FROUND_CUR_DIRECTION);
++}
++
++extern __inline __mmask8
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_cmp_ss_mask (__m128 __X, __m128 __Y, const int __P)
++{
++  return (__mmask8) __builtin_ia32_cmpss_mask ((__v4sf) __X,
++					       (__v4sf) __Y, __P,
++					       (__mmask8) -1,
++					       _MM_FROUND_CUR_DIRECTION);
++}
++
++extern __inline __mmask8
++__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
++_mm_mask_cmp_ss_mask (__mmask8 __M, __m128 __X, __m128 __Y, const int __P)
++{
++  return (__mmask8) __builtin_ia32_cmpss_mask ((__v4sf) __X,
++					       (__v4sf) __Y, __P,
++					       (__mmask8) __M,
++					       _MM_FROUND_CUR_DIRECTION);
++}
++
++#else
++#define _mm512_cmp_pd_mask(X, Y, P)					\
++  ((__mmask8) __builtin_ia32_cmppd512_mask ((__v8df)(__m512d)(X),	\
++					    (__v8df)(__m512d)(Y), (int)(P),\
++					    (__mmask8)-1,_MM_FROUND_CUR_DIRECTION))
++
++#define _mm512_cmp_ps_mask(X, Y, P)					\
++  ((__mmask16) __builtin_ia32_cmpps512_mask ((__v16sf)(__m512)(X),	\
++					     (__v16sf)(__m512)(Y), (int)(P),\
++					     (__mmask16)-1,_MM_FROUND_CUR_DIRECTION))
++
++#define _mm512_mask_cmp_pd_mask(M, X, Y, P)					\
++  ((__mmask8) __builtin_ia32_cmppd512_mask ((__v8df)(__m512d)(X),	\
++					    (__v8df)(__m512d)(Y), (int)(P),\
++					    (__mmask8)(M), _MM_FROUND_CUR_DIRECTION))
++
++#define _mm512_mask_cmp_ps_mask(M, X, Y, P)					\
++  ((__mmask16) __builtin_ia32_cmpps512_mask ((__v16sf)(__m512)(X),	\
++					     (__v16sf)(__m512)(Y), (int)(P),\
++					     (__mmask16)(M),_MM_FROUND_CUR_DIRECTION))
++
++#define _mm_cmp_sd_mask(X, Y, P)					\
++  ((__mmask8) __builtin_ia32_cmpsd_mask ((__v2df)(__m128d)(X),		\
++					 (__v2df)(__m128d)(Y), (int)(P),\
++					 (__mmask8)-1,_MM_FROUND_CUR_DIRECTION))
++
++#define _mm_mask_cmp_sd_mask(M, X, Y, P)					\
++  ((__mmask8) __builtin_ia32_cmpsd_mask ((__v2df)(__m128d)(X),		\
++					 (__v2df)(__m128d)(Y), (int)(P),\
++					 M,_MM_FROUND_CUR_DIRECTION))
++
++#define _mm_cmp_ss_mask(X, Y, P)					\
++  ((__mmask8) __builtin_ia32_cmpss_mask ((__v4sf)(__m128)(X),		\
++					 (__v4sf)(__m128)(Y), (int)(P), \
++					 (__mmask8)-1,_MM_FROUND_CUR_DIRECTION))
++
++#define _mm_mask_cmp_ss_mask(M, X, Y, P)					\
++  ((__mmask8) __builtin_ia32_cmpss_mask ((__v4sf)(__m128)(X),		\
++					 (__v4sf)(__m128)(Y), (int)(P), \
++					 M,_MM_FROUND_CUR_DIRECTION))
++#endif
++
+ extern __inline __mmask8
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_cmpeq_pd_mask (__m512d __X, __m512d __Y)
+@@ -15194,88 +15286,6 @@ _mm512_mask_cmpord_ps_mask (__mmask16 __U, __m512 __X, __m512 __Y)
+ 						   _MM_FROUND_CUR_DIRECTION);
+ }
+ 
+-extern __inline __mmask8
+-__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_cmp_sd_mask (__m128d __X, __m128d __Y, const int __P)
+-{
+-  return (__mmask8) __builtin_ia32_cmpsd_mask ((__v2df) __X,
+-					       (__v2df) __Y, __P,
+-					       (__mmask8) -1,
+-					       _MM_FROUND_CUR_DIRECTION);
+-}
+-
+-extern __inline __mmask8
+-__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_mask_cmp_sd_mask (__mmask8 __M, __m128d __X, __m128d __Y, const int __P)
+-{
+-  return (__mmask8) __builtin_ia32_cmpsd_mask ((__v2df) __X,
+-					       (__v2df) __Y, __P,
+-					       (__mmask8) __M,
+-					       _MM_FROUND_CUR_DIRECTION);
+-}
+-
+-extern __inline __mmask8
+-__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_cmp_ss_mask (__m128 __X, __m128 __Y, const int __P)
+-{
+-  return (__mmask8) __builtin_ia32_cmpss_mask ((__v4sf) __X,
+-					       (__v4sf) __Y, __P,
+-					       (__mmask8) -1,
+-					       _MM_FROUND_CUR_DIRECTION);
+-}
+-
+-extern __inline __mmask8
+-__attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+-_mm_mask_cmp_ss_mask (__mmask8 __M, __m128 __X, __m128 __Y, const int __P)
+-{
+-  return (__mmask8) __builtin_ia32_cmpss_mask ((__v4sf) __X,
+-					       (__v4sf) __Y, __P,
+-					       (__mmask8) __M,
+-					       _MM_FROUND_CUR_DIRECTION);
+-}
+-
+-#else
+-#define _mm512_cmp_pd_mask(X, Y, P)					\
+-  ((__mmask8) __builtin_ia32_cmppd512_mask ((__v8df)(__m512d)(X),	\
+-					    (__v8df)(__m512d)(Y), (int)(P),\
+-					    (__mmask8)-1,_MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm512_cmp_ps_mask(X, Y, P)					\
+-  ((__mmask16) __builtin_ia32_cmpps512_mask ((__v16sf)(__m512)(X),	\
+-					     (__v16sf)(__m512)(Y), (int)(P),\
+-					     (__mmask16)-1,_MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm512_mask_cmp_pd_mask(M, X, Y, P)					\
+-  ((__mmask8) __builtin_ia32_cmppd512_mask ((__v8df)(__m512d)(X),	\
+-					    (__v8df)(__m512d)(Y), (int)(P),\
+-					    (__mmask8)M, _MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm512_mask_cmp_ps_mask(M, X, Y, P)					\
+-  ((__mmask16) __builtin_ia32_cmpps512_mask ((__v16sf)(__m512)(X),	\
+-					     (__v16sf)(__m512)(Y), (int)(P),\
+-					     (__mmask16)M,_MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm_cmp_sd_mask(X, Y, P)					\
+-  ((__mmask8) __builtin_ia32_cmpsd_mask ((__v2df)(__m128d)(X),		\
+-					 (__v2df)(__m128d)(Y), (int)(P),\
+-					 (__mmask8)-1,_MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm_mask_cmp_sd_mask(M, X, Y, P)					\
+-  ((__mmask8) __builtin_ia32_cmpsd_mask ((__v2df)(__m128d)(X),		\
+-					 (__v2df)(__m128d)(Y), (int)(P),\
+-					 M,_MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm_cmp_ss_mask(X, Y, P)					\
+-  ((__mmask8) __builtin_ia32_cmpss_mask ((__v4sf)(__m128)(X),		\
+-					 (__v4sf)(__m128)(Y), (int)(P), \
+-					 (__mmask8)-1,_MM_FROUND_CUR_DIRECTION))
+-
+-#define _mm_mask_cmp_ss_mask(M, X, Y, P)					\
+-  ((__mmask8) __builtin_ia32_cmpss_mask ((__v4sf)(__m128)(X),		\
+-					 (__v4sf)(__m128)(Y), (int)(P), \
+-					 M,_MM_FROUND_CUR_DIRECTION))
+-#endif
+-
+ extern __inline __mmask16
+ __attribute__ ((__gnu_inline__, __always_inline__, __artificial__))
+ _mm512_kmov (__mmask16 __A)
+diff --git a/gcc/config/i386/avx512pfintrin.h b/gcc/config/i386/avx512pfintrin.h
+index 83556cb9fd4..a3cadc6841b 100644
+--- a/gcc/config/i386/avx512pfintrin.h
++++ b/gcc/config/i386/avx512pfintrin.h
+@@ -192,68 +192,73 @@ _mm512_mask_prefetch_i64scatter_ps (void *__addr, __mmask8 __mask,
+ 
+ #else
+ #define _mm512_prefetch_i32gather_pd(INDEX, ADDR, SCALE, HINT)		     \
+-  __builtin_ia32_gatherpfdpd ((__mmask8)0xFF, (__v8si)(__m256i)INDEX,	     \
+-			      (void const *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfdpd ((__mmask8)0xFF, (__v8si)(__m256i) (INDEX),     \
++			      (void const *) (ADDR), (int) (SCALE),	     \
++			      (int) (HINT))
+ 
+ #define _mm512_prefetch_i32gather_ps(INDEX, ADDR, SCALE, HINT)		     \
+-  __builtin_ia32_gatherpfdps ((__mmask16)0xFFFF, (__v16si)(__m512i)INDEX,    \
+-			      (void const *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfdps ((__mmask16)0xFFFF, (__v16si)(__m512i) (INDEX), \
++			      (void const *) (ADDR), (int) (SCALE),	     \
++			      (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i32gather_pd(INDEX, MASK, ADDR, SCALE, HINT)    \
+-  __builtin_ia32_gatherpfdpd ((__mmask8)MASK, (__v8si)(__m256i)INDEX,	     \
+-			      (void const *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfdpd ((__mmask8) (MASK), (__v8si)(__m256i) (INDEX),  \
++			      (void const *) (ADDR), (int) (SCALE),	     \
++			      (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i32gather_ps(INDEX, MASK, ADDR, SCALE, HINT)    \
+-  __builtin_ia32_gatherpfdps ((__mmask16)MASK, (__v16si)(__m512i)INDEX,      \
+-			      (void const *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfdps ((__mmask16) (MASK), (__v16si)(__m512i) (INDEX),\
++			      (void const *) (ADDR), (int) (SCALE),	     \
++			      (int) (HINT))
+ 
+ #define _mm512_prefetch_i64gather_pd(INDEX, ADDR, SCALE, HINT)		     \
+-  __builtin_ia32_gatherpfqpd ((__mmask8)0xFF, (__v8di)(__m512i)INDEX,	     \
+-			      (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfqpd ((__mmask8)0xFF, (__v8di)(__m512i) (INDEX),     \
++			      (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_prefetch_i64gather_ps(INDEX, ADDR, SCALE, HINT)		     \
+-  __builtin_ia32_gatherpfqps ((__mmask8)0xFF, (__v8di)(__m512i)INDEX,	     \
+-			      (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfqps ((__mmask8)0xFF, (__v8di)(__m512i) (INDEX),     \
++			      (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i64gather_pd(INDEX, MASK, ADDR, SCALE, HINT)    \
+-  __builtin_ia32_gatherpfqpd ((__mmask8)MASK, (__v8di)(__m512i)INDEX,	     \
+-			      (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfqpd ((__mmask8) (MASK), (__v8di)(__m512i) (INDEX),  \
++			      (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i64gather_ps(INDEX, MASK, ADDR, SCALE, HINT)    \
+-  __builtin_ia32_gatherpfqps ((__mmask8)MASK, (__v8di)(__m512i)INDEX,	     \
+-			      (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_gatherpfqps ((__mmask8) (MASK), (__v8di)(__m512i) (INDEX),  \
++			      (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_prefetch_i32scatter_pd(ADDR, INDEX, SCALE, HINT)              \
+-  __builtin_ia32_scatterpfdpd ((__mmask8)0xFF, (__v8si)(__m256i)INDEX,       \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfdpd ((__mmask8)0xFF, (__v8si)(__m256i) (INDEX),    \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_prefetch_i32scatter_ps(ADDR, INDEX, SCALE, HINT)              \
+-  __builtin_ia32_scatterpfdps ((__mmask16)0xFFFF, (__v16si)(__m512i)INDEX,   \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfdps ((__mmask16)0xFFFF, (__v16si)(__m512i) (INDEX),\
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i32scatter_pd(ADDR, MASK, INDEX, SCALE, HINT)   \
+-  __builtin_ia32_scatterpfdpd ((__mmask8)MASK, (__v8si)(__m256i)INDEX,       \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfdpd ((__mmask8) (MASK), (__v8si)(__m256i) (INDEX), \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i32scatter_ps(ADDR, MASK, INDEX, SCALE, HINT)   \
+-  __builtin_ia32_scatterpfdps ((__mmask16)MASK, (__v16si)(__m512i)INDEX,     \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfdps ((__mmask16) (MASK),			     \
++			       (__v16si)(__m512i) (INDEX),		     \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_prefetch_i64scatter_pd(ADDR, INDEX, SCALE, HINT)              \
+-  __builtin_ia32_scatterpfqpd ((__mmask8)0xFF, (__v8di)(__m512i)INDEX,	     \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfqpd ((__mmask8)0xFF, (__v8di)(__m512i) (INDEX),    \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_prefetch_i64scatter_ps(ADDR, INDEX, SCALE, HINT)              \
+-  __builtin_ia32_scatterpfqps ((__mmask8)0xFF, (__v8di)(__m512i)INDEX,	     \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfqps ((__mmask8)0xFF, (__v8di)(__m512i) (INDEX),    \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i64scatter_pd(ADDR, MASK, INDEX, SCALE, HINT)   \
+-  __builtin_ia32_scatterpfqpd ((__mmask8)MASK, (__v8di)(__m512i)INDEX,	     \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfqpd ((__mmask8) (MASK), (__v8di)(__m512i) (INDEX), \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ 
+ #define _mm512_mask_prefetch_i64scatter_ps(ADDR, MASK, INDEX, SCALE, HINT)   \
+-  __builtin_ia32_scatterpfqps ((__mmask8)MASK, (__v8di)(__m512i)INDEX,	     \
+-			       (void *)ADDR, (int)SCALE, (int)HINT)
++  __builtin_ia32_scatterpfqps ((__mmask8) (MASK), (__v8di)(__m512i) (INDEX), \
++			       (void *) (ADDR), (int) (SCALE), (int) (HINT))
+ #endif
+ 
+ #ifdef __DISABLE_AVX512PF__
+diff --git a/gcc/config/i386/avx512vlbwintrin.h b/gcc/config/i386/avx512vlbwintrin.h
+index 2dd73ffbd93..cbba242a047 100644
+--- a/gcc/config/i386/avx512vlbwintrin.h
++++ b/gcc/config/i386/avx512vlbwintrin.h
+@@ -1787,7 +1787,7 @@ _mm_maskz_slli_epi16 (__mmask8 __U, __m128i __A, int __B)
+ #else
+ #define _mm256_mask_alignr_epi8(W, U, X, Y, N)					    \
+   ((__m256i) __builtin_ia32_palignr256_mask ((__v4di)(__m256i)(X),		    \
+-					    (__v4di)(__m256i)(Y), (int)(N * 8),	    \
++					    (__v4di)(__m256i)(Y), (int)((N) * 8),   \
+ 					    (__v4di)(__m256i)(X), (__mmask32)(U)))
+ 
+ #define _mm256_mask_srli_epi16(W, U, A, B)                              \
+@@ -1864,18 +1864,18 @@ _mm_maskz_slli_epi16 (__mmask8 __U, __m128i __A, int __B)
+ 
+ #define _mm256_maskz_alignr_epi8(U, X, Y, N)					    \
+   ((__m256i) __builtin_ia32_palignr256_mask ((__v4di)(__m256i)(X),		    \
+-					    (__v4di)(__m256i)(Y), (int)(N * 8),	    \
++					    (__v4di)(__m256i)(Y), (int)((N) * 8),   \
+ 					    (__v4di)(__m256i)_mm256_setzero_si256 (),   \
+ 					    (__mmask32)(U)))
+ 
+ #define _mm_mask_alignr_epi8(W, U, X, Y, N)					    \
+   ((__m128i) __builtin_ia32_palignr128_mask ((__v2di)(__m128i)(X),		    \
+-					    (__v2di)(__m128i)(Y), (int)(N * 8),	    \
++					    (__v2di)(__m128i)(Y), (int)((N) * 8),   \
+ 					    (__v2di)(__m128i)(X), (__mmask16)(U)))
+ 
+ #define _mm_maskz_alignr_epi8(U, X, Y, N)					    \
+   ((__m128i) __builtin_ia32_palignr128_mask ((__v2di)(__m128i)(X),		    \
+-					    (__v2di)(__m128i)(Y), (int)(N * 8),	    \
++					    (__v2di)(__m128i)(Y), (int)((N) * 8),   \
+ 					    (__v2di)(__m128i)_mm_setzero_si128 (),  \
+ 					    (__mmask16)(U)))
+ 
+@@ -2033,7 +2033,7 @@ _mm_maskz_slli_epi16 (__mmask8 __U, __m128i __A, int __B)
+ #define _mm256_mask_cmp_epu8_mask(M, X, Y, P)				\
+   ((__mmask32) __builtin_ia32_ucmpb256_mask ((__v32qi)(__m256i)(X),	\
+ 					    (__v32qi)(__m256i)(Y), (int)(P),\
+-					    (__mmask32)M))
++					    (__mmask32)(M)))
+ #endif
+ 
+ extern __inline __mmask32
+diff --git a/gcc/config/i386/avx512vlintrin.h b/gcc/config/i386/avx512vlintrin.h
+index 3eaf817f898..c34890a8375 100644
+--- a/gcc/config/i386/avx512vlintrin.h
++++ b/gcc/config/i386/avx512vlintrin.h
+@@ -12972,260 +12972,276 @@ _mm256_permutex_pd (__m256d __X, const int __M)
+                                           (__mmask8)(U)))
+ 
+ #define _mm256_mmask_i32gather_ps(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256) __builtin_ia32_gather3siv8sf ((__v8sf)(__m256)V1OLD,		\
+-					 (void const *)ADDR,		\
+-					 (__v8si)(__m256i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m256) __builtin_ia32_gather3siv8sf ((__v8sf)(__m256) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v8si)(__m256i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm_mmask_i32gather_ps(V1OLD, MASK, INDEX, ADDR, SCALE)		\
+-  (__m128) __builtin_ia32_gather3siv4sf ((__v4sf)(__m128)V1OLD,		\
+-					 (void const *)ADDR,		\
+-					 (__v4si)(__m128i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m128) __builtin_ia32_gather3siv4sf ((__v4sf)(__m128) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v4si)(__m128i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm256_mmask_i32gather_pd(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256d) __builtin_ia32_gather3siv4df ((__v4df)(__m256d)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4si)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m256d) __builtin_ia32_gather3siv4df ((__v4df)(__m256d) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4si)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm_mmask_i32gather_pd(V1OLD, MASK, INDEX, ADDR, SCALE)		\
+-  (__m128d) __builtin_ia32_gather3siv2df ((__v2df)(__m128d)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4si)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128d) __builtin_ia32_gather3siv2df ((__v2df)(__m128d) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4si)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm256_mmask_i64gather_ps(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m128) __builtin_ia32_gather3div8sf ((__v4sf)(__m128)V1OLD,		\
+-					 (void const *)ADDR,		\
+-					 (__v4di)(__m256i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m128) __builtin_ia32_gather3div8sf ((__v4sf)(__m128) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v4di)(__m256i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm_mmask_i64gather_ps(V1OLD, MASK, INDEX, ADDR, SCALE)		\
+-  (__m128) __builtin_ia32_gather3div4sf ((__v4sf)(__m128)V1OLD,		\
+-					 (void const *)ADDR,		\
+-					 (__v2di)(__m128i)INDEX,	\
+-					 (__mmask8)MASK, (int)SCALE)
++  (__m128) __builtin_ia32_gather3div4sf ((__v4sf)(__m128) (V1OLD),	\
++					 (void const *) (ADDR),		\
++					 (__v2di)(__m128i) (INDEX),	\
++					 (__mmask8) (MASK),		\
++					 (int) (SCALE))
+ 
+ #define _mm256_mmask_i64gather_pd(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256d) __builtin_ia32_gather3div4df ((__v4df)(__m256d)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4di)(__m256i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m256d) __builtin_ia32_gather3div4df ((__v4df)(__m256d) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4di)(__m256i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm_mmask_i64gather_pd(V1OLD, MASK, INDEX, ADDR, SCALE)		\
+-  (__m128d) __builtin_ia32_gather3div2df ((__v2df)(__m128d)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v2di)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128d) __builtin_ia32_gather3div2df ((__v2df)(__m128d) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v2di)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm256_mmask_i32gather_epi32(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256i) __builtin_ia32_gather3siv8si ((__v8si)(__m256i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v8si)(__m256i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m256i) __builtin_ia32_gather3siv8si ((__v8si)(__m256i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v8si)(__m256i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm_mmask_i32gather_epi32(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m128i) __builtin_ia32_gather3siv4si ((__v4si)(__m128i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4si)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128i) __builtin_ia32_gather3siv4si ((__v4si)(__m128i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4si)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm256_mmask_i32gather_epi64(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256i) __builtin_ia32_gather3siv4di ((__v4di)(__m256i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4si)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m256i) __builtin_ia32_gather3siv4di ((__v4di)(__m256i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4si)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm_mmask_i32gather_epi64(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m128i) __builtin_ia32_gather3siv2di ((__v2di)(__m128i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4si)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128i) __builtin_ia32_gather3siv2di ((__v2di)(__m128i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4si)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm256_mmask_i64gather_epi32(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m128i) __builtin_ia32_gather3div8si ((__v4si)(__m128i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4di)(__m256i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128i) __builtin_ia32_gather3div8si ((__v4si)(__m128i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4di)(__m256i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm_mmask_i64gather_epi32(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m128i) __builtin_ia32_gather3div4si ((__v4si)(__m128i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v2di)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128i) __builtin_ia32_gather3div4si ((__v4si)(__m128i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v2di)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm256_mmask_i64gather_epi64(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m256i) __builtin_ia32_gather3div4di ((__v4di)(__m256i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v4di)(__m256i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m256i) __builtin_ia32_gather3div4di ((__v4di)(__m256i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v4di)(__m256i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm_mmask_i64gather_epi64(V1OLD, MASK, INDEX, ADDR, SCALE)	\
+-  (__m128i) __builtin_ia32_gather3div2di ((__v2di)(__m128i)V1OLD,	\
+-					  (void const *)ADDR,		\
+-					  (__v2di)(__m128i)INDEX,	\
+-					  (__mmask8)MASK, (int)SCALE)
++  (__m128i) __builtin_ia32_gather3div2di ((__v2di)(__m128i) (V1OLD),	\
++					  (void const *) (ADDR),	\
++					  (__v2di)(__m128i) (INDEX),	\
++					  (__mmask8) (MASK),		\
++					  (int) (SCALE))
+ 
+ #define _mm256_i32scatter_ps(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv8sf ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8sf)(__m256)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8sf ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8sf)(__m256) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i32scatter_ps(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv8sf ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8sf)(__m256)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8sf ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8sf)(__m256) (V1), (int) (SCALE))
+ 
+ #define _mm_i32scatter_ps(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv4sf ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4sf)(__m128)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4sf ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4sf)(__m128) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i32scatter_ps(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv4sf ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4sf)(__m128)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4sf ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4sf)(__m128) (V1), (int) (SCALE))
+ 
+ #define _mm256_i32scatter_pd(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv4df ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4df)(__m256d)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4df ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4df)(__m256d) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i32scatter_pd(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv4df ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4df)(__m256d)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4df ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4df)(__m256d) (V1), (int) (SCALE))
+ 
+ #define _mm_i32scatter_pd(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv2df ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v2df)(__m128d)V1, (int)SCALE)
++  __builtin_ia32_scattersiv2df ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v2df)(__m128d) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i32scatter_pd(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv2df ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v2df)(__m128d)V1, (int)SCALE)
++  __builtin_ia32_scattersiv2df ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v2df)(__m128d) (V1), (int) (SCALE))
+ 
+ #define _mm256_i64scatter_ps(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv8sf ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4sf)(__m128)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8sf ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4sf)(__m128) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i64scatter_ps(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv8sf ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4sf)(__m128)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8sf ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4sf)(__m128) (V1), (int) (SCALE))
+ 
+ #define _mm_i64scatter_ps(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv4sf ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v4sf)(__m128)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4sf ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v4sf)(__m128) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i64scatter_ps(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv4sf ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v4sf)(__m128)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4sf ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v4sf)(__m128) (V1), (int) (SCALE))
+ 
+ #define _mm256_i64scatter_pd(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv4df ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4df)(__m256d)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4df ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4df)(__m256d) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i64scatter_pd(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv4df ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4df)(__m256d)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4df ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4df)(__m256d) (V1), (int) (SCALE))
+ 
+ #define _mm_i64scatter_pd(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv2df ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v2df)(__m128d)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv2df ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v2df)(__m128d) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i64scatter_pd(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv2df ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v2df)(__m128d)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv2df ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v2df)(__m128d) (V1), (int) (SCALE))
+ 
+ #define _mm256_i32scatter_epi32(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv8si ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8si)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8si ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8si)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i32scatter_epi32(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scattersiv8si ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v8si)(__m256i)INDEX,			\
+-				(__v8si)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv8si ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v8si)(__m256i) (INDEX),		\
++				(__v8si)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm_i32scatter_epi32(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv4si ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4si)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4si ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4si)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i32scatter_epi32(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv4si ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4si)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4si ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4si)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm256_i32scatter_epi64(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv4di ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4di)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4di ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4di)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i32scatter_epi64(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scattersiv4di ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v4di)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv4di ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v4di)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm_i32scatter_epi64(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scattersiv2di ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v2di)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv2di ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v2di)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i32scatter_epi64(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scattersiv2di ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4si)(__m128i)INDEX,			\
+-				(__v2di)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scattersiv2di ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4si)(__m128i) (INDEX),		\
++				(__v2di)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm256_i64scatter_epi32(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv8si ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4si)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8si ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4si)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i64scatter_epi32(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scatterdiv8si ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4si)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv8si ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4si)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm_i64scatter_epi32(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv4si ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v4si)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4si ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v4si)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i64scatter_epi32(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv4si ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v4si)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4si ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v4si)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm256_i64scatter_epi64(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv4di ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4di)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4di ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4di)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_i64scatter_epi64(ADDR, MASK, INDEX, V1, SCALE)	\
+-  __builtin_ia32_scatterdiv4di ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v4di)(__m256i)INDEX,			\
+-				(__v4di)(__m256i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv4di ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v4di)(__m256i) (INDEX),		\
++				(__v4di)(__m256i) (V1), (int) (SCALE))
+ 
+ #define _mm_i64scatter_epi64(ADDR, INDEX, V1, SCALE)			\
+-  __builtin_ia32_scatterdiv2di ((void *)ADDR, (__mmask8)0xFF,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v2di)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv2di ((void *) (ADDR), (__mmask8)0xFF,	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v2di)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm_mask_i64scatter_epi64(ADDR, MASK, INDEX, V1, SCALE)		\
+-  __builtin_ia32_scatterdiv2di ((void *)ADDR, (__mmask8)MASK,		\
+-				(__v2di)(__m128i)INDEX,			\
+-				(__v2di)(__m128i)V1, (int)SCALE)
++  __builtin_ia32_scatterdiv2di ((void *) (ADDR), (__mmask8) (MASK),	\
++				(__v2di)(__m128i) (INDEX),		\
++				(__v2di)(__m128i) (V1), (int) (SCALE))
+ 
+ #define _mm256_mask_shuffle_epi32(W, U, X, C)                                       \
+   ((__m256i)  __builtin_ia32_pshufd256_mask ((__v8si)(__m256i)(X), (int)(C),        \
+@@ -13422,19 +13438,19 @@ _mm256_permutex_pd (__m256d __X, const int __M)
+         (__mmask8)(U)))
+ 
+ #define _mm_mask_cvtps_ph(W, U, A, I)						\
+-  ((__m128i) __builtin_ia32_vcvtps2ph_mask ((__v4sf)(__m128) A, (int) (I),      \
++  ((__m128i) __builtin_ia32_vcvtps2ph_mask ((__v4sf)(__m128) (A), (int) (I),	\
+       (__v8hi)(__m128i) (W), (__mmask8) (U)))
+ 
+ #define _mm_maskz_cvtps_ph(U, A, I)						\
+-  ((__m128i) __builtin_ia32_vcvtps2ph_mask ((__v4sf)(__m128) A, (int) (I),      \
++  ((__m128i) __builtin_ia32_vcvtps2ph_mask ((__v4sf)(__m128) (A), (int) (I),	\
+       (__v8hi)(__m128i) _mm_setzero_si128 (), (__mmask8) (U)))
+ 
+ #define _mm256_mask_cvtps_ph(W, U, A, I)					\
+-  ((__m128i) __builtin_ia32_vcvtps2ph256_mask ((__v8sf)(__m256) A, (int) (I),	\
++  ((__m128i) __builtin_ia32_vcvtps2ph256_mask ((__v8sf)(__m256) (A), (int) (I),	\
+       (__v8hi)(__m128i) (W), (__mmask8) (U)))
+ 
+ #define _mm256_maskz_cvtps_ph(U, A, I)						\
+-  ((__m128i) __builtin_ia32_vcvtps2ph256_mask ((__v8sf)(__m256) A, (int) (I),   \
++  ((__m128i) __builtin_ia32_vcvtps2ph256_mask ((__v8sf)(__m256) (A), (int) (I),	\
+       (__v8hi)(__m128i) _mm_setzero_si128 (), (__mmask8) (U)))
+ 
+ #define _mm256_mask_srai_epi32(W, U, A, B)				\
 diff --git a/gcc/config/i386/darwin.h b/gcc/config/i386/darwin.h
 index bdb36f00959..c099a6238d8 100644
 --- a/gcc/config/i386/darwin.h
@@ -10787,6 +13207,23 @@ index 75f70269517..db8b4fa8aab 100644
      }
  
  done:
+diff --git a/gcc/config/i386/f16cintrin.h b/gcc/config/i386/f16cintrin.h
+index 57c0da1fab7..257b3a27d9b 100644
+--- a/gcc/config/i386/f16cintrin.h
++++ b/gcc/config/i386/f16cintrin.h
+@@ -84,10 +84,10 @@ _mm256_cvtps_ph (__m256 __A, const int __I)
+     }))
+ 
+ #define _mm_cvtps_ph(A, I) \
+-  ((__m128i) __builtin_ia32_vcvtps2ph ((__v4sf)(__m128) A, (int) (I)))
++  ((__m128i) __builtin_ia32_vcvtps2ph ((__v4sf)(__m128) (A), (int) (I)))
+ 
+ #define _mm256_cvtps_ph(A, I) \
+-  ((__m128i) __builtin_ia32_vcvtps2ph256 ((__v8sf)(__m256) A, (int) (I)))
++  ((__m128i) __builtin_ia32_vcvtps2ph256 ((__v8sf)(__m256) (A), (int) (I)))
+ #endif /* __OPTIMIZE */
+ 
+ #ifdef __DISABLE_F16C__
 diff --git a/gcc/config/i386/i386-builtin.def b/gcc/config/i386/i386-builtin.def
 index 5dedeb2d18b..2f57d19bea2 100644
 --- a/gcc/config/i386/i386-builtin.def
@@ -10814,7 +13251,7 @@ index 5e7e46fcebe..f06fea1a8a5 100644
  
    if (!TARGET_80387)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..ae5046ee6a0 100644
+index 1bca5a7eea6..5978e51e8ea 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -2535,7 +2535,12 @@ rest_of_insert_endbranch (void)
@@ -10964,6 +13401,67 @@ index 1bca5a7eea6..ae5046ee6a0 100644
  		  return false;
  	    }
  	}
+@@ -50265,7 +50287,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
+   if ((TARGET_AVX512F && vector_size == 64)
+       || (TARGET_AVX512VL && (vector_size == 32 || vector_size == 16)))
+     {
+-      if (elem_size == 4 || elem_size == 8 || TARGET_AVX512BW)
++      if (elem_size == 4
++	  || elem_size == 8
++	  || (TARGET_AVX512BW && (elem_size == 1 || elem_size == 2)))
+ 	return smallest_int_mode_for_size (nunits);
+     }
+ 
+@@ -50919,11 +50943,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+       *clear = build_call_expr (fnclex, 0);
+       tree sw_var = create_tmp_var_raw (short_unsigned_type_node);
+       tree fnstsw_call = build_call_expr (fnstsw, 0);
+-      tree sw_mod = build2 (MODIFY_EXPR, short_unsigned_type_node,
+-			    sw_var, fnstsw_call);
++      tree sw_mod = build4 (TARGET_EXPR, short_unsigned_type_node, sw_var,
++			    fnstsw_call, NULL_TREE, NULL_TREE);
+       tree exceptions_x87 = fold_convert (integer_type_node, sw_var);
+-      tree update_mod = build2 (MODIFY_EXPR, integer_type_node,
+-				exceptions_var, exceptions_x87);
++      tree update_mod = build4 (TARGET_EXPR, integer_type_node,
++				exceptions_var, exceptions_x87,
++				NULL_TREE, NULL_TREE);
+       *update = build2 (COMPOUND_EXPR, integer_type_node,
+ 			sw_mod, update_mod);
+       tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
+@@ -50936,15 +50961,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+       tree stmxcsr = ix86_builtins[IX86_BUILTIN_STMXCSR];
+       tree ldmxcsr = ix86_builtins[IX86_BUILTIN_LDMXCSR];
+       tree stmxcsr_hold_call = build_call_expr (stmxcsr, 0);
+-      tree hold_assign_orig = build2 (MODIFY_EXPR, unsigned_type_node,
+-				      mxcsr_orig_var, stmxcsr_hold_call);
++      tree hold_assign_orig = build4 (TARGET_EXPR, unsigned_type_node,
++				      mxcsr_orig_var, stmxcsr_hold_call,
++				      NULL_TREE, NULL_TREE);
+       tree hold_mod_val = build2 (BIT_IOR_EXPR, unsigned_type_node,
+ 				  mxcsr_orig_var,
+ 				  build_int_cst (unsigned_type_node, 0x1f80));
+       hold_mod_val = build2 (BIT_AND_EXPR, unsigned_type_node, hold_mod_val,
+ 			     build_int_cst (unsigned_type_node, 0xffffffc0));
+-      tree hold_assign_mod = build2 (MODIFY_EXPR, unsigned_type_node,
+-				     mxcsr_mod_var, hold_mod_val);
++      tree hold_assign_mod = build4 (TARGET_EXPR, unsigned_type_node,
++				     mxcsr_mod_var, hold_mod_val,
++				     NULL_TREE, NULL_TREE);
+       tree ldmxcsr_hold_call = build_call_expr (ldmxcsr, 1, mxcsr_mod_var);
+       tree hold_all = build2 (COMPOUND_EXPR, unsigned_type_node,
+ 			      hold_assign_orig, hold_assign_mod);
+@@ -50973,8 +51000,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+ 			    exceptions_assign);
+ 	}
+       else
+-	*update = build2 (MODIFY_EXPR, integer_type_node,
+-			  exceptions_var, exceptions_sse);
++	*update = build4 (TARGET_EXPR, integer_type_node, exceptions_var,
++			  exceptions_sse, NULL_TREE, NULL_TREE);
+       tree ldmxcsr_update_call = build_call_expr (ldmxcsr, 1, mxcsr_orig_var);
+       *update = build2 (COMPOUND_EXPR, void_type_node, *update,
+ 			ldmxcsr_update_call);
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
 index 14e5a392f62..ad1949b2371 100644
 --- a/gcc/config/i386/i386.h
@@ -11011,6 +13509,21 @@ index 698c31a0a97..237c0054a09 100644
        tmp = gen_rtx_EQ (VOIDmode, flags, const0_rtx);
        tmp = gen_rtx_IF_THEN_ELSE (VOIDmode, tmp,
  				  gen_rtx_LABEL_REF (VOIDmode, noadj_label),
+diff --git a/gcc/config/i386/shaintrin.h b/gcc/config/i386/shaintrin.h
+index 3ab222fa77c..5741c7f6611 100644
+--- a/gcc/config/i386/shaintrin.h
++++ b/gcc/config/i386/shaintrin.h
+@@ -64,8 +64,8 @@ _mm_sha1rnds4_epu32 (__m128i __A, __m128i __B, const int __I)
+ }
+ #else
+ #define _mm_sha1rnds4_epu32(A, B, I)				    \
+-  ((__m128i) __builtin_ia32_sha1rnds4 ((__v4si)(__m128i)A,	    \
+-				       (__v4si)(__m128i)B, (int)I))
++  ((__m128i) __builtin_ia32_sha1rnds4 ((__v4si)(__m128i)(A),	    \
++				       (__v4si)(__m128i)(B), (int)(I)))
+ #endif
+ 
+ extern __inline __m128i
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
 index 18cc39ae521..3b51fef56f2 100644
 --- a/gcc/config/i386/sse.md
@@ -11187,6 +13700,21 @@ index 5f530a43000..1be79e1964c 100644
        assemble_name (file, name);
        fputs (":", file);
        ASM_OUTPUT_SKIP (file, size);
+diff --git a/gcc/config/riscv/riscv-builtins.c b/gcc/config/riscv/riscv-builtins.c
+index 548267179a1..13926ffe10d 100644
+--- a/gcc/config/riscv/riscv-builtins.c
++++ b/gcc/config/riscv/riscv-builtins.c
+@@ -283,8 +283,8 @@ riscv_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+   tree fsflags = GET_BUILTIN_DECL (CODE_FOR_riscv_fsflags);
+   tree old_flags = create_tmp_var_raw (RISCV_ATYPE_USI);
+ 
+-  *hold = build2 (MODIFY_EXPR, RISCV_ATYPE_USI, old_flags,
+-		  build_call_expr (frflags, 0));
++  *hold = build4 (TARGET_EXPR, RISCV_ATYPE_USI, old_flags,
++		  build_call_expr (frflags, 0), NULL_TREE, NULL_TREE);
+   *clear = build_call_expr (fsflags, 1, old_flags);
+   *update = NULL_TREE;
+ }
 diff --git a/gcc/config/rs6000/aix61.h b/gcc/config/rs6000/aix61.h
 index 57ea9ecfc47..8101d0b0c0a 100644
 --- a/gcc/config/rs6000/aix61.h
@@ -12345,7 +14873,7 @@ index d0d69beafd4..47a5d0576d0 100644
  
  /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 87d60078bb0..d582b324542 100644
+index 87d60078bb0..55334bfa217 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -4099,6 +4099,14 @@ rs6000_option_override_internal (bool global_init_p)
@@ -12780,6 +15308,71 @@ index 87d60078bb0..d582b324542 100644
    };
  
    for (i = 0; i < ARRAY_SIZE (flags); i++)
+@@ -39268,7 +39368,9 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+ 
+       tree fenv_var = create_tmp_var_raw (double_type_node);
+       TREE_ADDRESSABLE (fenv_var) = 1;
+-      tree fenv_addr = build1 (ADDR_EXPR, double_ptr_type_node, fenv_var);
++      tree fenv_addr = build1 (ADDR_EXPR, double_ptr_type_node,
++			       build4 (TARGET_EXPR, double_type_node, fenv_var,
++				       void_node, NULL_TREE, NULL_TREE));
+ 
+       *hold = build_call_expr (atomic_hold_decl, 1, fenv_addr);
+       *clear = build_call_expr (atomic_clear_decl, 0);
+@@ -39291,12 +39393,13 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+ 
+   /* Mask to clear everything except for the rounding modes and non-IEEE
+      arithmetic flag.  */
+-  const unsigned HOST_WIDE_INT hold_exception_mask =
+-    HOST_WIDE_INT_C (0xffffffff00000007);
++  const unsigned HOST_WIDE_INT hold_exception_mask
++    = HOST_WIDE_INT_C (0xffffffff00000007);
+ 
+   tree fenv_var = create_tmp_var_raw (double_type_node);
+ 
+-  tree hold_mffs = build2 (MODIFY_EXPR, void_type_node, fenv_var, call_mffs);
++  tree hold_mffs = build4 (TARGET_EXPR, double_type_node, fenv_var, call_mffs,
++			   NULL_TREE, NULL_TREE);
+ 
+   tree fenv_llu = build1 (VIEW_CONVERT_EXPR, uint64_type_node, fenv_var);
+   tree fenv_llu_and = build2 (BIT_AND_EXPR, uint64_type_node, fenv_llu,
+@@ -39320,12 +39423,13 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+ 
+   /* Mask to clear everything except for the rounding modes and non-IEEE
+      arithmetic flag.  */
+-  const unsigned HOST_WIDE_INT clear_exception_mask =
+-    HOST_WIDE_INT_C (0xffffffff00000000);
++  const unsigned HOST_WIDE_INT clear_exception_mask
++    = HOST_WIDE_INT_C (0xffffffff00000000);
+ 
+   tree fenv_clear = create_tmp_var_raw (double_type_node);
+ 
+-  tree clear_mffs = build2 (MODIFY_EXPR, void_type_node, fenv_clear, call_mffs);
++  tree clear_mffs = build4 (TARGET_EXPR, double_type_node, fenv_clear,
++			    call_mffs, NULL_TREE, NULL_TREE);
+ 
+   tree fenv_clean_llu = build1 (VIEW_CONVERT_EXPR, uint64_type_node, fenv_clear);
+   tree fenv_clear_llu_and = build2 (BIT_AND_EXPR, uint64_type_node,
+@@ -39350,13 +39454,14 @@ rs6000_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+                                 (*(uint64_t*)fenv_var 0x1ff80fff);
+      __builtin_mtfsf (0xff, fenv_update);  */
+ 
+-  const unsigned HOST_WIDE_INT update_exception_mask =
+-    HOST_WIDE_INT_C (0xffffffff1fffff00);
+-  const unsigned HOST_WIDE_INT new_exception_mask =
+-    HOST_WIDE_INT_C (0x1ff80fff);
++  const unsigned HOST_WIDE_INT update_exception_mask
++    = HOST_WIDE_INT_C (0xffffffff1fffff00);
++  const unsigned HOST_WIDE_INT new_exception_mask
++    = HOST_WIDE_INT_C (0x1ff80fff);
+ 
+   tree old_fenv = create_tmp_var_raw (double_type_node);
+-  tree update_mffs = build2 (MODIFY_EXPR, void_type_node, old_fenv, call_mffs);
++  tree update_mffs = build4 (TARGET_EXPR, double_type_node, old_fenv,
++			     call_mffs, NULL_TREE, NULL_TREE);
+ 
+   tree old_llu = build1 (VIEW_CONVERT_EXPR, uint64_type_node, old_fenv);
+   tree old_llu_and = build2 (BIT_AND_EXPR, uint64_type_node, old_llu,
 diff --git a/gcc/config/rs6000/rs6000.md b/gcc/config/rs6000/rs6000.md
 index a768f5dd511..db7ed60a2cf 100644
 --- a/gcc/config/rs6000/rs6000.md
@@ -13395,6 +15988,19 @@ index 5ec3fb4fe58..5b6246adc9f 100644
  
  
  
+diff --git a/gcc/config/tilegx/tilegx.md b/gcc/config/tilegx/tilegx.md
+index dce43eca074..7e3ef50dd4e 100644
+--- a/gcc/config/tilegx/tilegx.md
++++ b/gcc/config/tilegx/tilegx.md
+@@ -4110,7 +4110,7 @@
+   operands[1] = simplify_gen_subreg (<I124MODE:MODE>mode, operands[1],
+ 				     DImode,
+ 				     BYTES_BIG_ENDIAN
+-				     ? UNITS_PER_WORD - <n> : 0);
++				     ? UNITS_PER_WORD - <I124MODE:n> : 0);
+ })
+ 
+ (define_insn "*insn_stnt<I124MODE:n>_add<I48MODE:bitsuffix>"
 diff --git a/gcc/config/xtensa/xtensa.c b/gcc/config/xtensa/xtensa.c
 index ee5612441e2..2527468d57d 100644
 --- a/gcc/config/xtensa/xtensa.c
@@ -13545,10 +16151,67 @@ index 1ffefd5f482..9be446a862d 100644
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..a05f4861757 100644
+index 6441d647a54..504737621a7 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,174 @@
+@@ -1,3 +1,231 @@
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-09-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/96862
++	* constexpr.c (cxx_eval_outermost_constant_expr): Temporarily disable
++	flag_rounding_math during manifestly constant evaluation.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/95328
++	* decl.c (cp_finish_decomp): Call complete_type before checking
++	COMPLETE_TYPE_P.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94951
++	* typeck.c (cp_strict_aliasing_warning): New function.
++	(cp_build_indirect_ref_1, build_reinterpret_cast_1): Use
++	it instead of strict_aliasing_warning.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-24  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94742
++	* semantics.c (finish_call_expr): When looking if all overloads
++	are noreturn, use STRIP_TEMPLATE to look through TEMPLATE_DECLs.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94571
++	* parser.c (cp_parser_simple_declaration): Fix up a pasto in
++	diagnostics.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94325
++	* decl.c (begin_destructor_body): For CLASSTYPE_VBASECLASSES class
++	dtors, if CLASSTYPE_PRIMARY_BINFO is non-NULL, but not BINFO_VIRTUAL_P,
++	look at CLASSTYPE_PRIMARY_BINFO of its BINFO_TYPE if it is not
++	BINFO_VIRTUAL_P, and so on.
++
 +2020-06-16  Patrick Palka  <ppalka@redhat.com>
 +
 +	PR c++/95678
@@ -13724,10 +16387,19 @@ index 6441d647a54..a05f4861757 100644
  
  	* GCC 9.3.0 released.
 diff --git a/gcc/cp/constexpr.c b/gcc/cp/constexpr.c
-index bab5935a4eb..3465f1db54b 100644
+index bab5935a4eb..38b852681aa 100644
 --- a/gcc/cp/constexpr.c
 +++ b/gcc/cp/constexpr.c
-@@ -5602,7 +5602,7 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
+@@ -5352,6 +5352,8 @@ cxx_eval_outermost_constant_expr (tree t, bool allow_non_constant,
+ 			&constexpr_ctx_count, allow_non_constant, strict,
+ 			manifestly_const_eval || !allow_non_constant };
+ 
++  /* Turn off -frounding-math for manifestly constant evaluation.  */
++  warning_sentinel rm (flag_rounding_math, ctx.manifestly_const_eval);
+   tree type = initialized_type (t);
+   tree r = t;
+   if (VOID_TYPE_P (type))
+@@ -5602,7 +5604,7 @@ maybe_constant_value (tree t, tree decl, bool manifestly_const_eval)
        r = *cached;
        if (r != t)
  	{
@@ -13736,7 +16408,7 @@ index bab5935a4eb..3465f1db54b 100644
  	  protected_set_expr_location (r, EXPR_LOCATION (t));
  	}
        return r;
-@@ -6159,12 +6159,18 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
+@@ -6159,12 +6161,18 @@ potential_constant_expression_1 (tree t, bool want_rval, bool strict, bool now,
  		 variable with automatic storage duration defined outside that
  		 lambda-expression, where the reference would be an
  		 odr-use.  */
@@ -13838,7 +16510,7 @@ index f7c3eea4cdf..1f013c172ce 100644
  /* in ptree.c */
  extern void cxx_print_xnode			(FILE *, tree, int);
 diff --git a/gcc/cp/decl.c b/gcc/cp/decl.c
-index 39d55589ef3..5a6105d07e5 100644
+index 39d55589ef3..ec18f87e47f 100644
 --- a/gcc/cp/decl.c
 +++ b/gcc/cp/decl.c
 @@ -5826,9 +5826,6 @@ reshape_init_array_1 (tree elt_type, tree max_index, reshape_iter *d,
@@ -13896,7 +16568,16 @@ index 39d55589ef3..5a6105d07e5 100644
  	{
  	  /* If a TREE_READONLY variable needs initialization
  	     at runtime, it is no longer readonly and we need to
-@@ -11283,9 +11262,16 @@ grokdeclarator (const cp_declarator *declarator,
+@@ -7885,6 +7864,8 @@ cp_finish_decomp (tree decl, tree first, unsigned int count)
+       error_at (loc, "cannot decompose lambda closure type %qT", type);
+       goto error_out;
+     }
++  else if (processing_template_decl && complete_type (type) == error_mark_node)
++    goto error_out;
+   else if (processing_template_decl && !COMPLETE_TYPE_P (type))
+     pedwarn (loc, 0, "structured binding refers to incomplete class type %qT",
+ 	     type);
+@@ -11283,9 +11264,16 @@ grokdeclarator (const cp_declarator *declarator,
  	    attr_flags |= (int) ATTR_FLAG_FUNCTION_NEXT;
  	  if (declarator->kind == cdk_array)
  	    attr_flags |= (int) ATTR_FLAG_ARRAY_NEXT;
@@ -13913,6 +16594,34 @@ index 39d55589ef3..5a6105d07e5 100644
  	}
  
        inner_declarator = declarator->declarator;
+@@ -15855,14 +15843,20 @@ begin_destructor_body (void)
+ 	    /* If the vptr is shared with some virtual nearly empty base,
+ 	       don't clear it if not in charge, the dtor of the virtual
+ 	       nearly empty base will do that later.  */
+-	    if (CLASSTYPE_VBASECLASSES (current_class_type)
+-		&& CLASSTYPE_PRIMARY_BINFO (current_class_type)
+-		&& BINFO_VIRTUAL_P
+-			  (CLASSTYPE_PRIMARY_BINFO (current_class_type)))
++	    if (CLASSTYPE_VBASECLASSES (current_class_type))
+ 	      {
+-		stmt = convert_to_void (stmt, ICV_STATEMENT,
+-					tf_warning_or_error);
+-		stmt = build_if_in_charge (stmt);
++		tree c = current_class_type;
++		while (CLASSTYPE_PRIMARY_BINFO (c))
++		  {
++		    if (BINFO_VIRTUAL_P (CLASSTYPE_PRIMARY_BINFO (c)))
++		      {
++			stmt = convert_to_void (stmt, ICV_STATEMENT,
++						tf_warning_or_error);
++			stmt = build_if_in_charge (stmt);
++			break;
++		      }
++		    c = BINFO_TYPE (CLASSTYPE_PRIMARY_BINFO (c));
++		  }
+ 	      }
+ 	    finish_decl_cleanup (NULL_TREE, stmt);
+ 	  }
 diff --git a/gcc/cp/decl2.c b/gcc/cp/decl2.c
 index a46cbce08f4..a15bb3c45cc 100644
 --- a/gcc/cp/decl2.c
@@ -14090,9 +16799,18 @@ index 8999c5ad4a7..b8eb21e0f97 100644
  
        bindings = tree_cons (fnname, fns, bindings);
 diff --git a/gcc/cp/parser.c b/gcc/cp/parser.c
-index e1c02d7b718..db0276eb04f 100644
+index e1c02d7b718..aa64549698f 100644
 --- a/gcc/cp/parser.c
 +++ b/gcc/cp/parser.c
+@@ -13495,7 +13495,7 @@ cp_parser_simple_declaration (cp_parser* parser,
+ 	    if ((decl != error_mark_node
+ 		 && DECL_INITIAL (decl) != error_mark_node)
+ 		|| cp_parser_uncommitted_to_tentative_parse_p (parser))
+-	      cp_parser_error (parser, "expected %<,%> or %<;%>");
++	      cp_parser_error (parser, "expected %<;%>");
+ 	    /* Skip tokens until we reach the end of the statement.  */
+ 	    cp_parser_skip_to_end_of_statement (parser);
+ 	    /* If the next token is now a `;', consume it.  */
 @@ -18705,9 +18705,7 @@ cp_parser_enum_specifier (cp_parser* parser)
    bool is_unnamed = false;
    tree underlying_type = NULL_TREE;
@@ -14417,7 +17135,7 @@ index 4787747b6ff..7f8138aa479 100644
  	}
  
 diff --git a/gcc/cp/semantics.c b/gcc/cp/semantics.c
-index 4bfb5d15293..559e38dbc14 100644
+index 4bfb5d15293..3c578fbfa60 100644
 --- a/gcc/cp/semantics.c
 +++ b/gcc/cp/semantics.c
 @@ -380,7 +380,8 @@ add_stmt (tree t)
@@ -14430,6 +17148,15 @@ index 4bfb5d15293..559e38dbc14 100644
      }
  
    if (code == LABEL_EXPR || code == CASE_LABEL_EXPR)
+@@ -2437,7 +2438,7 @@ finish_call_expr (tree fn, vec<tree, va_gc> **args, bool disallow_virtual,
+ 	      bool abnormal = true;
+ 	      for (lkp_iterator iter (fn); abnormal && iter; ++iter)
+ 		{
+-		  tree fndecl = *iter;
++		  tree fndecl = STRIP_TEMPLATE (*iter);
+ 		  if (TREE_CODE (fndecl) != FUNCTION_DECL
+ 		      || !TREE_THIS_VOLATILE (fndecl))
+ 		    abnormal = false;
 diff --git a/gcc/cp/tree.c b/gcc/cp/tree.c
 index 3f3583c825d..7c68706640c 100644
 --- a/gcc/cp/tree.c
@@ -14580,6 +17307,66 @@ index 3f3583c825d..7c68706640c 100644
  #if defined ENABLE_TREE_CHECKING && (GCC_VERSION >= 2007)
  /* Complain that some language-specific thing hanging off a tree
     node has been accessed improperly.  */
+diff --git a/gcc/cp/typeck.c b/gcc/cp/typeck.c
+index 2169f8c4efd..ab703a3ff07 100644
+--- a/gcc/cp/typeck.c
++++ b/gcc/cp/typeck.c
+@@ -3238,6 +3238,22 @@ build_x_indirect_ref (location_t loc, tree expr, ref_operator errorstring,
+     return rval;
+ }
+ 
++/* Like c-family strict_aliasing_warning, but don't warn for dependent
++   types or expressions.  */
++
++static bool
++cp_strict_aliasing_warning (location_t loc, tree type, tree expr)
++{
++  if (processing_template_decl)
++    {
++      tree e = expr;
++      STRIP_NOPS (e);
++      if (dependent_type_p (type) || type_dependent_expression_p (e))
++	return false;
++    }
++  return strict_aliasing_warning (loc, type, expr);
++}
++
+ /* The implementation of the above, and of indirection implied by other
+    constructs.  If DO_FOLD is true, fold away INDIRECT_REF of ADDR_EXPR.  */
+ 
+@@ -3280,10 +3296,10 @@ cp_build_indirect_ref_1 (tree ptr, ref_operator errorstring,
+ 	  /* If a warning is issued, mark it to avoid duplicates from
+ 	     the backend.  This only needs to be done at
+ 	     warn_strict_aliasing > 2.  */
+-	  if (warn_strict_aliasing > 2)
+-	    if (strict_aliasing_warning (EXPR_LOCATION (ptr),
+-					 type, TREE_OPERAND (ptr, 0)))
+-	      TREE_NO_WARNING (ptr) = 1;
++	  if (warn_strict_aliasing > 2
++	      && cp_strict_aliasing_warning (EXPR_LOCATION (ptr),
++					     type, TREE_OPERAND (ptr, 0)))
++	    TREE_NO_WARNING (ptr) = 1;
+ 	}
+ 
+       if (VOID_TYPE_P (t))
+@@ -7535,7 +7551,7 @@ build_reinterpret_cast_1 (tree type, tree expr, bool c_cast_p,
+       expr = cp_build_addr_expr (expr, complain);
+ 
+       if (warn_strict_aliasing > 2)
+-	strict_aliasing_warning (EXPR_LOCATION (expr), type, expr);
++	cp_strict_aliasing_warning (EXPR_LOCATION (expr), type, expr);
+ 
+       if (expr != error_mark_node)
+ 	expr = build_reinterpret_cast_1
+@@ -7648,7 +7664,7 @@ build_reinterpret_cast_1 (tree type, tree expr, bool c_cast_p,
+ 
+       if (warn_strict_aliasing <= 2)
+ 	/* strict_aliasing_warning STRIP_NOPs its expr.  */
+-	strict_aliasing_warning (EXPR_LOCATION (expr), type, expr);
++	cp_strict_aliasing_warning (EXPR_LOCATION (expr), type, expr);
+ 
+       return build_nop_reinterpret (type, expr);
+     }
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index f8268e87d4d..345edc57348 100644
 --- a/gcc/d/ChangeLog
@@ -15497,6 +18284,19 @@ index fe1194ef91a..44a15dda240 100644
  the variable's decl in order to chose what to output.
  @end defmac
  
+diff --git a/gcc/dumpfile.c b/gcc/dumpfile.c
+index 14b6dfea75e..abab401b3e7 100644
+--- a/gcc/dumpfile.c
++++ b/gcc/dumpfile.c
+@@ -2055,7 +2055,7 @@ temp_dump_context::temp_dump_context (bool forcibly_enable_optinfo,
+ 				      bool forcibly_enable_dumping,
+ 				      dump_flags_t test_pp_flags)
+ : m_context (),
+-  m_saved (&dump_context ().get ())
++  m_saved (&dump_context::get ())
+ {
+   dump_context::s_current = &m_context;
+   if (forcibly_enable_optinfo)
 diff --git a/gcc/dwarf2cfi.c b/gcc/dwarf2cfi.c
 index d6aed358484..3831979e26d 100644
 --- a/gcc/dwarf2cfi.c
@@ -15594,7 +18394,7 @@ index d6aed358484..3831979e26d 100644
        add_cfi (cfi);
      }
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
-index 30c4c7007ee..9ea109b3b61 100644
+index 30c4c7007ee..3c6833419c6 100644
 --- a/gcc/dwarf2out.c
 +++ b/gcc/dwarf2out.c
 @@ -23011,11 +23011,22 @@ gen_subprogram_die (tree decl, dw_die_ref context_die)
@@ -15622,6 +18422,81 @@ index 30c4c7007ee..9ea109b3b61 100644
  	      if (die == auto_die || die == decltype_auto_die)
  		add_type_attribute (subr_die, TREE_TYPE (TREE_TYPE (decl)),
  				    TYPE_UNQUALIFIED, false, context_die);
+@@ -27251,7 +27262,7 @@ static bool maybe_at_text_label_p = true;
+ /* One above highest N where .LVLN label might be equal to .Ltext0 label.  */
+ static unsigned int first_loclabel_num_not_at_text_label;
+ 
+-/* Look ahead for a real insn, or for a begin stmt marker.  */
++/* Look ahead for a real insn.  */
+ 
+ static rtx_insn *
+ dwarf2out_next_real_insn (rtx_insn *loc_note)
+@@ -27276,7 +27287,7 @@ dwarf2out_var_location (rtx_insn *loc_note)
+ {
+   char loclabel[MAX_ARTIFICIAL_LABEL_BYTES + 2];
+   struct var_loc_node *newloc;
+-  rtx_insn *next_real, *next_note;
++  rtx_insn *next_real;
+   rtx_insn *call_insn = NULL;
+   static const char *last_label;
+   static const char *last_postcall_label;
+@@ -27301,7 +27312,6 @@ dwarf2out_var_location (rtx_insn *loc_note)
+ 	      var_loc_p = false;
+ 
+ 	      next_real = dwarf2out_next_real_insn (call_insn);
+-	      next_note = NULL;
+ 	      cached_next_real_insn = NULL;
+ 	      goto create_label;
+ 	    }
+@@ -27329,7 +27339,6 @@ dwarf2out_var_location (rtx_insn *loc_note)
+ 		  var_loc_p = false;
+ 
+ 		  next_real = dwarf2out_next_real_insn (call_insn);
+-		  next_note = NULL;
+ 		  cached_next_real_insn = NULL;
+ 		  goto create_label;
+ 		}
+@@ -27358,22 +27367,28 @@ dwarf2out_var_location (rtx_insn *loc_note)
+ 	next_real = NULL;
+     }
+ 
+-  next_note = NEXT_INSN (loc_note);
+-  if (! next_note
+-      || next_note->deleted ()
+-      || ! NOTE_P (next_note)
+-      || (NOTE_KIND (next_note) != NOTE_INSN_VAR_LOCATION
+-	  && NOTE_KIND (next_note) != NOTE_INSN_BEGIN_STMT
+-	  && NOTE_KIND (next_note) != NOTE_INSN_INLINE_ENTRY))
+-    next_note = NULL;
+-
+   if (! next_real)
+     next_real = dwarf2out_next_real_insn (loc_note);
+ 
+-  if (next_note)
++  if (next_real)
+     {
+-      expected_next_loc_note = next_note;
+-      cached_next_real_insn = next_real;
++      rtx_insn *next_note = NEXT_INSN (loc_note);
++      while (next_note != next_real)
++	{
++	  if (! next_note->deleted ()
++	      && NOTE_P (next_note)
++	      && NOTE_KIND (next_note) == NOTE_INSN_VAR_LOCATION)
++	    break;
++	  next_note = NEXT_INSN (next_note);
++	}
++
++      if (next_note == next_real)
++	cached_next_real_insn = NULL;
++      else
++	{
++	  expected_next_loc_note = next_note;
++	  cached_next_real_insn = next_real;
++	}
+     }
+   else
+     cached_next_real_insn = NULL;
 diff --git a/gcc/early-remat.c b/gcc/early-remat.c
 index 122891c1edb..712e39033f4 100644
 --- a/gcc/early-remat.c
@@ -15636,10 +18511,35 @@ index 122891c1edb..712e39033f4 100644
  	  unsigned int gen = canon_candidate (next_candidate);
  
 diff --git a/gcc/fold-const.c b/gcc/fold-const.c
-index c717f24501e..64273c1c6bc 100644
+index c717f24501e..8388bde0434 100644
 --- a/gcc/fold-const.c
 +++ b/gcc/fold-const.c
-@@ -10376,11 +10376,11 @@ fold_binary_loc (location_t loc, enum tree_code code, tree type,
+@@ -5423,8 +5423,22 @@ fold_cond_expr_with_comparison (location_t loc, tree type,
+       case LT_EXPR:
+ 	if (TYPE_UNSIGNED (TREE_TYPE (arg1)))
+ 	  break;
+-	tem = fold_build1_loc (loc, ABS_EXPR, TREE_TYPE (arg1), arg1);
+-	return negate_expr (fold_convert_loc (loc, type, tem));
++	if (ANY_INTEGRAL_TYPE_P (TREE_TYPE (arg1))
++	    && !TYPE_OVERFLOW_WRAPS (TREE_TYPE (arg1)))
++	  {
++	    /* A <= 0 ? A : -A for A INT_MIN is valid, but -abs(INT_MIN)
++	       is not, invokes UB both in abs and in the negation of it.
++	       So, use ABSU_EXPR instead.  */
++	    tree utype = unsigned_type_for (TREE_TYPE (arg1));
++	    tem = fold_build1_loc (loc, ABSU_EXPR, utype, arg1);
++	    tem = negate_expr (tem);
++	    return fold_convert_loc (loc, type, tem);
++	  }
++	else
++	  {
++	    tem = fold_build1_loc (loc, ABS_EXPR, TREE_TYPE (arg1), arg1);
++	    return negate_expr (fold_convert_loc (loc, type, tem));
++	  }
+       default:
+ 	gcc_assert (TREE_CODE_CLASS (comp_code) == tcc_comparison);
+ 	break;
+@@ -10376,11 +10390,11 @@ fold_binary_loc (location_t loc, enum tree_code code, tree type,
  
        /* Convert -A / -B to A / B when the type is signed and overflow is
  	 undefined.  */
@@ -15653,7 +18553,7 @@ index c717f24501e..64273c1c6bc 100644
  	    fold_overflow_warning (("assuming signed overflow does not occur "
  				    "when distributing negation across "
  				    "division"),
-@@ -10390,11 +10390,11 @@ fold_binary_loc (location_t loc, enum tree_code code, tree type,
+@@ -10390,11 +10404,11 @@ fold_binary_loc (location_t loc, enum tree_code code, tree type,
  						    TREE_OPERAND (arg0, 0)),
  				  negate_expr (op1));
  	}
@@ -17348,6 +20248,31 @@ index 33bbb66674b..0bfe67a02ba 100644
  	{
  	  /* Now verify that BB's immediate dominator ends in a
  	     conditional as well.  */
+diff --git a/gcc/gimple.c b/gcc/gimple.c
+index 8fae60fb848..0c3321ff625 100644
+--- a/gcc/gimple.c
++++ b/gcc/gimple.c
+@@ -2860,8 +2860,8 @@ check_loadstore (gimple *, tree op, tree, void *data)
+ bool
+ infer_nonnull_range (gimple *stmt, tree op)
+ {
+-  return infer_nonnull_range_by_dereference (stmt, op)
+-    || infer_nonnull_range_by_attribute (stmt, op);
++  return (infer_nonnull_range_by_dereference (stmt, op)
++	  || infer_nonnull_range_by_attribute (stmt, op));
+ }
+ 
+ /* Return true if OP can be inferred to be non-NULL after STMT
+@@ -2873,7 +2873,8 @@ infer_nonnull_range_by_dereference (gimple *stmt, tree op)
+      non-NULL if -fdelete-null-pointer-checks is enabled.  */
+   if (!flag_delete_null_pointer_checks
+       || !POINTER_TYPE_P (TREE_TYPE (op))
+-      || gimple_code (stmt) == GIMPLE_ASM)
++      || gimple_code (stmt) == GIMPLE_ASM
++      || gimple_clobber_p (stmt))
+     return false;
+ 
+   if (walk_stmt_load_store_ops (stmt, (void *)op,
 diff --git a/gcc/gimplify.c b/gcc/gimplify.c
 index bd8bd6d7e06..e103e76b466 100644
 --- a/gcc/gimplify.c
@@ -17442,6 +20367,86 @@ index 25284936bc3..38e0ac12f7e 100644
    tree chain1 = gimple_call_chain (s1);
    tree chain2 = gimple_call_chain (s2);
    if ((chain1 && !chain2)
+diff --git a/gcc/omp-low.c b/gcc/omp-low.c
+index 813cefd69b9..9708e2de7fb 100644
+--- a/gcc/omp-low.c
++++ b/gcc/omp-low.c
+@@ -9050,7 +9050,7 @@ lower_omp_taskreg (gimple_stmt_iterator *gsi_p, omp_context *ctx)
+     }
+   lower_rec_input_clauses (clauses, &par_ilist, &par_olist, ctx, NULL);
+   lower_omp (&par_body, ctx);
+-  if (gimple_code (stmt) == GIMPLE_OMP_PARALLEL)
++  if (gimple_code (stmt) != GIMPLE_OMP_TASK)
+     lower_reduction_clauses (clauses, &par_rlist, ctx);
+ 
+   /* Declare all the variables created by mapping and the variables
+diff --git a/gcc/omp-simd-clone.c b/gcc/omp-simd-clone.c
+index e865828f569..f403c0a2b9c 100644
+--- a/gcc/omp-simd-clone.c
++++ b/gcc/omp-simd-clone.c
+@@ -812,6 +812,7 @@ simd_clone_init_simd_arrays (struct cgraph_node *node,
+ struct modify_stmt_info {
+   ipa_parm_adjustment_vec adjustments;
+   gimple *stmt;
++  gimple *after_stmt;
+   /* True if the parent statement was modified by
+      ipa_simd_modify_stmt_ops.  */
+   bool modified;
+@@ -892,7 +893,10 @@ ipa_simd_modify_stmt_ops (tree *tp, int *walk_subtrees, void *data)
+       gimple_stmt_iterator gsi;
+       if (gimple_code (info->stmt) == GIMPLE_PHI)
+ 	{
+-	  gsi = gsi_after_labels (single_succ (ENTRY_BLOCK_PTR_FOR_FN (cfun)));
++	  if (info->after_stmt)
++	    gsi = gsi_for_stmt (info->after_stmt);
++	  else
++	    gsi = gsi_after_labels (single_succ (ENTRY_BLOCK_PTR_FOR_FN (cfun)));
+ 	  /* Cache SSA_NAME for next time.  */
+ 	  if (cand
+ 	      && TREE_CODE (*orig_tp) == ADDR_EXPR
+@@ -901,7 +905,12 @@ ipa_simd_modify_stmt_ops (tree *tp, int *walk_subtrees, void *data)
+ 	}
+       else
+ 	gsi = gsi_for_stmt (info->stmt);
+-      gsi_insert_before (&gsi, stmt, GSI_SAME_STMT);
++      if (info->after_stmt)
++	gsi_insert_after (&gsi, stmt, GSI_SAME_STMT);
++      else
++	gsi_insert_before (&gsi, stmt, GSI_SAME_STMT);
++      if (gimple_code (info->stmt) == GIMPLE_PHI)
++	info->after_stmt = stmt;
+       *orig_tp = repl;
+     }
+   else if (!useless_type_conversion_p (TREE_TYPE (*tp), TREE_TYPE (repl)))
+@@ -1006,6 +1015,7 @@ ipa_simd_modify_function_body (struct cgraph_node *node,
+ 	  gphi *phi = as_a <gphi *> (gsi_stmt (gsi));
+ 	  int i, n = gimple_phi_num_args (phi);
+ 	  info.stmt = phi;
++	  info.after_stmt = NULL;
+ 	  struct walk_stmt_info wi;
+ 	  memset (&wi, 0, sizeof (wi));
+ 	  info.modified = false;
+@@ -1031,6 +1041,7 @@ ipa_simd_modify_function_body (struct cgraph_node *node,
+ 	{
+ 	  gimple *stmt = gsi_stmt (gsi);
+ 	  info.stmt = stmt;
++	  info.after_stmt = NULL;
+ 	  struct walk_stmt_info wi;
+ 
+ 	  memset (&wi, 0, sizeof (wi));
+diff --git a/gcc/optabs.c b/gcc/optabs.c
+index 7d7efe0a4a2..f469e809939 100644
+--- a/gcc/optabs.c
++++ b/gcc/optabs.c
+@@ -5559,6 +5559,8 @@ expand_vec_perm_const (machine_mode mode, rtx v0, rtx v1,
+       if (shift_amt)
+ 	{
+ 	  struct expand_operand ops[3];
++	  if (shift_amt == const0_rtx)
++	    return v0;
+ 	  if (shift_code != CODE_FOR_nothing)
+ 	    {
+ 	      create_output_operand (&ops[0], target, mode);
 diff --git a/gcc/params.def b/gcc/params.def
 index 8e4887e50a2..e23a4530bfa 100644
 --- a/gcc/params.def
@@ -17578,11 +20583,262 @@ index 7916344c584..3e969e52176 100644
  extern void incr_ticks_for_insn (rtx_insn *);
  extern void mark_end_of_function_resources (rtx, bool);
  extern void init_resource_info (rtx_insn *);
+diff --git a/gcc/stor-layout.c b/gcc/stor-layout.c
+index 5d6f2e0166c..125fc66b5ce 100644
+--- a/gcc/stor-layout.c
++++ b/gcc/stor-layout.c
+@@ -1315,7 +1315,8 @@ place_field (record_layout_info rli, tree field)
+ 	 Bump the cumulative size to multiple of field alignment.  */
+ 
+       if (!targetm.ms_bitfield_layout_p (rli->t)
+-          && DECL_SOURCE_LOCATION (field) != BUILTINS_LOCATION)
++	  && DECL_SOURCE_LOCATION (field) != BUILTINS_LOCATION
++	  && !TYPE_ARTIFICIAL (rli->t))
+ 	warning (OPT_Wpadded, "padding struct to align %q+D", field);
+ 
+       /* If the alignment is still within offset_align, just align
+@@ -1749,7 +1750,8 @@ finalize_record_size (record_layout_info rli)
+ 
+   if (TREE_CONSTANT (unpadded_size)
+       && simple_cst_equal (unpadded_size, TYPE_SIZE (rli->t)) == 0
+-      && input_location != BUILTINS_LOCATION)
++      && input_location != BUILTINS_LOCATION
++      && !TYPE_ARTIFICIAL (rli->t))
+     warning (OPT_Wpadded, "padding struct size to alignment boundary");
+ 
+   if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..e84d6b6ca41 100644
+index e132f2657ef..086473d9e40 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1193 @@
+@@ -1,3 +1,1420 @@
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-09-03  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/96862
++	* g++.dg/cpp1z/constexpr-96862.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-25  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/96722
++	* g++.dg/opt/pr96722.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-18  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/96571
++	* gcc.dg/Wunused-var-4.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-11  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/96545
++	* c-c++-common/pr96545.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-04  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/96426
++	* gcc.c-torture/compile/pr96426.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-07-15  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/96174
++	* gcc.target/i386/avx512f-vcmppd-3.c: New test.
++	* gcc.target/i386/avx512f-vcmpps-3.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-07-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/95857
++	* gcc.dg/pr95857.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-06-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/95903
++	* c-c++-common/pr95903.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-06-24  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/95810
++	* gcc.dg/ubsan/pr95810.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/95328
++	* g++.dg/cpp1z/decomp53.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-14  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/95108
++	* gcc.dg/gomp/pr95108.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-13  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/95080
++	* g++.dg/opt/pr95080.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94951
++	* g++.dg/warn/Wstrict-aliasing-bogus-tmpl.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/94873
++	* gcc.dg/pr94873.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94842
++	* gcc.dg/pr94842.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-28  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94809
++	* gcc.c-torture/execute/pr94809.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94780
++	* gcc.dg/pr94780.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94755
++	* c-c++-common/pr94755.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-24  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94742
++	* g++.dg/warn/Wreturn-type-12.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-23  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94705
++	* gcc.dg/pr94705.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/94641
++	* c-c++-common/ubsan/pr94641.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/94618
++	* g++.dg/opt/pr94618.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-17  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94621
++	* gcc.c-torture/compile/pr94621.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-16  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94571
++	* g++.dg/cpp1z/decomp51.C: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR tree-optimization/94524
++	* gcc.c-torture/execute/pr94524-1.c: New test.
++	* gcc.c-torture/execute/pr94524-2.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/94438
++	* gcc.target/i386/avx512bw-pr94438.c: New test.
++	* gcc.target/i386/avx512vlbw-pr94438.c: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-04-08  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c++/94325
++	* g++.dg/ubsan/vptr-15.C: New test.
++
++2020-09-16  Sylvia Taylor  <sylvia.taylor@arm.com>
++
++	Backported from master:
++	2019-08-22  Sylvia Taylor  <sylvia.taylor@arm.com>
++
++	* gcc.target/aarch64/advsimd-intrinsics/vld1x4.c: New test.
++	* gcc.target/aarch64/advsimd-intrinsics/vst1x4.c: New test.
++
 +2020-09-15  Will Schmidt  <will_schmidt@vnet.ibm.com>
 +
 +	* gcc.target/powerpc/pr96139-a.c: New test.
@@ -18848,6 +22104,102 @@ index 00000000000..0611921295c
 +{
 +  *y = (({ __builtin_convertvector (*x, V); }));
 +}
+diff --git a/gcc/testsuite/c-c++-common/pr94755.c b/gcc/testsuite/c-c++-common/pr94755.c
+new file mode 100644
+index 00000000000..3520864c77a
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/pr94755.c
+@@ -0,0 +1,11 @@
++/* PR c/94755 */
++/* { dg-do compile } */
++
++extern void foo (void);
++
++void
++bar (double x)
++{
++  if (x == __builtin_speculation_safe_value ())	/* { dg-error "too few arguments to function" } */
++    foo ();
++}
+diff --git a/gcc/testsuite/c-c++-common/pr95903.c b/gcc/testsuite/c-c++-common/pr95903.c
+new file mode 100644
+index 00000000000..6e9f68e200f
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/pr95903.c
+@@ -0,0 +1,19 @@
++/* PR middle-end/95903 */
++/* { dg-do compile { target lp64 } } */
++/* { dg-options "-O2 -fwrapv -fdump-tree-optimized" } */
++/* Verify that for -fwrapv the + 1 addition is performed in the parameter's
++   type before sign extending it.  */
++/* { dg-final { scan-tree-dump-times "off_\[0-9]+\\\(D\\\) \\+ 1" 2 "optimized" } } */
++
++char
++foo (const char *ptr, int off)
++{
++  off += 1;
++  return ptr[off];
++}
++
++char
++bar (const char *ptr, int off)
++{
++  return ptr[off + 1];
++}
+diff --git a/gcc/testsuite/c-c++-common/pr96545.c b/gcc/testsuite/c-c++-common/pr96545.c
+new file mode 100644
+index 00000000000..bc6b0cf345c
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/pr96545.c
+@@ -0,0 +1,31 @@
++/* PR c/96545 */
++/* { dg-do compile } */
++
++extern char x[], y[], z[];
++struct S;
++extern struct S s, t, u;
++int v, w;
++
++void
++foo (void)
++{
++  __atomic_exchange (&x, &y, &z, 0);	/* { dg-error "must be a pointer to a complete type" } */
++}
++
++void
++bar (void)
++{
++  __atomic_exchange (&s, &t, &u, 0);	/* { dg-error "must be a pointer to a complete type" } */
++}
++
++void
++baz (void)
++{
++  __atomic_exchange (&v, &t, &w, 0);	/* { dg-error "size mismatch in argument 2 of" } */
++}
++
++void
++qux (void)
++{
++  __atomic_exchange (&v, &w, &t, 0);	/* { dg-error "size mismatch in argument 3 of" } */
++}
+diff --git a/gcc/testsuite/c-c++-common/ubsan/pr94641.c b/gcc/testsuite/c-c++-common/ubsan/pr94641.c
+new file mode 100644
+index 00000000000..b41cb06164d
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/ubsan/pr94641.c
+@@ -0,0 +1,11 @@
++/* PR c/94641 */
++/* { dg-do compile } */
++/* { dg-options "-fsanitize=undefined -Wpadded" } */
++
++void foo (void *) __attribute__((nonnull));
++
++void
++bar (void *p)
++{
++  foo (p);
++}
 diff --git a/gcc/testsuite/g++.dg/abi/mangle72.C b/gcc/testsuite/g++.dg/abi/mangle72.C
 index 656a0cae403..308865bd2c6 100644
 --- a/gcc/testsuite/g++.dg/abi/mangle72.C
@@ -19245,6 +22597,82 @@ index 00000000000..2fc71de8d95
 +template <typename T> struct S
 +{ template <typename V> S (T, V, long = 0); };
 +using U = decltype(S{0, 4u});
+diff --git a/gcc/testsuite/g++.dg/cpp1z/constexpr-96862.C b/gcc/testsuite/g++.dg/cpp1z/constexpr-96862.C
+new file mode 100644
+index 00000000000..0b5c2e81bd1
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/constexpr-96862.C
+@@ -0,0 +1,20 @@
++// PR c++/96862
++// { dg-do compile { target c++17 } }
++// { dg-additional-options "-frounding-math" }
++
++constexpr double a = 0x1.0p+100 + 0x1.0p-100;
++const double b = 0x1.0p+100 + 0x1.0p-100;
++const double &&c = 0x1.0p+100 + 0x1.0p-100;
++static_assert (0x1.0p+100 + 0x1.0p-100 == 0x1.0p+100, "");
++
++void
++foo ()
++{
++  constexpr double d = 0x1.0p+100 + 0x1.0p-100;
++  const double e = 0x1.0p+100 + 0x1.0p-100;
++  const double &&f = 0x1.0p+100 + 0x1.0p-100;
++  static_assert (0x1.0p+100 + 0x1.0p-100 == 0x1.0p+100, "");
++}
++
++const double &g = a;
++const double &h = b;
+diff --git a/gcc/testsuite/g++.dg/cpp1z/decomp51.C b/gcc/testsuite/g++.dg/cpp1z/decomp51.C
+new file mode 100644
+index 00000000000..fe8b998abc8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/decomp51.C
+@@ -0,0 +1,16 @@
++// PR c++/94571
++// { dg-do compile { target c++17 } }
++
++void
++foo ()
++{
++  int e[2], f[2];
++  auto [a,b] = e, [c,d] = f;	// { dg-error "expected ';' before ',' token" }
++}
++
++void
++bar ()
++{
++  int e[2];
++  auto [a, b] = e );		// { dg-error "expected ';' before '\\\)' token" }
++}
+diff --git a/gcc/testsuite/g++.dg/cpp1z/decomp53.C b/gcc/testsuite/g++.dg/cpp1z/decomp53.C
+new file mode 100644
+index 00000000000..b34e6ac7250
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/cpp1z/decomp53.C
+@@ -0,0 +1,22 @@
++// PR c++/95328
++// { dg-do compile { target c++11 } }
++// { dg-options "" }
++
++template <typename T>
++struct S
++{
++  int a, b;
++};
++
++template <typename T>
++void
++foo ()
++{
++  auto [a, b] = S<int>();	// { dg-warning "structured bindings only available with" "" { target c++14_down } }
++}
++
++int
++main ()
++{
++  foo<int> ();
++}
 diff --git a/gcc/testsuite/g++.dg/cpp1z/fold11.C b/gcc/testsuite/g++.dg/cpp1z/fold11.C
 new file mode 100644
 index 00000000000..09a30555eee
@@ -19742,6 +23170,110 @@ index 00000000000..d0394eab891
 +  e = 5;
 +  struct e j;
 +}
+diff --git a/gcc/testsuite/g++.dg/opt/pr94618.C b/gcc/testsuite/g++.dg/opt/pr94618.C
+new file mode 100644
+index 00000000000..e6a81d2c5ab
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr94618.C
+@@ -0,0 +1,25 @@
++// PR rtl-optimization/94618
++// { dg-do compile { target c++11 } }
++// { dg-options "-O2 -fnon-call-exceptions -fcompare-debug" }
++
++struct S
++{
++  int a, b, c;
++  int foo () noexcept { return a; }
++  int bar () noexcept { return b; }
++  void baz (int);
++  void qux () { if (c) for (int x = foo (); x != bar (); ) baz (x); }
++};
++
++struct T
++{
++  S s;
++  void foo ();
++};
++
++void
++T::foo ()
++{
++  s.qux ();
++  s.qux ();
++}
+diff --git a/gcc/testsuite/g++.dg/opt/pr95080.C b/gcc/testsuite/g++.dg/opt/pr95080.C
+new file mode 100644
+index 00000000000..2da7df73b72
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr95080.C
+@@ -0,0 +1,41 @@
++// PR debug/95080
++// { dg-do compile }
++// { dg-options "-Og -fcse-follow-jumps -fnon-call-exceptions -fcompare-debug" }
++
++char *a;
++
++void baz ();
++
++static inline bool
++bar ()
++{
++  int j = a[0] - 1;
++  switch (j)
++    {
++    case 0:
++    case 2:
++      return true;
++    default:
++      return false;
++    }
++}
++
++static inline bool
++foo ()
++{
++  if (bar ())
++    baz ();
++  return 0;
++}
++
++struct S
++{
++  int h;
++   ~S ();
++};
++
++S::~S ()
++{
++  if (a[0] == 0)
++    foo () != h;
++}
+diff --git a/gcc/testsuite/g++.dg/opt/pr96722.C b/gcc/testsuite/g++.dg/opt/pr96722.C
+new file mode 100644
+index 00000000000..408dfeea8a0
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr96722.C
+@@ -0,0 +1,20 @@
++// PR tree-optimization/96722
++// { dg-do run }
++// { dg-options "-O2" }
++
++struct S { int s; ~S () {} };
++
++void
++foo (S *a)
++{
++  if (a)
++    return;
++  a->~S ();
++}
++
++int
++main ()
++{
++  S s;
++  foo (&s);
++}
 diff --git a/gcc/testsuite/g++.dg/pr93674.C b/gcc/testsuite/g++.dg/pr93674.C
 new file mode 100644
 index 00000000000..8c59f1b0079
@@ -20031,6 +23563,55 @@ index 00000000000..d1bea6dffaa
 +
 +    return 0;
 +}
+diff --git a/gcc/testsuite/g++.dg/ubsan/vptr-15.C b/gcc/testsuite/g++.dg/ubsan/vptr-15.C
+new file mode 100644
+index 00000000000..f6f36a58bab
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/ubsan/vptr-15.C
+@@ -0,0 +1,14 @@
++// PR c++/94325
++// { dg-do run { target c++11 } }
++// { dg-options "-fsanitize=vptr -fno-sanitize-recover=vptr" }
++
++struct A { virtual ~A () = default; };
++struct B : public virtual A {};
++struct C : public B {};
++struct D : public C {};
++
++int
++main ()
++{
++  D a;
++}
+diff --git a/gcc/testsuite/g++.dg/warn/Wreturn-type-12.C b/gcc/testsuite/g++.dg/warn/Wreturn-type-12.C
+new file mode 100644
+index 00000000000..b35d3faafb0
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wreturn-type-12.C
+@@ -0,0 +1,23 @@
++// PR c++/94742
++// { dg-do compile { target c++11 } }
++// { dg-options "-Wreturn-type" }
++
++template <class T>
++[[noreturn]] void
++foo (T const &t, char const *)
++{
++  throw T (t);
++}
++
++template <class U>
++int
++bar ()
++{
++  foo (42, __FUNCTION__);
++}	// { dg-bogus "no return statement in function returning non-void" }
++
++int
++main ()
++{
++  bar<long>();
++}
 diff --git a/gcc/testsuite/g++.dg/warn/Wshadow-compatible-local-3.C b/gcc/testsuite/g++.dg/warn/Wshadow-compatible-local-3.C
 new file mode 100644
 index 00000000000..045dc75563e
@@ -20045,6 +23626,24 @@ index 00000000000..045dc75563e
 +  bool ready;
 +  enum class State { ready };
 +}
+diff --git a/gcc/testsuite/g++.dg/warn/Wstrict-aliasing-bogus-tmpl.C b/gcc/testsuite/g++.dg/warn/Wstrict-aliasing-bogus-tmpl.C
+new file mode 100644
+index 00000000000..d0375042e42
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/warn/Wstrict-aliasing-bogus-tmpl.C
+@@ -0,0 +1,12 @@
++// PR c++/94951
++// { dg-do compile }
++// { dg-options "-O2 -Wall" }
++
++struct A { int a; };
++template <int N>
++struct B : public A
++{
++  static B<N> foo () { B<N> t; t.a = 4; return t; }	// { dg-bogus "dereferencing type-punned pointer will break strict-aliasing rules" }
++};
++
++B<0> b = B<0>::foo ();
 diff --git a/gcc/testsuite/g++.dg/warn/Wunused-var-26.C b/gcc/testsuite/g++.dg/warn/Wunused-var-26.C
 index b3e020b6007..89c53de88a4 100644
 --- a/gcc/testsuite/g++.dg/warn/Wunused-var-26.C
@@ -20426,6 +24025,44 @@ index 00000000000..6e20a4168de
 +{
 +  *x = *x >> (unsigned int) y;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr94621.c b/gcc/testsuite/gcc.c-torture/compile/pr94621.c
+new file mode 100644
+index 00000000000..0d98dfd53a5
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr94621.c
+@@ -0,0 +1,16 @@
++/* PR tree-optimization/94621 */
++
++struct S { int c, e[]; };
++
++static inline int
++foo (struct S *m, int r, int c)
++{
++  int (*a)[][m->c] = (int (*)[][m->c])&m->e;
++  return (*a)[r][c];
++}
++
++void
++bar (struct S *a)
++{
++  foo (a, 0, 0);
++}
+diff --git a/gcc/testsuite/gcc.c-torture/compile/pr96426.c b/gcc/testsuite/gcc.c-torture/compile/pr96426.c
+new file mode 100644
+index 00000000000..bd573fe5366
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/compile/pr96426.c
+@@ -0,0 +1,10 @@
++/* PR middle-end/96426 */
++
++typedef long long V __attribute__((vector_size(16)));
++typedef double W __attribute__((vector_size(16)));
++
++void
++foo (V *v)
++{
++  __builtin_convertvector (*v, W);
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c b/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c
 new file mode 100644
 index 00000000000..f768af0ab02
@@ -20536,6 +24173,62 @@ index 00000000000..6c806bbd90c
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94524-1.c b/gcc/testsuite/gcc.c-torture/execute/pr94524-1.c
+new file mode 100644
+index 00000000000..e7365ad97fd
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr94524-1.c
+@@ -0,0 +1,19 @@
++/* PR tree-optimization/94524 */
++
++typedef signed char __attribute__ ((__vector_size__ (16))) V;
++
++static __attribute__ ((__noinline__, __noclone__)) V
++foo (V c)
++{
++  c %= (signed char) -19;
++  return (V) c;
++}
++
++int
++main ()
++{
++  V x = foo ((V) { 31 });
++  if (x[0] != 12)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94524-2.c b/gcc/testsuite/gcc.c-torture/execute/pr94524-2.c
+new file mode 100644
+index 00000000000..9c74b7be403
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr94524-2.c
+@@ -0,0 +1,25 @@
++/* PR tree-optimization/94524 */
++
++typedef signed char __attribute__ ((__vector_size__ (16))) V;
++
++static __attribute__ ((__noinline__, __noclone__)) V
++foo (V c)
++{
++  c %= (signed char) -128;
++  return (V) c;
++}
++
++int
++main ()
++{
++  V x = foo ((V) { -128 });
++  if (x[0] != 0)
++    __builtin_abort ();
++  x = foo ((V) { -127 });
++  if (x[0] != -127)
++    __builtin_abort ();
++  x = foo ((V) { 127 });
++  if (x[0] != 127)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94591.c b/gcc/testsuite/gcc.c-torture/execute/pr94591.c
 new file mode 100644
 index 00000000000..42271ad8bce
@@ -20574,6 +24267,63 @@ index 00000000000..42271ad8bce
 +  if (di[0] != 63 || di[1] != 38)
 +    abort();
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr94809.c b/gcc/testsuite/gcc.c-torture/execute/pr94809.c
+new file mode 100644
+index 00000000000..ce55e8f92d4
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr94809.c
+@@ -0,0 +1,12 @@
++/* PR tree-optimization/94809 */
++
++int
++main ()
++{
++  int a = 0;
++  unsigned long long one = 1;
++  ((-1ULL / one) < a++, one);
++  if (a != 1)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/Wunused-var-4.c b/gcc/testsuite/gcc.dg/Wunused-var-4.c
+new file mode 100644
+index 00000000000..08ddcf4407e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/Wunused-var-4.c
+@@ -0,0 +1,33 @@
++/* PR c/96571 */
++/* { dg-do compile } */
++/* { dg-options "-std=c99 -O2 -Wunused-but-set-variable" } */
++
++enum E { V };
++
++int
++foo (void)
++{
++  enum E v;				/* { dg-bogus "set but not used" } */
++  return _Generic (v, enum E : 0);
++}
++
++int
++bar (void)
++{
++  int a = 0;				/* { dg-bogus "set but not used" } */
++  return _Generic (0, int : a);
++}
++
++int
++baz (void)
++{
++  int a;				/* { dg-bogus "set but not used" } */
++  return _Generic (0, long long : a, int : 0);
++}
++
++int
++qux (void)
++{
++  int a;				/* { dg-bogus "set but not used" } */
++  return _Generic (0, long long : a, default: 0);
++}
 diff --git a/gcc/testsuite/gcc.dg/dfp/pr94111.c b/gcc/testsuite/gcc.dg/dfp/pr94111.c
 new file mode 100644
 index 00000000000..ea3a132270a
@@ -20607,6 +24357,30 @@ index 453266ed84e..e63a2f5c62d 100644
  /* { dg-additional-options "-mavx -mno-avx2" { target i?86-*-* x86_64-*-* } } */
  /* { dg-additional-options "-mvsx" { target powerpc_vsx_ok } } */
  
+diff --git a/gcc/testsuite/gcc.dg/gomp/pr95108.c b/gcc/testsuite/gcc.dg/gomp/pr95108.c
+new file mode 100644
+index 00000000000..b492333686b
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/gomp/pr95108.c
+@@ -0,0 +1,18 @@
++/* PR middle-end/95108 */
++/* { dg-do compile { target vect_simd_clones } } */
++/* { dg-options "-O2 -fopenmp-simd -w" } */
++
++int *v;
++
++#pragma omp declare simd
++void
++foo (int x)
++{
++  int *a = &x + 1;
++
++  for (;;)
++    {
++      *v = *a;
++      a = v;
++    }
++}
 diff --git a/gcc/testsuite/gcc.dg/pr93399.c b/gcc/testsuite/gcc.dg/pr93399.c
 new file mode 100644
 index 00000000000..3d9299018be
@@ -20875,6 +24649,94 @@ index 00000000000..1267b822098
 +      __sync_val_compare_and_swap (&g, -1, f);
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.dg/pr94705.c b/gcc/testsuite/gcc.dg/pr94705.c
+new file mode 100644
+index 00000000000..96392ab60ee
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94705.c
+@@ -0,0 +1,13 @@
++/* PR c/94705 */
++/* { dg-do compile } */
++/* { dg-options "" } */
++
++void foo ();
++
++int
++bar (void)
++{
++  foo (baz);	/* { dg-error "'baz' undeclared" } */
++		/* { dg-message "only once" "" { target *-*-* } .-1 } */
++  void __attribute__ ((noinline)) baz (void);
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94780.c b/gcc/testsuite/gcc.dg/pr94780.c
+new file mode 100644
+index 00000000000..c4b723e24b2
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94780.c
+@@ -0,0 +1,13 @@
++/* PR target/94780 */
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++_Atomic double x;
++
++double
++foo (void)
++{
++  double bar () { return x; }
++  x /= 3;
++  return bar ();
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94842.c b/gcc/testsuite/gcc.dg/pr94842.c
+new file mode 100644
+index 00000000000..33d9d42644c
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94842.c
+@@ -0,0 +1,11 @@
++/* PR c/94842 */
++/* { dg-do compile } */
++/* { dg-options "" } */
++
++_Atomic float x = 5;
++
++void
++foo (void)
++{
++  void bar (float y[(int) (x += 2)]) {}
++}
+diff --git a/gcc/testsuite/gcc.dg/pr94873.c b/gcc/testsuite/gcc.dg/pr94873.c
+new file mode 100644
+index 00000000000..36152176fbf
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr94873.c
+@@ -0,0 +1,27 @@
++/* PR rtl-optimization/94873 */
++/* { dg-do run { target int128 } } */
++/* { dg-options "-O -fno-merge-constants -fno-split-wide-types -fno-tree-fre" } */
++
++__attribute__((noipa)) void
++foo (const char *p, int q)
++{
++  if (p[0] != '%' || p[1] != '0' || p[2] != '2' || p[3] != 'x' || p[4] != '\0')
++    __builtin_abort ();
++#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
++  if ((unsigned char) q != 0x95)
++    __builtin_abort ();
++#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
++  if ((unsigned char) q != 0)
++    __builtin_abort ();
++#endif
++}
++
++int
++main ()
++{
++  union U { __int128 a; char b[sizeof (__int128)]; };
++  char x = ((union U){ .a = 0xF4409395252B9560ULL}).b[1];
++  for (unsigned i = 0; i < sizeof (x); i++)
++    foo ("%02x", i[(volatile unsigned char *) &x]);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/pr95133.c b/gcc/testsuite/gcc.dg/pr95133.c
 new file mode 100644
 index 00000000000..523decaf90e
@@ -20894,6 +24756,49 @@ index 00000000000..523decaf90e
 +  }
 +  *xp++ = *ip;
 +  goto *(&&base + *ip);
++}
+diff --git a/gcc/testsuite/gcc.dg/pr95857.c b/gcc/testsuite/gcc.dg/pr95857.c
+new file mode 100644
+index 00000000000..41506ea6893
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr95857.c
+@@ -0,0 +1,37 @@
++/* PR tree-optimization/95857 */
++/* { dg-do compile } */
++/* { dg-options "-O2" } */
++
++struct E { int e; };
++int bar (void), baz (void);
++void qux (void *);
++
++void
++foo (int x)
++{
++  struct E a = { 0 };
++  struct E i = { 0 };
++  qux (&&lab2);
++  if (baz ())
++    i.e = 1;
++  else
++    a.e = -2;
++  switch (a.e)
++    {
++    case -2:
++    lab1:
++      switch (i.e)
++	{
++	case -3:
++	case 2:
++	  if (i.e-- != 2)
++	    __builtin_unreachable ();
++	lab2:
++	  baz ();
++	  goto lab1;
++	case 0:
++	  bar ();
++	}
++      break;
++    }
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr94206.c b/gcc/testsuite/gcc.dg/torture/pr94206.c
 new file mode 100644
@@ -21381,6 +25286,25 @@ index 00000000000..76f831f26e2
 +    foo ();
 +  while (*c)
 +    sigsetjmp (buf, 0);
++}
+diff --git a/gcc/testsuite/gcc.dg/ubsan/pr95810.c b/gcc/testsuite/gcc.dg/ubsan/pr95810.c
+new file mode 100644
+index 00000000000..535ace69089
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/ubsan/pr95810.c
+@@ -0,0 +1,13 @@
++/* PR middle-end/95810 */
++/* { dg-do run } */
++/* { dg-options "-fsanitize=undefined -fno-sanitize-recover=undefined" } */
++
++int
++main ()
++{
++  int x = -__INT_MAX__ - 1;
++  x = (x <= 0 ? x : -x);
++  if (x != -__INT_MAX__ - 1)
++    __builtin_abort ();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/vect/bb-slp-over-widen-2.c b/gcc/testsuite/gcc.dg/vect/bb-slp-over-widen-2.c
 index 3750fb79c12..042b7e9ea1b 100644
@@ -23448,6 +27372,25 @@ index 00000000000..75b7a7bf313
 +  if (x[0] != ((__int128)1 << 64 | 1) || x[1] != 0)
 +    abort ();
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512bw-pr94438.c b/gcc/testsuite/gcc.target/i386/avx512bw-pr94438.c
+new file mode 100644
+index 00000000000..9e56f2846ee
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512bw-pr94438.c
+@@ -0,0 +1,13 @@
++/* PR target/94438 */
++/* { dg-do compile { target int128 } } */
++/* { dg-options "-mavx512bw" } */
++
++typedef __attribute__ ((__vector_size__ (4 * sizeof (__int128)))) __int128 V;
++void bar (V);
++
++void
++foo (V w)
++{
++  V v = 0 <= (0 >= w);
++  bar (v);
++}
 diff --git a/gcc/testsuite/gcc.target/i386/avx512bw-pr94500.c b/gcc/testsuite/gcc.target/i386/avx512bw-pr94500.c
 new file mode 100644
 index 00000000000..7effdac5a17
@@ -23586,6 +27529,26 @@ index 00000000000..2719108a411
 +{
 +  return _mm512_div_ps (x, _mm512_set1_ps (*y));
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-vcmppd-3.c b/gcc/testsuite/gcc.target/i386/avx512f-vcmppd-3.c
+new file mode 100644
+index 00000000000..3d36eca78fa
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-vcmppd-3.c
+@@ -0,0 +1,4 @@
++/* { dg-do compile } */
++/* { dg-options "-O0 -mavx512f" } */
++
++#include "avx512f-vcmppd-1.c"
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-vcmpps-3.c b/gcc/testsuite/gcc.target/i386/avx512f-vcmpps-3.c
+new file mode 100644
+index 00000000000..af797aad2de
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-vcmpps-3.c
+@@ -0,0 +1,4 @@
++/* { dg-do compile } */
++/* { dg-options "-O0 -mavx512f" } */
++
++#include "avx512f-vcmpps-1.c"
 diff --git a/gcc/testsuite/gcc.target/i386/avx512vl-pr93069.c b/gcc/testsuite/gcc.target/i386/avx512vl-pr93069.c
 new file mode 100644
 index 00000000000..b38b5ad32bb
@@ -23603,6 +27566,25 @@ index 00000000000..b38b5ad32bb
 +foo (int x, int y)
 +{
 +  return x == 0 ? x : y;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/avx512vlbw-pr94438.c b/gcc/testsuite/gcc.target/i386/avx512vlbw-pr94438.c
+new file mode 100644
+index 00000000000..a0c52e426c8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512vlbw-pr94438.c
+@@ -0,0 +1,13 @@
++/* PR target/94438 */
++/* { dg-do compile { target int128 } } */
++/* { dg-options "-mavx512bw -mavx512vl" } */
++
++typedef __attribute__ ((__vector_size__ (sizeof (__int128)))) __int128 V;
++void bar (V);
++
++void
++foo (V w)
++{
++  V v = 0 <= (0 >= w);
++  bar (v);
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr93654.c b/gcc/testsuite/gcc.target/i386/pr93654.c
 new file mode 100644
@@ -23776,6 +27758,24 @@ index 00000000000..34a1e069eac
 +foo (V v)
 +{
 +  return __builtin_ia32_movq128 (v);  /* { dg-error "" } */
++}
+diff --git a/gcc/testsuite/gcc.target/i386/xsave-avx-1.c b/gcc/testsuite/gcc.target/i386/xsave-avx-1.c
+new file mode 100644
+index 00000000000..ca87a791446
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/xsave-avx-1.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-mxsave -mno-avx" } */
++
++#include <immintrin.h>
++
++extern int m;
++
++void
++avx_imply_save (void)
++{
++  _xgetbv (m);
 +}
 diff --git a/gcc/testsuite/gcc.target/powerpc/builtins-1-p9-runnable.c b/gcc/testsuite/gcc.target/powerpc/builtins-1-p9-runnable.c
 index 0e4ab48f555..0e6eeff4b7e 100644
@@ -29003,6 +33003,87 @@ index ea9a50ccb27..79482f9b69c 100644
      eval [string map [list FUNC $aarch64_ext] {
  	proc check_effective_target_aarch64_asm_FUNC_ok { } {
  	  if { [istarget aarch64*-*-*] } {
+diff --git a/gcc/tree-cfg.c b/gcc/tree-cfg.c
+index 0c4ae81aa05..e5dfd17ded9 100644
+--- a/gcc/tree-cfg.c
++++ b/gcc/tree-cfg.c
+@@ -1726,6 +1726,7 @@ group_case_labels_stmt (gswitch *stmt)
+   int old_size = gimple_switch_num_labels (stmt);
+   int i, next_index, new_size;
+   basic_block default_bb = NULL;
++  hash_set<tree> *removed_labels = NULL;
+ 
+   default_bb = gimple_switch_default_bb (cfun, stmt);
+ 
+@@ -1742,8 +1743,11 @@ group_case_labels_stmt (gswitch *stmt)
+       base_bb = label_to_block (cfun, CASE_LABEL (base_case));
+ 
+       /* Discard cases that have the same destination as the default case or
+-	 whose destiniation blocks have already been removed as unreachable.  */
+-      if (base_bb == NULL || base_bb == default_bb)
++	 whose destination blocks have already been removed as unreachable.  */
++      if (base_bb == NULL
++	  || base_bb == default_bb
++	  || (removed_labels
++	      && removed_labels->contains (CASE_LABEL (base_case))))
+ 	{
+ 	  i++;
+ 	  continue;
+@@ -1766,10 +1770,13 @@ group_case_labels_stmt (gswitch *stmt)
+ 	  /* Merge the cases if they jump to the same place,
+ 	     and their ranges are consecutive.  */
+ 	  if (merge_bb == base_bb
++	      && (removed_labels == NULL
++		  || !removed_labels->contains (CASE_LABEL (merge_case)))
+ 	      && wi::to_wide (CASE_LOW (merge_case)) == bhp1)
+ 	    {
+-	      base_high = CASE_HIGH (merge_case) ?
+-		  CASE_HIGH (merge_case) : CASE_LOW (merge_case);
++	      base_high
++		= (CASE_HIGH (merge_case)
++		   ? CASE_HIGH (merge_case) : CASE_LOW (merge_case));
+ 	      CASE_HIGH (base_case) = base_high;
+ 	      next_index++;
+ 	    }
+@@ -1790,7 +1797,29 @@ group_case_labels_stmt (gswitch *stmt)
+ 	{
+ 	  edge base_edge = find_edge (gimple_bb (stmt), base_bb);
+ 	  if (base_edge != NULL)
+-	    remove_edge_and_dominated_blocks (base_edge);
++	    {
++	      for (gimple_stmt_iterator gsi = gsi_start_bb (base_bb);
++		   !gsi_end_p (gsi); gsi_next (&gsi))
++		if (glabel *stmt = dyn_cast <glabel *> (gsi_stmt (gsi)))
++		  {
++		    if (FORCED_LABEL (gimple_label_label (stmt))
++			|| DECL_NONLOCAL (gimple_label_label (stmt)))
++		      {
++			/* Forced/non-local labels aren't going to be removed,
++			   but they will be moved to some neighbouring basic
++			   block. If some later case label refers to one of
++			   those labels, we should throw that case away rather
++			   than keeping it around and refering to some random
++			   other basic block without an edge to it.  */
++			if (removed_labels == NULL)
++			  removed_labels = new hash_set<tree>;
++			removed_labels->add (gimple_label_label (stmt));
++		      }
++		  }
++		else
++		  break;
++	      remove_edge_and_dominated_blocks (base_edge);
++	    }
+ 	  i = next_index;
+ 	  continue;
+ 	}
+@@ -1807,6 +1836,7 @@ group_case_labels_stmt (gswitch *stmt)
+   if (new_size < old_size)
+     gimple_switch_set_num_labels (stmt, new_size);
+ 
++  delete removed_labels;
+   return new_size < old_size;
+ }
+ 
 diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
 index d00c1bd31e6..efd720b9609 100644
 --- a/gcc/tree-data-ref.c
@@ -29105,10 +33186,22 @@ index 2780a4b243f..699b48b8124 100644
  }
  
 diff --git a/gcc/tree-inline.c b/gcc/tree-inline.c
-index d115fcb1a5b..7a41f64bcc3 100644
+index d115fcb1a5b..878f1631a17 100644
 --- a/gcc/tree-inline.c
 +++ b/gcc/tree-inline.c
-@@ -3213,10 +3213,10 @@ insert_init_stmt (copy_body_data *id, basic_block bb, gimple *init_stmt)
+@@ -543,8 +543,9 @@ remap_type_1 (tree type, copy_body_data *id)
+ 	  /* For array bounds where we have decided not to copy over the bounds
+ 	     variable which isn't used in OpenMP/OpenACC region, change them to
+ 	     an uninitialized VAR_DECL temporary.  */
+-	  if (TYPE_MAX_VALUE (TYPE_DOMAIN (new_tree)) == error_mark_node
+-	      && id->adjust_array_error_bounds
++	  if (id->adjust_array_error_bounds
++	      && TYPE_DOMAIN (new_tree)
++	      && TYPE_MAX_VALUE (TYPE_DOMAIN (new_tree)) == error_mark_node
+ 	      && TYPE_MAX_VALUE (TYPE_DOMAIN (type)) != error_mark_node)
+ 	    {
+ 	      tree v = create_tmp_var (TREE_TYPE (TYPE_DOMAIN (new_tree)));
+@@ -3213,10 +3214,10 @@ insert_init_stmt (copy_body_data *id, basic_block bb, gimple *init_stmt)
  	  gimple_assign_set_rhs1 (init_stmt, rhs);
  	}
        gsi_insert_after (&si, init_stmt, GSI_NEW_STMT);
@@ -29121,7 +33214,7 @@ index d115fcb1a5b..7a41f64bcc3 100644
  	  tree def = gimple_assign_lhs (init_stmt);
  	  insert_init_debug_bind (id, bb, def, def, init_stmt);
  	}
-@@ -5698,6 +5698,7 @@ copy_decl_to_var (tree decl, copy_body_data *id)
+@@ -5698,6 +5699,7 @@ copy_decl_to_var (tree decl, copy_body_data *id)
    TREE_READONLY (copy) = TREE_READONLY (decl);
    TREE_THIS_VOLATILE (copy) = TREE_THIS_VOLATILE (decl);
    DECL_GIMPLE_REG_P (copy) = DECL_GIMPLE_REG_P (decl);
@@ -29247,7 +33340,7 @@ index 8959f52a67b..15a74544a07 100644
  
    sort_partitions_by_post_order (pg, partitions);
 diff --git a/gcc/tree-nested.c b/gcc/tree-nested.c
-index 3fe23cc2b22..e7c1026cf85 100644
+index 3fe23cc2b22..dc0cfe27142 100644
 --- a/gcc/tree-nested.c
 +++ b/gcc/tree-nested.c
 @@ -1178,7 +1178,7 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
@@ -29303,7 +33396,72 @@ index 3fe23cc2b22..e7c1026cf85 100644
  	      if (OMP_CLAUSE_CODE (clause) != OMP_CLAUSE_PRIVATE)
  		need_chain = true;
  	    }
-@@ -1894,7 +1906,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+@@ -1396,12 +1408,22 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	      if (OMP_CLAUSE_REDUCTION_DECL_PLACEHOLDER (clause))
+ 		DECL_CONTEXT (OMP_CLAUSE_REDUCTION_DECL_PLACEHOLDER (clause))
+ 		  = info->context;
++	      tree save_local_var_chain = info->new_local_var_chain;
++	      info->new_local_var_chain = NULL;
++	      gimple_seq *seq = &OMP_CLAUSE_REDUCTION_GIMPLE_INIT (clause);
+ 	      walk_body (convert_nonlocal_reference_stmt,
+-			 convert_nonlocal_reference_op, info,
+-			 &OMP_CLAUSE_REDUCTION_GIMPLE_INIT (clause));
++			 convert_nonlocal_reference_op, info, seq);
++	      if (info->new_local_var_chain)
++		declare_vars (info->new_local_var_chain,
++			      gimple_seq_first_stmt (*seq), false);
++	      info->new_local_var_chain = NULL;
++	      seq = &OMP_CLAUSE_REDUCTION_GIMPLE_MERGE (clause);
+ 	      walk_body (convert_nonlocal_reference_stmt,
+-			 convert_nonlocal_reference_op, info,
+-			 &OMP_CLAUSE_REDUCTION_GIMPLE_MERGE (clause));
++			 convert_nonlocal_reference_op, info, seq);
++	      if (info->new_local_var_chain)
++		declare_vars (info->new_local_var_chain,
++			      gimple_seq_first_stmt (*seq), false);
++	      info->new_local_var_chain = save_local_var_chain;
+ 	      DECL_CONTEXT (OMP_CLAUSE_REDUCTION_PLACEHOLDER (clause))
+ 		= old_context;
+ 	      if (OMP_CLAUSE_REDUCTION_DECL_PLACEHOLDER (clause))
+@@ -1411,15 +1433,31 @@ convert_nonlocal_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+ 	  break;
+ 
+ 	case OMP_CLAUSE_LASTPRIVATE:
+-	  walk_body (convert_nonlocal_reference_stmt,
+-		     convert_nonlocal_reference_op, info,
+-		     &OMP_CLAUSE_LASTPRIVATE_GIMPLE_SEQ (clause));
++	  {
++	    tree save_local_var_chain = info->new_local_var_chain;
++	    info->new_local_var_chain = NULL;
++	    gimple_seq *seq = &OMP_CLAUSE_LASTPRIVATE_GIMPLE_SEQ (clause);
++	    walk_body (convert_nonlocal_reference_stmt,
++		       convert_nonlocal_reference_op, info, seq);
++	    if (info->new_local_var_chain)
++	      declare_vars (info->new_local_var_chain,
++			    gimple_seq_first_stmt (*seq), false);
++	    info->new_local_var_chain = save_local_var_chain;
++	  }
+ 	  break;
+ 
+ 	case OMP_CLAUSE_LINEAR:
+-	  walk_body (convert_nonlocal_reference_stmt,
+-		     convert_nonlocal_reference_op, info,
+-		     &OMP_CLAUSE_LINEAR_GIMPLE_SEQ (clause));
++	  {
++	    tree save_local_var_chain = info->new_local_var_chain;
++	    info->new_local_var_chain = NULL;
++	    gimple_seq *seq = &OMP_CLAUSE_LINEAR_GIMPLE_SEQ (clause);
++	    walk_body (convert_nonlocal_reference_stmt,
++		       convert_nonlocal_reference_op, info, seq);
++	    if (info->new_local_var_chain)
++	      declare_vars (info->new_local_var_chain,
++			    gimple_seq_first_stmt (*seq), false);
++	    info->new_local_var_chain = save_local_var_chain;
++	  }
+ 	  break;
+ 
+ 	default:
+@@ -1894,7 +1932,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
  {
    struct nesting_info *const info = (struct nesting_info *) wi->info;
    bool need_frame = false, need_stmts = false;
@@ -29312,7 +33470,7 @@ index 3fe23cc2b22..e7c1026cf85 100644
    int dummy;
    bitmap new_suppress;
  
-@@ -1903,6 +1915,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+@@ -1903,6 +1941,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
  
    for (clause = *pclauses; clause ; clause = OMP_CLAUSE_CHAIN (clause))
      {
@@ -29320,7 +33478,7 @@ index 3fe23cc2b22..e7c1026cf85 100644
        switch (OMP_CLAUSE_CODE (clause))
  	{
  	case OMP_CLAUSE_REDUCTION:
-@@ -1910,6 +1923,15 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+@@ -1910,6 +1949,15 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
  	case OMP_CLAUSE_TASK_REDUCTION:
  	  if (OMP_CLAUSE_REDUCTION_PLACEHOLDER (clause))
  	    need_stmts = true;
@@ -29336,7 +33494,7 @@ index 3fe23cc2b22..e7c1026cf85 100644
  	  goto do_decl_clause;
  
  	case OMP_CLAUSE_LASTPRIVATE:
-@@ -1935,7 +1957,9 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+@@ -1935,7 +1983,9 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
  	case OMP_CLAUSE_USE_DEVICE_PTR:
  	case OMP_CLAUSE_IS_DEVICE_PTR:
  	do_decl_clause:
@@ -29347,7 +33505,7 @@ index 3fe23cc2b22..e7c1026cf85 100644
  	  if (VAR_P (decl)
  	      && (TREE_STATIC (decl) || DECL_EXTERNAL (decl)))
  	    break;
-@@ -1948,8 +1972,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
+@@ -1948,8 +1998,7 @@ convert_local_omp_clauses (tree *pclauses, struct walk_stmt_info *wi)
  		  if (OMP_CLAUSE_CODE (clause) == OMP_CLAUSE_SHARED)
  		    OMP_CLAUSE_SHARED_READONLY (clause) = 0;
  		  bitmap_set_bit (new_suppress, DECL_UID (decl));
@@ -29916,6 +34074,69 @@ index 255575f1198..4f42817f7de 100644
  	   && (non_ass_var = independent_of_stmt_p (op0, stmt, call,
  						    to_move)))
      ;
+diff --git a/gcc/tree-vect-generic.c b/gcc/tree-vect-generic.c
+index ad1ea4e7b97..1f255fa70c2 100644
+--- a/gcc/tree-vect-generic.c
++++ b/gcc/tree-vect-generic.c
+@@ -478,6 +478,7 @@ expand_vector_divmod (gimple_stmt_iterator *gsi, tree type, tree op0,
+ {
+   bool use_pow2 = true;
+   bool has_vector_shift = true;
++  bool use_abs_op1 = false;
+   int mode = -1, this_mode;
+   int pre_shift = -1, post_shift;
+   unsigned int nunits = nunits_for_known_piecewise_op (type);
+@@ -618,8 +619,11 @@ expand_vector_divmod (gimple_stmt_iterator *gsi, tree type, tree op0,
+ 
+ 	  /* n rem d = n rem -d */
+ 	  if (code == TRUNC_MOD_EXPR && d < 0)
+-	    d = abs_d;
+-	  else if (abs_d == HOST_WIDE_INT_1U << (prec - 1))
++	    {
++	      d = abs_d;
++	      use_abs_op1 = true;
++	    }
++	  if (abs_d == HOST_WIDE_INT_1U << (prec - 1))
+ 	    {
+ 	      /* This case is not handled correctly below.  */
+ 	      mode = -2;
+@@ -899,6 +903,23 @@ expand_vector_divmod (gimple_stmt_iterator *gsi, tree type, tree op0,
+   if (op == unknown_optab
+       || optab_handler (op, TYPE_MODE (type)) == CODE_FOR_nothing)
+     return NULL_TREE;
++  if (use_abs_op1)
++    {
++      tree_vector_builder elts;
++      if (!elts.new_unary_operation (type, op1, false))
++	return NULL_TREE;
++      unsigned int count = elts.encoded_nelts ();
++      for (unsigned int i = 0; i < count; ++i)
++	{
++	  tree elem1 = VECTOR_CST_ELT (op1, i);
++
++	  tree elt = const_unop (ABS_EXPR, TREE_TYPE (elem1), elem1);
++	  if (elt == NULL_TREE)
++	    return NULL_TREE;
++	  elts.quick_push (elt);
++	}
++      op1 = elts.build ();
++    }
+   tem = gimplify_build2 (gsi, MULT_EXPR, type, cur_op, op1);
+   op = optab_for_tree_code (MINUS_EXPR, type, optab_default);
+   if (op == unknown_optab
+@@ -1670,6 +1691,12 @@ expand_vector_conversion (gimple_stmt_iterator *gsi)
+   gimple *stmt = gsi_stmt (*gsi);
+   gimple *g;
+   tree lhs = gimple_call_lhs (stmt);
++  if (lhs == NULL_TREE)
++    {
++      g = gimple_build_nop ();
++      gsi_replace (gsi, g, false);
++      return;
++    }
+   tree arg = gimple_call_arg (stmt, 0);
+   tree decl = NULL_TREE;
+   tree ret_type = TREE_TYPE (lhs);
 diff --git a/gcc/tree-vect-loop-manip.c b/gcc/tree-vect-loop-manip.c
 index b3fae5ba4da..80b89656438 100644
 --- a/gcc/tree-vect-loop-manip.c
@@ -30022,11 +34243,34 @@ index 0308b26b808..ed6586753c5 100644
  
    /* Replace use of lhs with newly computed result.  If the use stmt is a
       single arg PHI, just replace all uses of PHI result.  It's necessary
+diff --git a/gcc/tree-vect-patterns.c b/gcc/tree-vect-patterns.c
+index badf4e7104e..c74888ed9af 100644
+--- a/gcc/tree-vect-patterns.c
++++ b/gcc/tree-vect-patterns.c
+@@ -2969,8 +2969,8 @@ vect_recog_divmod_pattern (stmt_vec_info stmt_vinfo, tree *type_out)
+ 	  d = abs_d;
+ 	  oprnd1 = build_int_cst (itype, abs_d);
+ 	}
+-      else if (HOST_BITS_PER_WIDE_INT >= prec
+-	       && abs_d == HOST_WIDE_INT_1U << (prec - 1))
++      if (HOST_BITS_PER_WIDE_INT >= prec
++	  && abs_d == HOST_WIDE_INT_1U << (prec - 1))
+ 	/* This case is not handled correctly below.  */
+ 	return NULL;
+ 
 diff --git a/gcc/tree.c b/gcc/tree.c
-index 32e94e48132..d8d90bf0636 100644
+index 32e94e48132..d747a0bf685 100644
 --- a/gcc/tree.c
 +++ b/gcc/tree.c
-@@ -12995,10 +12995,11 @@ lhd_gcc_personality (void)
+@@ -11683,6 +11683,7 @@ build_call_expr_internal_loc_array (location_t loc, internal_fn ifn,
+     CALL_EXPR_ARG (t, i) = args[i];
+   SET_EXPR_LOCATION (t, loc);
+   CALL_EXPR_IFN (t) = ifn;
++  process_call_operands (t);
+   return t;
+ }
+ 
+@@ -12995,10 +12996,11 @@ lhd_gcc_personality (void)
     OBJ_TYPE_REF representing an virtual call of C++ method.
     (As opposed to OBJ_TYPE_REF representing objc calls
     through a cast where middle-end devirtualization machinery
@@ -30040,7 +34284,7 @@ index 32e94e48132..d8d90bf0636 100644
  {
    if (TREE_CODE (target) != OBJ_TYPE_REF)
      return false;
-@@ -13011,7 +13012,7 @@ virtual_method_call_p (const_tree target)
+@@ -13011,7 +13013,7 @@ virtual_method_call_p (const_tree target)
    /* If we do not have BINFO associated, it means that type was built
       without devirtualization enabled.  Do not consider this a virtual
       call.  */
@@ -30064,6 +34308,34 @@ index 2f8e37bb356..8d25916ff9d 100644
  extern bool types_same_for_odr (const_tree type1, const_tree type2);
  extern bool contains_bitfld_component_ref_p (const_tree);
  extern bool block_may_fallthru (const_tree);
+diff --git a/gcc/ubsan.c b/gcc/ubsan.c
+index d2696302bd0..5d4af79177c 100644
+--- a/gcc/ubsan.c
++++ b/gcc/ubsan.c
+@@ -229,6 +229,7 @@ ubsan_get_type_descriptor_type (void)
+   TYPE_FIELDS (ret) = fields[0];
+   TYPE_NAME (ret) = type_decl;
+   TYPE_STUB_DECL (ret) = type_decl;
++  TYPE_ARTIFICIAL (ret) = 1;
+   layout_type (ret);
+   ubsan_type_descriptor_type = ret;
+   return ret;
+@@ -277,6 +278,7 @@ ubsan_get_source_location_type (void)
+   TYPE_FIELDS (ret) = fields[0];
+   TYPE_NAME (ret) = type_decl;
+   TYPE_STUB_DECL (ret) = type_decl;
++  TYPE_ARTIFICIAL (ret) = 1;
+   layout_type (ret);
+   ubsan_source_location_type = ret;
+   return ret;
+@@ -593,6 +595,7 @@ ubsan_create_data (const char *name, int loccnt, const location_t *ploc, ...)
+   TYPE_FIELDS (ret) = fields[0];
+   TYPE_NAME (ret) = type_decl;
+   TYPE_STUB_DECL (ret) = type_decl;
++  TYPE_ARTIFICIAL (ret) = 1;
+   layout_type (ret);
+ 
+   /* Now, fill in the type.  */
 diff --git a/gcc/varasm.c b/gcc/varasm.c
 index 8f006dcff67..8d87e28cc7c 100644
 --- a/gcc/varasm.c
@@ -31688,10 +35960,33 @@ index 0335a165edc..1dea2f0e5f8 100644
        p = "Unknown error code";
        break;
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 0156d5f7bc9..69fe8f49b21 100644
+index 0156d5f7bc9..ea471e44b42 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,144 @@
+@@ -1,3 +1,167 @@
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-08  Jakub Jelinek  <jakub@redhat.com>
++		    Tobias Burnus  <tobias@codesourcery.com>
++
++	PR fortran/93553
++	* testsuite/libgomp.fortran/pr93553.f90: New test.
++
++2020-09-16  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-08-05  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/96459
++	* testsuite/libgomp.c/teams-3.c: New test.
++	* testsuite/libgomp.c-c++-common/for-2.h (OMPTEAMS): Define to nothing
++	if not defined yet.
++	(N(test)): Use it before all N(f*) calls.
++	* testsuite/libgomp.c-c++-common/for-14.c (DO_PRAGMA, OMPTEAMS): Define.
++	(main): Don't call all test_* functions from within
++	#pragma omp teams reduction(|:err), call them directly.
++
 +2020-06-04  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	* testsuite/libgomp.oacc-fortran/error_stop-1.f: Initialize before
@@ -31962,6 +36257,289 @@ index 00000000000..4d4232ef340
 +    abort ();
 +  garply ();
 +}
+diff --git a/libgomp/testsuite/libgomp.c-c++-common/for-14.c b/libgomp/testsuite/libgomp.c-c++-common/for-14.c
+index 56440ab740f..d2e3be82b09 100644
+--- a/libgomp/testsuite/libgomp.c-c++-common/for-14.c
++++ b/libgomp/testsuite/libgomp.c-c++-common/for-14.c
+@@ -6,6 +6,8 @@ extern
+ #endif
+ void abort ();
+ 
++#define DO_PRAGMA(x) _Pragma (#x)
++#define OMPTEAMS DO_PRAGMA (omp teams)
+ #define M(x, y, z) O(x, y, z)
+ #define O(x, y, z) x ## _ ## y ## _ ## z
+ 
+@@ -77,33 +79,30 @@ int
+ main ()
+ {
+   int err = 0;
+-  #pragma omp teams reduction(|:err)
+-    {
+-      err |= test_d_normal ();
+-      err |= test_d_ds128_normal ();
+-      err |= test_ds_normal ();
+-      err |= test_ds_ds128_normal ();
+-      err |= test_dpf_static ();
+-      err |= test_dpf_static32 ();
+-      err |= test_dpf_auto ();
+-      err |= test_dpf_guided32 ();
+-      err |= test_dpf_runtime ();
+-      err |= test_dpf_ds128_static ();
+-      err |= test_dpf_ds128_static32 ();
+-      err |= test_dpf_ds128_auto ();
+-      err |= test_dpf_ds128_guided32 ();
+-      err |= test_dpf_ds128_runtime ();
+-      err |= test_dpfs_static ();
+-      err |= test_dpfs_static32 ();
+-      err |= test_dpfs_auto ();
+-      err |= test_dpfs_guided32 ();
+-      err |= test_dpfs_runtime ();
+-      err |= test_dpfs_ds128_static ();
+-      err |= test_dpfs_ds128_static32 ();
+-      err |= test_dpfs_ds128_auto ();
+-      err |= test_dpfs_ds128_guided32 ();
+-      err |= test_dpfs_ds128_runtime ();
+-    }
++  err |= test_d_normal ();
++  err |= test_d_ds128_normal ();
++  err |= test_ds_normal ();
++  err |= test_ds_ds128_normal ();
++  err |= test_dpf_static ();
++  err |= test_dpf_static32 ();
++  err |= test_dpf_auto ();
++  err |= test_dpf_guided32 ();
++  err |= test_dpf_runtime ();
++  err |= test_dpf_ds128_static ();
++  err |= test_dpf_ds128_static32 ();
++  err |= test_dpf_ds128_auto ();
++  err |= test_dpf_ds128_guided32 ();
++  err |= test_dpf_ds128_runtime ();
++  err |= test_dpfs_static ();
++  err |= test_dpfs_static32 ();
++  err |= test_dpfs_auto ();
++  err |= test_dpfs_guided32 ();
++  err |= test_dpfs_runtime ();
++  err |= test_dpfs_ds128_static ();
++  err |= test_dpfs_ds128_static32 ();
++  err |= test_dpfs_ds128_auto ();
++  err |= test_dpfs_ds128_guided32 ();
++  err |= test_dpfs_ds128_runtime ();
+   if (err)
+     abort ();
+   return 0;
+diff --git a/libgomp/testsuite/libgomp.c-c++-common/for-2.h b/libgomp/testsuite/libgomp.c-c++-common/for-2.h
+index 91a604a6c25..f637fd3d760 100644
+--- a/libgomp/testsuite/libgomp.c-c++-common/for-2.h
++++ b/libgomp/testsuite/libgomp.c-c++-common/for-2.h
+@@ -14,6 +14,9 @@ noreturn (void)
+ #ifndef OMPTGT
+ #define OMPTGT
+ #endif
++#ifndef OMPTEAMS
++#define OMPTEAMS
++#endif
+ #ifndef OMPTO
+ #define OMPTO(v) do {} while (0)
+ #endif
+@@ -214,31 +217,37 @@ N(test) (void)
+   for (i = 0; i < 1500; i++)
+     a[i] = i - 25;
+   OMPTO (a);
++  OMPTEAMS
+   N(f0) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 23)
+       return 1;
++  OMPTEAMS
+   N(f1) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 25)
+       return 1;
++  OMPTEAMS
+   N(f2) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 29)
+       return 1;
++  OMPTEAMS
+   N(f3) (1500LL - 1 - 23 - 48, -1LL + 25 - 48, 1LL);
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 22)
+       return 1;
++  OMPTEAMS
+   N(f3) (1500LL - 1 - 23 - 48, 1500LL - 1, 7LL);
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 22)
+       return 1;
++  OMPTEAMS
+   N(f4) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+@@ -249,6 +258,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	b[i][j][k] = i - 2.5 + 1.5 * j - 1.5 * k;
+   OMPTO (b);
++  OMPTEAMS
+   N(f5) (0, 10, 0, 15, 0, 10, 1, 1, 1);
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -256,6 +266,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f5) (0, 10, 30, 15, 0, 10, 4, 5, 6);
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -263,6 +274,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f6) (9, -1, 29, 0, 9, -1, -1, -2, -1);
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -270,6 +282,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i - 4.5 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f7) ();
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -277,6 +290,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.0 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f8) ();	  
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -284,9 +298,13 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.0 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f9) ();
++  OMPTEAMS
+   N(f10) ();
++  OMPTEAMS
+   N(f11) (10);
++  OMPTEAMS
+   N(f12) (12);
+   OMPFROM (a);
+   OMPFROM (b);
+@@ -298,7 +316,9 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.0 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f13) ();
++  OMPTEAMS
+   N(f14) ();
+   OMPFROM (a);
+   OMPFROM (b);
+@@ -507,26 +527,31 @@ N(test) (void)
+   for (i = 0; i < 1500; i++)
+     a[i] = i - 25;
+   OMPTO (a);
++  OMPTEAMS
+   N(f20) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 23)
+       return 1;
++  OMPTEAMS
+   N(f21) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 25)
+       return 1;
++  OMPTEAMS
+   N(f22) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 29)
+       return 1;
++  OMPTEAMS
+   N(f23) (1500LL - 1 - 23 - 48, -1LL + 25 - 48);
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+     if (a[i] != i - 22)
+       return 1;
++  OMPTEAMS
+   N(f24) ();
+   OMPFROM (a);
+   for (i = 0; i < 1500; i++)
+@@ -537,6 +562,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	b[i][j][k] = i - 2.5 + 1.5 * j - 1.5 * k;
+   OMPTO (b);
++  OMPTEAMS
+   N(f25) (0, 10, 0, 15, 0, 10, 1);
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -544,6 +570,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f25) (0, 10, 30, 15, 0, 10, 5);
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -551,6 +578,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f26) (9, -1, 29, 0, 9, -1, -2);
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -558,6 +586,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i - 4.5 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f27) ();
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -565,6 +594,7 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.0 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f28) ();
+   OMPFROM (b);
+   for (i = 0; i < 10; i++)
+@@ -572,9 +602,13 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.0 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f29) ();
++  OMPTEAMS
+   N(f30) ();
++  OMPTEAMS
+   N(f31) (20);
++  OMPTEAMS
+   N(f32) (12);
+   OMPFROM (a);
+   OMPFROM (b);
+@@ -586,7 +620,9 @@ N(test) (void)
+       for (k = 0; k < 10; k++)
+ 	if (b[i][j][k] != i + 1.0 + 1.5 * j - 1.5 * k)
+ 	  return 1;
++  OMPTEAMS
+   N(f33) ();
++  OMPTEAMS
+   N(f34) ();
+   OMPFROM (a);
+   OMPFROM (b);
 diff --git a/libgomp/testsuite/libgomp.c/pr93566.c b/libgomp/testsuite/libgomp.c/pr93566.c
 new file mode 100644
 index 00000000000..3334bd571f6
@@ -32081,6 +36659,32 @@ index 00000000000..3334bd571f6
 +  corge ();
 +  return 0;
 +}
+diff --git a/libgomp/testsuite/libgomp.c/teams-3.c b/libgomp/testsuite/libgomp.c/teams-3.c
+new file mode 100644
+index 00000000000..34a9aa00ff7
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.c/teams-3.c
+@@ -0,0 +1,20 @@
++/* PR middle-end/96459 */
++
++#include <stdlib.h>
++
++int
++main ()
++{
++  int niters = 0, i, j, k;
++  #pragma omp teams reduction(+:niters)
++  {
++    #pragma omp distribute collapse(3)
++    for (i = 0; i < 3; i++)
++      for (j = 0; j < 8; j += 2)
++	for (k = 0; k < 25; k += 3)
++	  niters++;
++  }
++  if (niters != 108)
++    abort ();
++  return 0;
++}
 diff --git a/libgomp/testsuite/libgomp.fortran/async_io_9.f90 b/libgomp/testsuite/libgomp.fortran/async_io_9.f90
 new file mode 100644
 index 00000000000..2dc111c3967
@@ -32132,6 +36736,33 @@ index 00000000000..6edb7da4116
 +  if (iomsg /= "Bad STATUS parameter in CLOSE statement") stop 2
 +  close (10, status='delete')
 +end program test
+diff --git a/libgomp/testsuite/libgomp.fortran/pr93553.f90 b/libgomp/testsuite/libgomp.fortran/pr93553.f90
+new file mode 100644
+index 00000000000..5d6f10febed
+--- /dev/null
++++ b/libgomp/testsuite/libgomp.fortran/pr93553.f90
+@@ -0,0 +1,21 @@
++program p
++   implicit none
++   integer :: x(8) = 0
++   call sub(x)
++end
++subroutine sub(x)
++   implicit none
++   integer i
++   integer :: x(8)
++   integer :: c(8) = [(11*i, i=1,8)]
++   call s
++   if (any (x /= c)) stop 1
++contains
++   subroutine s
++      integer :: i
++      !$omp parallel do reduction(+:x)
++      do i = 1, 8
++         x(i) = c(i)
++      end do
++   end
++end
 diff --git a/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c b/libgomp/testsuite/libgomp.oacc-c-c++-common/structured-dynamic-lifetimes-1-lib.c
 new file mode 100644
 index 00000000000..8fa87777f1a
