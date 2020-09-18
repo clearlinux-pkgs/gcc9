@@ -72,7 +72,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (189):
+GCC Administrator (190):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -325,7 +326,7 @@ Iain Sandoe (1):
 Ian Lance Taylor (1):
       go.test: update issue4085b.go to version from Go 1.13
 
-Jakub Jelinek (78):
+Jakub Jelinek (79):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -404,6 +405,7 @@ Jakub Jelinek (78):
       gimple: Ignore *0 = {CLOBBER} in path isolation [PR96722]
       dwarf2out: Fix up dwarf2out_next_real_insn caching [PR96729]
       c++: Disable -frounding-math during manifestly constant evaluation [PR96862]
+      store-merging: Consider also overlapping stores earlier in the by bitpos sorting [PR97053]
 
 Jason Merrill (12):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -584,18 +586,22 @@ Richard Biener (10):
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
 
-Richard Sandiford (5):
+Richard Sandiford (6):
       ipa-devirt: Fix crash in obj_type_ref_class [PR95114]
       early-remat: Handle sets of multiple candidate regs [PR94605]
       aarch64: Clear canary value after stack_protect_test [PR96191]
       arm: Clear canary value after stack_protect_test [PR96191]
       Update links to Arm docs
+      arm: Extend the PR94780 fix to arm
 
 Romain Naour (1):
       Fix missing dependencies for selftests which occasionally causes failed builds.
 
 Samuel Thibault (1):
       hurd: libgcc unwinding support over signal trampolines
+
+Segher Boessenkool (1):
+      rs6000: Properly handle LE index munging in vec_shr (PR94710)
 
 Stefan Schulze Frielinghaus (1):
       S/390: Emit vector alignment hints for z13 if AS accepts them
@@ -5506,10 +5512,31 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..e2b77d3adf5 100644
+index d8e53874e68..dc4835f3771 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1793 @@
+@@ -1,3 +1,1814 @@
++2020-04-29  Richard Sandiford  <richard.sandiford@arm.com>
++
++	* config/arm/arm-builtins.c (arm_atomic_assign_expand_fenv): Use
++	TARGET_EXPR instead of MODIFY_EXPR for the first assignments to
++	fenv_var and new_fenv_var.
++
++2020-09-17  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	Backported from master:
++	2020-04-24  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	PR target/94710
++	* config/rs6000/vector.md (vec_shr_<mode> for VEC_L): Correct little
++	endian byteshift_val calculation.
++
++2020-09-17  liuhongt  <hongtao.liu@intel.com>
++
++	* common/config/i386/i386-common.c
++	(OPTION_MASK_ISA_AVX_UNSET): Remove OPTION_MASK_ISA_XSAVE_UNSET.
++	(OPTION_MASK_ISA_XSAVE_UNSET): Add OPTION_MASK_ISA_AVX_UNSET.
++
 +2020-09-16  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -11170,6 +11197,33 @@ index 270ca907d87..7d07adc4257 100644
  #define UCLIBC_DYNAMIC_LINKER  "/lib/ld-uClibc.so.0"
  
  /* Note that the default is to link against dynamic libraries, if they are
+diff --git a/gcc/config/arm/arm-builtins.c b/gcc/config/arm/arm-builtins.c
+index 55bbb487097..ba74ab832da 100644
+--- a/gcc/config/arm/arm-builtins.c
++++ b/gcc/config/arm/arm-builtins.c
+@@ -3292,8 +3292,9 @@ arm_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+   mask = build_int_cst (unsigned_type_node,
+ 			~((ARM_FE_ALL_EXCEPT << ARM_FE_EXCEPT_SHIFT)
+ 			  | ARM_FE_ALL_EXCEPT));
+-  ld_fenv = build2 (MODIFY_EXPR, unsigned_type_node,
+-		    fenv_var, build_call_expr (get_fpscr, 0));
++  ld_fenv = build4 (TARGET_EXPR, unsigned_type_node,
++		    fenv_var, build_call_expr (get_fpscr, 0),
++		    NULL_TREE, NULL_TREE);
+   masked_fenv = build2 (BIT_AND_EXPR, unsigned_type_node, fenv_var, mask);
+   hold_fnclex = build_call_expr (set_fpscr, 1, masked_fenv);
+   *hold = build2 (COMPOUND_EXPR, void_type_node,
+@@ -3314,8 +3315,8 @@ arm_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+        __atomic_feraiseexcept (new_fenv_var);  */
+ 
+   new_fenv_var = create_tmp_var_raw (unsigned_type_node);
+-  reload_fenv = build2 (MODIFY_EXPR, unsigned_type_node, new_fenv_var,
+-			build_call_expr (get_fpscr, 0));
++  reload_fenv = build4 (TARGET_EXPR, unsigned_type_node, new_fenv_var,
++			build_call_expr (get_fpscr, 0), NULL_TREE, NULL_TREE);
+   restore_fnenv = build_call_expr (set_fpscr, 1, fenv_var);
+   atomic_feraiseexcept = builtin_decl_implicit (BUILT_IN_ATOMIC_FERAISEEXCEPT);
+   update_call = build_call_expr (atomic_feraiseexcept, 1,
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
 index cdfc0f9e72f..d4e2ad2a317 100644
 --- a/gcc/config/arm/arm.c
@@ -15438,6 +15492,20 @@ index a768f5dd511..db7ed60a2cf 100644
      }
  
      emit_insn (gen_rs6000_mffsl_hw (operands[0]));
+diff --git a/gcc/config/rs6000/vector.md b/gcc/config/rs6000/vector.md
+index 0b62dd04bde..f90489c0203 100644
+--- a/gcc/config/rs6000/vector.md
++++ b/gcc/config/rs6000/vector.md
+@@ -1322,7 +1322,8 @@
+   emit_move_insn (zero_reg, CONST0_RTX (<MODE>mode));
+   if (!BYTES_BIG_ENDIAN)
+     {
+-      byteshift_val = 16 - byteshift_val;
++      /* Note, byteshift_val can be 0!  */
++      byteshift_val = -byteshift_val & 15;
+       op1 = zero_reg;
+       op2 = operands[1];
+     }
 diff --git a/gcc/config/rs6000/vsx.md b/gcc/config/rs6000/vsx.md
 index 607c0cd33f2..2e998a3a990 100644
 --- a/gcc/config/rs6000/vsx.md
@@ -20248,6 +20316,196 @@ index 33bbb66674b..0bfe67a02ba 100644
  	{
  	  /* Now verify that BB's immediate dominator ends in a
  	     conditional as well.  */
+diff --git a/gcc/gimple-ssa-store-merging.c b/gcc/gimple-ssa-store-merging.c
+index 550f782813b..c1081da9c0e 100644
+--- a/gcc/gimple-ssa-store-merging.c
++++ b/gcc/gimple-ssa-store-merging.c
+@@ -2081,7 +2081,8 @@ struct imm_store_chain_info
+       }
+   }
+   bool terminate_and_process_chain ();
+-  bool try_coalesce_bswap (merged_store_group *, unsigned int, unsigned int);
++  bool try_coalesce_bswap (merged_store_group *, unsigned int, unsigned int,
++			   unsigned int);
+   bool coalesce_immediate_stores ();
+   bool output_merged_store (merged_store_group *);
+   bool output_merged_stores ();
+@@ -2402,14 +2403,39 @@ gather_bswap_load_refs (vec<tree> *refs, tree val)
+    into the group.  That way it will be its own store group and will
+    not be touched.  If ALL_INTEGER_CST_P and there are overlapping
+    INTEGER_CST stores, those are mergeable using merge_overlapping,
+-   so don't return false for those.  */
++   so don't return false for those.
++
++   Similarly, check stores from FIRST_EARLIER (inclusive) to END_EARLIER
++   (exclusive), whether they don't overlap the bitrange START to END
++   and have order in between FIRST_ORDER and LAST_ORDER.  This is to
++   prevent merging in cases like:
++     MEM <char[12]> [&b + 8B] = {};
++     MEM[(short *) &b] = 5;
++     _5 = *x_4(D);
++     MEM <long long unsigned int> [&b + 2B] = _5;
++     MEM[(char *)&b + 16B] = 88;
++     MEM[(int *)&b + 20B] = 1;
++   The = {} store comes in sort_by_bitpos before the = 88 store, and can't
++   be merged with it, because the = _5 store overlaps these and is in between
++   them in sort_by_order ordering.  If it was merged, the merged store would
++   go after the = _5 store and thus change behavior.  */
+ 
+ static bool
+ check_no_overlap (vec<store_immediate_info *> m_store_info, unsigned int i,
+-		  bool all_integer_cst_p, unsigned int last_order,
+-		  unsigned HOST_WIDE_INT end)
++		  bool all_integer_cst_p, unsigned int first_order,
++		  unsigned int last_order, unsigned HOST_WIDE_INT start,
++		  unsigned HOST_WIDE_INT end, unsigned int first_earlier,
++		  unsigned end_earlier)
+ {
+   unsigned int len = m_store_info.length ();
++  for (unsigned int j = first_earlier; j < end_earlier; j++)
++    {
++      store_immediate_info *info = m_store_info[j];
++      if (info->order > first_order
++	  && info->order < last_order
++	  && info->bitpos + info->bitsize > start)
++	return false;
++    }
+   for (++i; i < len; ++i)
+     {
+       store_immediate_info *info = m_store_info[i];
+@@ -2430,7 +2456,8 @@ check_no_overlap (vec<store_immediate_info *> m_store_info, unsigned int i,
+ bool
+ imm_store_chain_info::try_coalesce_bswap (merged_store_group *merged_store,
+ 					  unsigned int first,
+-					  unsigned int try_size)
++					  unsigned int try_size,
++					  unsigned int first_earlier)
+ {
+   unsigned int len = m_store_info.length (), last = first;
+   unsigned HOST_WIDE_INT width = m_store_info[first]->bitsize;
+@@ -2569,7 +2596,8 @@ imm_store_chain_info::try_coalesce_bswap (merged_store_group *merged_store,
+   if (n.base_addr == NULL_TREE && !is_gimple_val (n.src))
+     return false;
+ 
+-  if (!check_no_overlap (m_store_info, last, false, last_order, end))
++  if (!check_no_overlap (m_store_info, last, false, first_order, last_order,
++			 merged_store->start, end, first_earlier, first))
+     return false;
+ 
+   /* Don't handle memory copy this way if normal non-bswap processing
+@@ -2661,6 +2689,8 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 
+   store_immediate_info *info;
+   unsigned int i, ignore = 0;
++  unsigned int first_earlier = 0;
++  unsigned int end_earlier = 0;
+ 
+   /* Order the stores by the bitposition they write to.  */
+   m_store_info.qsort (sort_by_bitpos);
+@@ -2675,6 +2705,12 @@ imm_store_chain_info::coalesce_immediate_stores ()
+       if (i <= ignore)
+ 	goto done;
+ 
++      while (first_earlier < end_earlier
++	     && (m_store_info[first_earlier]->bitpos
++		 + m_store_info[first_earlier]->bitsize
++		 <= merged_store->start))
++	first_earlier++;
++
+       /* First try to handle group of stores like:
+ 	 p[0] = data >> 24;
+ 	 p[1] = data >> 16;
+@@ -2688,7 +2724,8 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	{
+ 	  unsigned int try_size;
+ 	  for (try_size = 64; try_size >= 16; try_size >>= 1)
+-	    if (try_coalesce_bswap (merged_store, i - 1, try_size))
++	    if (try_coalesce_bswap (merged_store, i - 1, try_size,
++				    first_earlier))
+ 	      break;
+ 
+ 	  if (try_size >= 16)
+@@ -2696,7 +2733,10 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	      ignore = i + merged_store->stores.length () - 1;
+ 	      m_merged_store_groups.safe_push (merged_store);
+ 	      if (ignore < m_store_info.length ())
+-		merged_store = new merged_store_group (m_store_info[ignore]);
++		{
++		  merged_store = new merged_store_group (m_store_info[ignore]);
++		  end_earlier = ignore;
++		}
+ 	      else
+ 		merged_store = NULL;
+ 	      goto done;
+@@ -2722,12 +2762,16 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	  /* Only allow overlapping stores of constants.  */
+ 	  if (info->rhs_code == INTEGER_CST && merged_store->only_constants)
+ 	    {
++	      unsigned int first_order
++		= MIN (merged_store->first_order, info->order);
+ 	      unsigned int last_order
+ 		= MAX (merged_store->last_order, info->order);
+ 	      unsigned HOST_WIDE_INT end
+ 		= MAX (merged_store->start + merged_store->width,
+ 		       info->bitpos + info->bitsize);
+-	      if (check_no_overlap (m_store_info, i, true, last_order, end))
++	      if (check_no_overlap (m_store_info, i, true, first_order,
++				    last_order, merged_store->start, end,
++				    first_earlier, end_earlier))
+ 		{
+ 		  /* check_no_overlap call above made sure there are no
+ 		     overlapping stores with non-INTEGER_CST rhs_code
+@@ -2756,6 +2800,7 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 		  do
+ 		    {
+ 		      unsigned int max_order = 0;
++		      unsigned int min_order = first_order;
+ 		      unsigned first_nonmergeable_int_order = ~0U;
+ 		      unsigned HOST_WIDE_INT this_end = end;
+ 		      k = i;
+@@ -2781,6 +2826,7 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 				  break;
+ 				}
+ 			      k = j;
++			      min_order = MIN (min_order, info2->order);
+ 			      this_end = MAX (this_end,
+ 					      info2->bitpos + info2->bitsize);
+ 			    }
+@@ -2796,6 +2842,12 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 			    first_nonmergeable_order
+ 			      = MIN (first_nonmergeable_order, info2->order);
+ 			}
++		      if (k > i
++			  && !check_no_overlap (m_store_info, len - 1, true,
++						min_order, try_order,
++						merged_store->start, this_end,
++						first_earlier, end_earlier))
++			k = 0;
+ 		      if (k == 0)
+ 			{
+ 			  if (last_order == try_order)
+@@ -2881,9 +2933,12 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	      info->ops_swapped_p = true;
+ 	    }
+ 	  if (check_no_overlap (m_store_info, i, false,
++				MIN (merged_store->first_order, info->order),
+ 				MAX (merged_store->last_order, info->order),
++				merged_store->start,
+ 				MAX (merged_store->start + merged_store->width,
+-				     info->bitpos + info->bitsize)))
++				     info->bitpos + info->bitsize),
++				first_earlier, end_earlier))
+ 	    {
+ 	      /* Turn MEM_REF into BIT_INSERT_EXPR for bit-field stores.  */
+ 	      if (info->rhs_code == MEM_REF && infof->rhs_code != MEM_REF)
+@@ -2928,6 +2983,7 @@ imm_store_chain_info::coalesce_immediate_stores ()
+ 	delete merged_store;
+ 
+       merged_store = new merged_store_group (info);
++      end_earlier = i;
+       if (dump_file && (dump_flags & TDF_DETAILS))
+ 	fputs ("New store group\n", dump_file);
+ 
 diff --git a/gcc/gimple.c b/gcc/gimple.c
 index 8fae60fb848..0c3321ff625 100644
 --- a/gcc/gimple.c
@@ -20608,10 +20866,14 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..086473d9e40 100644
+index e132f2657ef..75fb9c57faa 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1420 @@
+@@ -1,3 +1,1424 @@
++2020-09-17  liuhongt  <hongtao.liu@intel.com>
++
++	* gcc.target/i386/xsave-avx-1.c: New test.
++
 +2020-09-16  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -24799,6 +25061,174 @@ index 00000000000..41506ea6893
 +	}
 +      break;
 +    }
++}
+diff --git a/gcc/testsuite/gcc.dg/store_merging_31.c b/gcc/testsuite/gcc.dg/store_merging_31.c
+new file mode 100644
+index 00000000000..32c21eb053c
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/store_merging_31.c
+@@ -0,0 +1,27 @@
++/* PR tree-optimization/97053 */
++/* { dg-do run } */
++/* { dg-options "-O2" } */
++
++struct S { short a; char b[9]; int c; char d; int e; };
++
++__attribute__((noipa)) void
++foo (char *x, char *y)
++{
++  if (__builtin_strcmp (x, "ABCDXXXX") != 0
++      || __builtin_strcmp (y, "ABCDXXXX") != 0)
++    __builtin_abort ();
++}
++
++int
++main ()
++{
++  char a[9] = "XXXXXXXX";
++  struct S b = {};
++  __builtin_memcpy (a, "ABCD", 4);
++  b.a = 5;
++  __builtin_memcpy (b.b, a, 8); 
++  b.d = 'X';
++  b.e = 1;
++  foo (a, b.b);
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/store_merging_32.c b/gcc/testsuite/gcc.dg/store_merging_32.c
+new file mode 100644
+index 00000000000..8c90489bdeb
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/store_merging_32.c
+@@ -0,0 +1,129 @@
++/* PR tree-optimization/97053 */
++/* { dg-do run } */
++/* { dg-options "-O2 -fno-tree-dse" } */
++
++struct __attribute__((packed, may_alias)) S { long long s; };
++struct __attribute__((packed, may_alias)) T { short t; };
++
++__attribute__((noipa)) void
++test (char *p, char *q, int s)
++{
++  if ((s & 1) == 0)
++    {
++      if (*(short __attribute__((may_alias)) *) &p[sizeof (short)]
++	  != *(short __attribute__((may_alias)) *) &q[sizeof (short)]
++	  || (((struct S __attribute__((may_alias)) *) &p[1])->s
++	      != ((struct S __attribute__((may_alias)) *) &q[1])->s)
++	  || (*(short __attribute__((may_alias)) *) &p[2 * sizeof (short)]
++	      != *(short __attribute__((may_alias)) *) &q[2 * sizeof (short)]))
++	__builtin_abort ();
++    }
++  else
++    {
++      if (*(short __attribute__((may_alias)) *) &p[sizeof (short)]
++	  != *(short __attribute__((may_alias)) *) &q[sizeof (short)]
++	  || (((struct S __attribute__((may_alias)) *) &p[1])->s
++	      != ((struct S __attribute__((may_alias)) *) &q[1])->s)
++	  || (((struct T __attribute__((may_alias)) *) &p[2 * sizeof (short) - 1])->t
++	      != ((struct T __attribute__((may_alias)) *) &q[2 * sizeof (short) - 1])->t)
++	  || p[3 * sizeof (short) - 2] != q[3 * sizeof (short) - 2])
++	__builtin_abort ();
++    }
++}
++
++__attribute__((noipa)) void
++foo (long long *p, char *q, char *r, char *s)
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  *(short __attribute__((may_alias)) *) &a[sizeof (short)] = 1;
++  ((struct S __attribute__((may_alias)) *) &a[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &a[2 * sizeof (short)] = 2;
++  *(short __attribute__((may_alias)) *) &q[sizeof (short)] = 1;
++  ((struct S __attribute__((may_alias)) *) &r[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &s[2 * sizeof (short)] = 2;
++  test (a, q, 0);
++}
++
++__attribute__((noipa)) void
++bar (long long *p, char *q, char *r, char *s, char *t)
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  *(short __attribute__((may_alias)) *) &a[sizeof (short)] = 1;
++  ((struct S __attribute__((may_alias)) *) &a[1])->s = p[0];
++  ((struct T __attribute__((may_alias)) *) &a[2 * sizeof (short) - 1])->t = 2;
++  a[3 * sizeof (short) - 2] = 3;
++  *(short __attribute__((may_alias)) *) &q[sizeof (short)] = 1;
++  ((struct S __attribute__((may_alias)) *) &r[1])->s = p[0];
++  ((struct T __attribute__((may_alias)) *) &s[2 * sizeof (short) - 1])->t = 2;
++  t[3 * sizeof (short) - 2] = 3;
++  test (a, q, 1);
++}
++
++__attribute__((noipa)) void
++baz (long long *p, char *q, char *r, char *s)
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  *(short __attribute__((may_alias)) *) &a[2 * sizeof (short)] = 2;
++  ((struct S __attribute__((may_alias)) *) &a[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &a[sizeof (short)] = 1;
++  *(short __attribute__((may_alias)) *) &q[2 * sizeof (short)] = 2;
++  ((struct S __attribute__((may_alias)) *) &r[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &s[sizeof (short)] = 1;
++  test (a, q, 2);
++}
++
++__attribute__((noipa)) void
++qux (long long *p, char *q, char *r, char *s, char *t)
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  *(short __attribute__((may_alias)) *) &a[2 * sizeof (short) - 1] = 2;
++  ((struct S __attribute__((may_alias)) *) &a[1])->s = p[0];
++  a[3 * sizeof (short) - 2] = 3;
++  *(short __attribute__((may_alias)) *) &a[sizeof (short)] = 1;
++  ((struct T __attribute__((may_alias)) *) &q[2 * sizeof (short) - 1])->t = 2;
++  ((struct S __attribute__((may_alias)) *) &r[1])->s = p[0];
++  s[3 * sizeof (short) - 2] = 3;
++  ((struct T __attribute__((may_alias)) *) &t[sizeof (short)])->t = 1;
++  test (a, q, 3);
++}
++
++__attribute__((noipa)) void
++corge (long long *p, char *q, char *r, char *s, short u[3])
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  *(short __attribute__((may_alias)) *) &a[2 * sizeof (short)] = u[2];
++  ((struct S __attribute__((may_alias)) *) &a[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &a[sizeof (short)] = u[1];
++  *(short __attribute__((may_alias)) *) &q[2 * sizeof (short)] = u[2];
++  ((struct S __attribute__((may_alias)) *) &r[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &s[sizeof (short)] = u[1];
++  test (a, q, 4);
++}
++
++__attribute__((noipa)) void
++garply (long long *p, char *q, char *r, char *s, short u[3])
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  *(short __attribute__((may_alias)) *) &a[sizeof (short)] = u[1];
++  ((struct S __attribute__((may_alias)) *) &a[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &a[2 * sizeof (short)] = u[2];
++  *(short __attribute__((may_alias)) *) &s[sizeof (short)] = u[1];
++  ((struct S __attribute__((may_alias)) *) &r[1])->s = p[0];
++  *(short __attribute__((may_alias)) *) &q[2 * sizeof (short)] = u[2];
++  test (a, q, 6);
++}
++
++int
++main ()
++{
++  char a[64] __attribute__((aligned (__alignof (short))));
++  long long p = -1LL;
++  short u[] = { 1, 2, 3 };
++  foo (&p, &a[0], &a[0], &a[0]);
++  bar (&p, &a[0], &a[0], &a[0], &a[0]);
++  baz (&p, &a[0], &a[0], &a[0]);
++  qux (&p, &a[0], &a[0], &a[0], &a[0]);
++  corge (&p, &a[0], &a[0], &a[0], u);
++  garply (&p, &a[0], &a[0], &a[0], u);
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr94206.c b/gcc/testsuite/gcc.dg/torture/pr94206.c
 new file mode 100644
