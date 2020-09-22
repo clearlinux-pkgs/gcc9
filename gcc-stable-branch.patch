@@ -72,7 +72,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (193):
+GCC Administrator (194):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -431,7 +432,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (39):
+Jonathan Wakely (46):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -471,6 +472,13 @@ Jonathan Wakely (39):
       libstdc++: Enable assertions in constexpr string_view members [PR 71960]
       libstdc++: Avoid errors in allocator's noexcept-specifier (PR 89510)
       libstdc++: Fix is_trivially_constructible (PR 94033)
+      libstdc++: handle small max_blocks_per_chunk in pool resources [PR 94160]
+      libstdc++: Fix noexcept-specifier for std::bind_front [PR 97101]
+      libstdc++: Make C++17 ignore --disable-libstdcxx-filesystem-ts [PR 94681]
+      libstdc++: Fix build for targets without lstat [PR 94681]
+      libstdc++: Fix std::gcd and std::lcm for unsigned integers [PR 92978]
+      libstdc++: Use correct argument type for __use_alloc [PR 96803]
+      libstdc++: Use correct argument type for __use_alloc, again [PR 96803]
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -38457,10 +38465,75 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..6a646977866 100644
+index 45847172291..c1823865056 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,479 @@
+@@ -1,3 +1,544 @@
++2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-28  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/92978
++	* include/std/numeric (__abs_integral): Replace with ...
++	(__detail::__absu): New function template that returns an
++	unsigned type, guaranteeing it can represent the most
++	negative signed value.
++	(__detail::__gcd, __detail::__lcm): Require arguments to
++	be unsigned and therefore already non-negative.
++	(gcd, lcm): Convert arguments to absolute value as unsigned
++	type before calling __detail::__gcd or __detail::__lcm.
++	* include/experimental/numeric (gcd, lcm): Likewise.
++	* testsuite/26_numerics/gcd/gcd_neg.cc: Adjust expected
++	errors.
++	* testsuite/26_numerics/lcm/lcm_neg.cc: Likewise.
++	* testsuite/26_numerics/gcd/92978.cc: New test.
++	* testsuite/26_numerics/lcm/92978.cc: New test.
++	* testsuite/experimental/numeric/92978.cc: New test.
++
++2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94681
++	* src/c++17/fs_ops.cc (read_symlink): Use posix::lstat instead
++	of calling ::lstat directly.
++	* src/filesystem/ops.cc (read_symlink): Likewise.
++
++2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94681
++	* acinclude.m4 (GLIBCXX_CHECK_FILESYSTEM_DEPS): Do not depend on
++	$enable_libstdcxx_filesystem_ts.
++	* configure: Regenerate.
++
++2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-09-20  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/97101
++	* include/std/functional (bind_front): Fix order of parameters
++	in is_nothrow_constructible_v specialization.
++	* testsuite/20_util/function_objects/bind_front/97101.cc: New test.
++
++2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-09-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/94160
++	* src/c++17/memory_resource.cc (munge_options): Round
++	max_blocks_per_chunk to a multiple of four.
++	(__pool_resource::_M_alloc_pools()): Simplify slightly.
++	* testsuite/20_util/unsynchronized_pool_resource/allocate.cc:
++	Check that valid pointers are returned when small values are
++	used for max_blocks_per_chunk.
++
 +2020-09-11  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -38940,6 +39013,451 @@ index 45847172291..6a646977866 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/libstdc++-v3/acinclude.m4 b/libstdc++-v3/acinclude.m4
+index d22e30230b3..93d86d2c363 100644
+--- a/libstdc++-v3/acinclude.m4
++++ b/libstdc++-v3/acinclude.m4
+@@ -4374,7 +4374,8 @@ AC_DEFUN([GLIBCXX_ENABLE_FILESYSTEM_TS], [
+ ])
+ 
+ dnl
+-dnl Check whether the library calls required by the Filesystem TS are present.
++dnl Check whether the library calls required by the C++17 Filesystem library
++dnl and the Filesystem TS are present.
+ dnl Defines:
+ dnl  HAVE_STRUCT_DIRENT_D_TYPE
+ dnl  _GLIBCXX_USE_REALPATH
+@@ -4389,226 +4390,224 @@ dnl  HAVE_SYMLINK
+ dnl
+ AC_DEFUN([GLIBCXX_CHECK_FILESYSTEM_DEPS], [dnl
+ dnl
+-  if test $enable_libstdcxx_filesystem_ts = yes; then
+-    AC_LANG_SAVE
+-    AC_LANG_CPLUSPLUS
+-    ac_save_CXXFLAGS="$CXXFLAGS"
+-    CXXFLAGS="$CXXFLAGS -fno-exceptions"
++  AC_LANG_SAVE
++  AC_LANG_CPLUSPLUS
++  ac_save_CXXFLAGS="$CXXFLAGS"
++  CXXFLAGS="$CXXFLAGS -fno-exceptions"
+ dnl
+-    AC_MSG_CHECKING([for struct dirent.d_type])
+-    AC_CACHE_VAL(glibcxx_cv_dirent_d_type, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [#include <dirent.h>],
+-        [
+-         struct dirent d;
+-         if (sizeof d.d_type) return 0;
+-        ],
+-        [glibcxx_cv_dirent_d_type=yes],
+-        [glibcxx_cv_dirent_d_type=no])
+-    ])
+-    if test $glibcxx_cv_dirent_d_type = yes; then
+-      AC_DEFINE(HAVE_STRUCT_DIRENT_D_TYPE, 1, [Define to 1 if `d_type' is a member of `struct dirent'.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_dirent_d_type)
++  AC_MSG_CHECKING([for struct dirent.d_type])
++  AC_CACHE_VAL(glibcxx_cv_dirent_d_type, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [#include <dirent.h>],
++      [
++       struct dirent d;
++       if (sizeof d.d_type) return 0;
++      ],
++      [glibcxx_cv_dirent_d_type=yes],
++      [glibcxx_cv_dirent_d_type=no])
++  ])
++  if test $glibcxx_cv_dirent_d_type = yes; then
++    AC_DEFINE(HAVE_STRUCT_DIRENT_D_TYPE, 1, [Define to 1 if `d_type' is a member of `struct dirent'.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_dirent_d_type)
+ dnl
+-    AC_MSG_CHECKING([for realpath])
+-    AC_CACHE_VAL(glibcxx_cv_realpath, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [
+-         #include <limits.h>
+-         #include <stdlib.h>
+-         #include <unistd.h>
+-        ],
+-        [
+-         #if _XOPEN_VERSION < 500
+-         #error
+-         #elif _XOPEN_VERSION >= 700 || defined(PATH_MAX)
+-         char *tmp = realpath((const char*)NULL, (char*)NULL);
+-         #else
+-         #error
+-         #endif
+-        ],
+-        [glibcxx_cv_realpath=yes],
+-        [glibcxx_cv_realpath=no])
+-    ])
+-    if test $glibcxx_cv_realpath = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_REALPATH, 1, [Define if usable realpath is available in <stdlib.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_realpath)
++  AC_MSG_CHECKING([for realpath])
++  AC_CACHE_VAL(glibcxx_cv_realpath, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [
++       #include <limits.h>
++       #include <stdlib.h>
++       #include <unistd.h>
++      ],
++      [
++       #if _XOPEN_VERSION < 500
++       #error
++       #elif _XOPEN_VERSION >= 700 || defined(PATH_MAX)
++       char *tmp = realpath((const char*)NULL, (char*)NULL);
++       #else
++       #error
++       #endif
++      ],
++      [glibcxx_cv_realpath=yes],
++      [glibcxx_cv_realpath=no])
++  ])
++  if test $glibcxx_cv_realpath = yes; then
++    AC_DEFINE(_GLIBCXX_USE_REALPATH, 1, [Define if usable realpath is available in <stdlib.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_realpath)
+ dnl
+-    AC_MSG_CHECKING([for utimensat])
+-    AC_CACHE_VAL(glibcxx_cv_utimensat, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [
+-          #include <fcntl.h>
+-          #include <sys/stat.h>
+-        ],
+-        [
+-          struct timespec ts[2] = { { 0, UTIME_OMIT }, { 1, 1 } };
+-          int i = utimensat(AT_FDCWD, "path", ts, 0);
+-        ],
+-        [glibcxx_cv_utimensat=yes],
+-        [glibcxx_cv_utimensat=no])
+-    ])
+-    if test $glibcxx_cv_utimensat = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_UTIMENSAT, 1, [Define if utimensat and UTIME_OMIT are available in <sys/stat.h> and AT_FDCWD in <fcntl.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_utimensat)
++  AC_MSG_CHECKING([for utimensat])
++  AC_CACHE_VAL(glibcxx_cv_utimensat, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [
++	#include <fcntl.h>
++	#include <sys/stat.h>
++      ],
++      [
++	struct timespec ts[2] = { { 0, UTIME_OMIT }, { 1, 1 } };
++	int i = utimensat(AT_FDCWD, "path", ts, 0);
++      ],
++      [glibcxx_cv_utimensat=yes],
++      [glibcxx_cv_utimensat=no])
++  ])
++  if test $glibcxx_cv_utimensat = yes; then
++    AC_DEFINE(_GLIBCXX_USE_UTIMENSAT, 1, [Define if utimensat and UTIME_OMIT are available in <sys/stat.h> and AT_FDCWD in <fcntl.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_utimensat)
+ dnl
+-    AC_MSG_CHECKING([for utime])
+-    AC_CACHE_VAL(glibcxx_cv_utime, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [
+-          #include <utime.h>
+-        ],
+-        [
+-          struct utimbuf t = { 1, 1 };
+-          int i = utime("path", &t);
+-        ],
+-        [glibcxx_cv_utime=yes],
+-        [glibcxx_cv_utime=no])
+-    ])
+-    if test $glibcxx_cv_utime = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_UTIME, 1, [Define if utime is available in <utime.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_utime)
++  AC_MSG_CHECKING([for utime])
++  AC_CACHE_VAL(glibcxx_cv_utime, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [
++	#include <utime.h>
++      ],
++      [
++	struct utimbuf t = { 1, 1 };
++	int i = utime("path", &t);
++      ],
++      [glibcxx_cv_utime=yes],
++      [glibcxx_cv_utime=no])
++  ])
++  if test $glibcxx_cv_utime = yes; then
++    AC_DEFINE(_GLIBCXX_USE_UTIME, 1, [Define if utime is available in <utime.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_utime)
+ dnl
+-    AC_MSG_CHECKING([for lstat])
+-    AC_CACHE_VAL(glibcxx_cv_lstat, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [ #include <sys/stat.h> ],
+-        [
+-          struct stat st;
+-          int i = lstat("path", &st);
+-        ],
+-        [glibcxx_cv_lstat=yes],
+-        [glibcxx_cv_lstat=no])
+-    ])
+-    if test $glibcxx_cv_lstat = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_LSTAT, 1, [Define if lstat is available in <sys/stat.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_lstat)
++  AC_MSG_CHECKING([for lstat])
++  AC_CACHE_VAL(glibcxx_cv_lstat, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [ #include <sys/stat.h> ],
++      [
++	struct stat st;
++	int i = lstat("path", &st);
++      ],
++      [glibcxx_cv_lstat=yes],
++      [glibcxx_cv_lstat=no])
++  ])
++  if test $glibcxx_cv_lstat = yes; then
++    AC_DEFINE(_GLIBCXX_USE_LSTAT, 1, [Define if lstat is available in <sys/stat.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_lstat)
+ dnl
+-    AC_MSG_CHECKING([for struct stat.st_mtim.tv_nsec])
+-    AC_CACHE_VAL(glibcxx_cv_st_mtim, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [ #include <sys/stat.h> ],
+-        [
+-          struct stat st;
+-          return st.st_mtim.tv_nsec;
+-        ],
+-        [glibcxx_cv_st_mtim=yes],
+-        [glibcxx_cv_st_mtim=no])
+-    ])
+-    if test $glibcxx_cv_st_mtim = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_ST_MTIM, 1, [Define if struct stat has timespec members.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_st_mtim)
++  AC_MSG_CHECKING([for struct stat.st_mtim.tv_nsec])
++  AC_CACHE_VAL(glibcxx_cv_st_mtim, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [ #include <sys/stat.h> ],
++      [
++	struct stat st;
++	return st.st_mtim.tv_nsec;
++      ],
++      [glibcxx_cv_st_mtim=yes],
++      [glibcxx_cv_st_mtim=no])
++  ])
++  if test $glibcxx_cv_st_mtim = yes; then
++    AC_DEFINE(_GLIBCXX_USE_ST_MTIM, 1, [Define if struct stat has timespec members.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_st_mtim)
+ dnl
+-    AC_MSG_CHECKING([for fchmod])
+-    AC_CACHE_VAL(glibcxx_cv_fchmod, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [#include <sys/stat.h>],
+-        [fchmod(1, S_IWUSR);],
+-        [glibcxx_cv_fchmod=yes],
+-        [glibcxx_cv_fchmod=no])
+-    ])
+-    if test $glibcxx_cv_fchmod = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_FCHMOD, 1, [Define if fchmod is available in <sys/stat.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_fchmod)
++  AC_MSG_CHECKING([for fchmod])
++  AC_CACHE_VAL(glibcxx_cv_fchmod, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [#include <sys/stat.h>],
++      [fchmod(1, S_IWUSR);],
++      [glibcxx_cv_fchmod=yes],
++      [glibcxx_cv_fchmod=no])
++  ])
++  if test $glibcxx_cv_fchmod = yes; then
++    AC_DEFINE(_GLIBCXX_USE_FCHMOD, 1, [Define if fchmod is available in <sys/stat.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_fchmod)
+ dnl
+-    AC_MSG_CHECKING([for fchmodat])
+-    AC_CACHE_VAL(glibcxx_cv_fchmodat, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [
+-          #include <fcntl.h>
+-          #include <sys/stat.h>
+-        ],
+-        [fchmodat(AT_FDCWD, "", 0, AT_SYMLINK_NOFOLLOW);],
+-        [glibcxx_cv_fchmodat=yes],
+-        [glibcxx_cv_fchmodat=no])
+-    ])
+-    if test $glibcxx_cv_fchmodat = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_FCHMODAT, 1, [Define if fchmodat is available in <sys/stat.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_fchmodat)
+-dnl
+-    AC_MSG_CHECKING([for sendfile that can copy files])
+-    AC_CACHE_VAL(glibcxx_cv_sendfile, [dnl
+-      case "${target_os}" in
+-        gnu* | linux* | solaris*)
+-          GCC_TRY_COMPILE_OR_LINK(
+-            [#include <sys/sendfile.h>],
+-            [sendfile(1, 2, (off_t*)0, sizeof 1);],
+-            [glibcxx_cv_sendfile=yes],
+-            [glibcxx_cv_sendfile=no])
+-          ;;
+-        *)
+-          glibcxx_cv_sendfile=no
+-          ;;
+-      esac
+-    ])
+-    if test $glibcxx_cv_sendfile = yes; then
+-      AC_DEFINE(_GLIBCXX_USE_SENDFILE, 1, [Define if sendfile is available in <sys/sendfile.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_sendfile)
++  AC_MSG_CHECKING([for fchmodat])
++  AC_CACHE_VAL(glibcxx_cv_fchmodat, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [
++	#include <fcntl.h>
++	#include <sys/stat.h>
++      ],
++      [fchmodat(AT_FDCWD, "", 0, AT_SYMLINK_NOFOLLOW);],
++      [glibcxx_cv_fchmodat=yes],
++      [glibcxx_cv_fchmodat=no])
++  ])
++  if test $glibcxx_cv_fchmodat = yes; then
++    AC_DEFINE(_GLIBCXX_USE_FCHMODAT, 1, [Define if fchmodat is available in <sys/stat.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_fchmodat)
+ dnl
+-    AC_MSG_CHECKING([for link])
+-    AC_CACHE_VAL(glibcxx_cv_link, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [#include <unistd.h>],
+-        [link("", "");],
+-        [glibcxx_cv_link=yes],
+-        [glibcxx_cv_link=no])
+-    ])
+-    if test $glibcxx_cv_link = yes; then
+-      AC_DEFINE(HAVE_LINK, 1, [Define if link is available in <unistd.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_link)
++  AC_MSG_CHECKING([for sendfile that can copy files])
++  AC_CACHE_VAL(glibcxx_cv_sendfile, [dnl
++    case "${target_os}" in
++      gnu* | linux* | solaris*)
++	GCC_TRY_COMPILE_OR_LINK(
++	  [#include <sys/sendfile.h>],
++	  [sendfile(1, 2, (off_t*)0, sizeof 1);],
++	  [glibcxx_cv_sendfile=yes],
++	  [glibcxx_cv_sendfile=no])
++	;;
++      *)
++	glibcxx_cv_sendfile=no
++	;;
++    esac
++  ])
++  if test $glibcxx_cv_sendfile = yes; then
++    AC_DEFINE(_GLIBCXX_USE_SENDFILE, 1, [Define if sendfile is available in <sys/sendfile.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_sendfile)
+ dnl
+-    AC_MSG_CHECKING([for readlink])
+-    AC_CACHE_VAL(glibcxx_cv_readlink, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [#include <unistd.h>],
+-        [char buf[32]; readlink("", buf, sizeof(buf));],
+-        [glibcxx_cv_readlink=yes],
+-        [glibcxx_cv_readlink=no])
+-    ])
+-    if test $glibcxx_cv_readlink = yes; then
+-      AC_DEFINE(HAVE_READLINK, 1, [Define if readlink is available in <unistd.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_readlink)
++  AC_MSG_CHECKING([for link])
++  AC_CACHE_VAL(glibcxx_cv_link, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [#include <unistd.h>],
++      [link("", "");],
++      [glibcxx_cv_link=yes],
++      [glibcxx_cv_link=no])
++  ])
++  if test $glibcxx_cv_link = yes; then
++    AC_DEFINE(HAVE_LINK, 1, [Define if link is available in <unistd.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_link)
+ dnl
+-    AC_MSG_CHECKING([for symlink])
+-    AC_CACHE_VAL(glibcxx_cv_symlink, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [#include <unistd.h>],
+-        [symlink("", "");],
+-        [glibcxx_cv_symlink=yes],
+-        [glibcxx_cv_symlink=no])
+-    ])
+-    if test $glibcxx_cv_symlink = yes; then
+-      AC_DEFINE(HAVE_SYMLINK, 1, [Define if symlink is available in <unistd.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_symlink)
++  AC_MSG_CHECKING([for readlink])
++  AC_CACHE_VAL(glibcxx_cv_readlink, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [#include <unistd.h>],
++      [char buf[32]; readlink("", buf, sizeof(buf));],
++      [glibcxx_cv_readlink=yes],
++      [glibcxx_cv_readlink=no])
++  ])
++  if test $glibcxx_cv_readlink = yes; then
++    AC_DEFINE(HAVE_READLINK, 1, [Define if readlink is available in <unistd.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_readlink)
+ dnl
+-    AC_MSG_CHECKING([for truncate])
+-    AC_CACHE_VAL(glibcxx_cv_truncate, [dnl
+-      GCC_TRY_COMPILE_OR_LINK(
+-        [#include <unistd.h>],
+-        [truncate("", 99);],
+-        [glibcxx_cv_truncate=yes],
+-        [glibcxx_cv_truncate=no])
+-    ])
+-    if test $glibcxx_cv_truncate = yes; then
+-      AC_DEFINE(HAVE_TRUNCATE, 1, [Define if truncate is available in <unistd.h>.])
+-    fi
+-    AC_MSG_RESULT($glibcxx_cv_truncate)
++  AC_MSG_CHECKING([for symlink])
++  AC_CACHE_VAL(glibcxx_cv_symlink, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [#include <unistd.h>],
++      [symlink("", "");],
++      [glibcxx_cv_symlink=yes],
++      [glibcxx_cv_symlink=no])
++  ])
++  if test $glibcxx_cv_symlink = yes; then
++    AC_DEFINE(HAVE_SYMLINK, 1, [Define if symlink is available in <unistd.h>.])
++  fi
++  AC_MSG_RESULT($glibcxx_cv_symlink)
+ dnl
+-    CXXFLAGS="$ac_save_CXXFLAGS"
+-    AC_LANG_RESTORE
++  AC_MSG_CHECKING([for truncate])
++  AC_CACHE_VAL(glibcxx_cv_truncate, [dnl
++    GCC_TRY_COMPILE_OR_LINK(
++      [#include <unistd.h>],
++      [truncate("", 99);],
++      [glibcxx_cv_truncate=yes],
++      [glibcxx_cv_truncate=no])
++  ])
++  if test $glibcxx_cv_truncate = yes; then
++    AC_DEFINE(HAVE_TRUNCATE, 1, [Define if truncate is available in <unistd.h>.])
+   fi
++  AC_MSG_RESULT($glibcxx_cv_truncate)
++dnl
++  CXXFLAGS="$ac_save_CXXFLAGS"
++  AC_LANG_RESTORE
+ ])
+ 
+ dnl
 diff --git a/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt b/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt
 index 53c87f115e0..089537d5ddf 100644
 --- a/libstdc++-v3/config/abi/post/aarch64-linux-gnu/baseline_symbols.txt
@@ -40723,6 +41241,607 @@ index a403f4b660a..ab2e0951c31 100644
  OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIcEE@@GLIBCXX_3.4.21
  OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
  OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+index 1225edc596b..86db10fbe75 100755
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -80612,22 +80612,21 @@ $as_echo_n "checking whether to build Filesystem TS support... " >&6; }
+ $as_echo "$enable_libstdcxx_filesystem_ts" >&6; }
+ 
+ 
+-  if test $enable_libstdcxx_filesystem_ts = yes; then
+ 
+-    ac_ext=cpp
++  ac_ext=cpp
+ ac_cpp='$CXXCPP $CPPFLAGS'
+ ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+ 
+-    ac_save_CXXFLAGS="$CXXFLAGS"
+-    CXXFLAGS="$CXXFLAGS -fno-exceptions"
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for struct dirent.d_type" >&5
++  ac_save_CXXFLAGS="$CXXFLAGS"
++  CXXFLAGS="$CXXFLAGS -fno-exceptions"
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for struct dirent.d_type" >&5
+ $as_echo_n "checking for struct dirent.d_type... " >&6; }
+-    if ${glibcxx_cv_dirent_d_type+:} false; then :
++  if ${glibcxx_cv_dirent_d_type+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <dirent.h>
+@@ -80635,8 +80634,8 @@ int
+ main ()
+ {
+ 
+-         struct dirent d;
+-         if (sizeof d.d_type) return 0;
++       struct dirent d;
++       if (sizeof d.d_type) return 0;
+ 
+   ;
+   return 0;
+@@ -80659,8 +80658,8 @@ int
+ main ()
+ {
+ 
+-         struct dirent d;
+-         if (sizeof d.d_type) return 0;
++       struct dirent d;
++       if (sizeof d.d_type) return 0;
+ 
+   ;
+   return 0;
+@@ -80677,37 +80676,37 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_dirent_d_type = yes; then
++  if test $glibcxx_cv_dirent_d_type = yes; then
+ 
+ $as_echo "#define HAVE_STRUCT_DIRENT_D_TYPE 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_dirent_d_type" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_dirent_d_type" >&5
+ $as_echo "$glibcxx_cv_dirent_d_type" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for realpath" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for realpath" >&5
+ $as_echo_n "checking for realpath... " >&6; }
+-    if ${glibcxx_cv_realpath+:} false; then :
++  if ${glibcxx_cv_realpath+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-         #include <limits.h>
+-         #include <stdlib.h>
+-         #include <unistd.h>
++       #include <limits.h>
++       #include <stdlib.h>
++       #include <unistd.h>
+ 
+ int
+ main ()
+ {
+ 
+-         #if _XOPEN_VERSION < 500
+-         #error
+-         #elif _XOPEN_VERSION >= 700 || defined(PATH_MAX)
+-         char *tmp = realpath((const char*)NULL, (char*)NULL);
+-         #else
+-         #error
+-         #endif
++       #if _XOPEN_VERSION < 500
++       #error
++       #elif _XOPEN_VERSION >= 700 || defined(PATH_MAX)
++       char *tmp = realpath((const char*)NULL, (char*)NULL);
++       #else
++       #error
++       #endif
+ 
+   ;
+   return 0;
+@@ -80726,21 +80725,21 @@ fi
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-         #include <limits.h>
+-         #include <stdlib.h>
+-         #include <unistd.h>
++       #include <limits.h>
++       #include <stdlib.h>
++       #include <unistd.h>
+ 
+ int
+ main ()
+ {
+ 
+-         #if _XOPEN_VERSION < 500
+-         #error
+-         #elif _XOPEN_VERSION >= 700 || defined(PATH_MAX)
+-         char *tmp = realpath((const char*)NULL, (char*)NULL);
+-         #else
+-         #error
+-         #endif
++       #if _XOPEN_VERSION < 500
++       #error
++       #elif _XOPEN_VERSION >= 700 || defined(PATH_MAX)
++       char *tmp = realpath((const char*)NULL, (char*)NULL);
++       #else
++       #error
++       #endif
+ 
+   ;
+   return 0;
+@@ -80757,31 +80756,31 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_realpath = yes; then
++  if test $glibcxx_cv_realpath = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_REALPATH 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_realpath" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_realpath" >&5
+ $as_echo "$glibcxx_cv_realpath" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for utimensat" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for utimensat" >&5
+ $as_echo_n "checking for utimensat... " >&6; }
+-    if ${glibcxx_cv_utimensat+:} false; then :
++  if ${glibcxx_cv_utimensat+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-          #include <fcntl.h>
+-          #include <sys/stat.h>
++	#include <fcntl.h>
++	#include <sys/stat.h>
+ 
+ int
+ main ()
+ {
+ 
+-          struct timespec ts[2] = { { 0, UTIME_OMIT }, { 1, 1 } };
+-          int i = utimensat(AT_FDCWD, "path", ts, 0);
++	struct timespec ts[2] = { { 0, UTIME_OMIT }, { 1, 1 } };
++	int i = utimensat(AT_FDCWD, "path", ts, 0);
+ 
+   ;
+   return 0;
+@@ -80800,15 +80799,15 @@ fi
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-          #include <fcntl.h>
+-          #include <sys/stat.h>
++	#include <fcntl.h>
++	#include <sys/stat.h>
+ 
+ int
+ main ()
+ {
+ 
+-          struct timespec ts[2] = { { 0, UTIME_OMIT }, { 1, 1 } };
+-          int i = utimensat(AT_FDCWD, "path", ts, 0);
++	struct timespec ts[2] = { { 0, UTIME_OMIT }, { 1, 1 } };
++	int i = utimensat(AT_FDCWD, "path", ts, 0);
+ 
+   ;
+   return 0;
+@@ -80825,30 +80824,30 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_utimensat = yes; then
++  if test $glibcxx_cv_utimensat = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_UTIMENSAT 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_utimensat" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_utimensat" >&5
+ $as_echo "$glibcxx_cv_utimensat" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for utime" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for utime" >&5
+ $as_echo_n "checking for utime... " >&6; }
+-    if ${glibcxx_cv_utime+:} false; then :
++  if ${glibcxx_cv_utime+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-          #include <utime.h>
++	#include <utime.h>
+ 
+ int
+ main ()
+ {
+ 
+-          struct utimbuf t = { 1, 1 };
+-          int i = utime("path", &t);
++	struct utimbuf t = { 1, 1 };
++	int i = utime("path", &t);
+ 
+   ;
+   return 0;
+@@ -80867,14 +80866,14 @@ fi
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-          #include <utime.h>
++	#include <utime.h>
+ 
+ int
+ main ()
+ {
+ 
+-          struct utimbuf t = { 1, 1 };
+-          int i = utime("path", &t);
++	struct utimbuf t = { 1, 1 };
++	int i = utime("path", &t);
+ 
+   ;
+   return 0;
+@@ -80891,19 +80890,19 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_utime = yes; then
++  if test $glibcxx_cv_utime = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_UTIME 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_utime" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_utime" >&5
+ $as_echo "$glibcxx_cv_utime" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lstat" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for lstat" >&5
+ $as_echo_n "checking for lstat... " >&6; }
+-    if ${glibcxx_cv_lstat+:} false; then :
++  if ${glibcxx_cv_lstat+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+  #include <sys/stat.h>
+@@ -80911,8 +80910,8 @@ int
+ main ()
+ {
+ 
+-          struct stat st;
+-          int i = lstat("path", &st);
++	struct stat st;
++	int i = lstat("path", &st);
+ 
+   ;
+   return 0;
+@@ -80935,8 +80934,8 @@ int
+ main ()
+ {
+ 
+-          struct stat st;
+-          int i = lstat("path", &st);
++	struct stat st;
++	int i = lstat("path", &st);
+ 
+   ;
+   return 0;
+@@ -80953,19 +80952,19 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_lstat = yes; then
++  if test $glibcxx_cv_lstat = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_LSTAT 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_lstat" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_lstat" >&5
+ $as_echo "$glibcxx_cv_lstat" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for struct stat.st_mtim.tv_nsec" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for struct stat.st_mtim.tv_nsec" >&5
+ $as_echo_n "checking for struct stat.st_mtim.tv_nsec... " >&6; }
+-    if ${glibcxx_cv_st_mtim+:} false; then :
++  if ${glibcxx_cv_st_mtim+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+  #include <sys/stat.h>
+@@ -80973,8 +80972,8 @@ int
+ main ()
+ {
+ 
+-          struct stat st;
+-          return st.st_mtim.tv_nsec;
++	struct stat st;
++	return st.st_mtim.tv_nsec;
+ 
+   ;
+   return 0;
+@@ -80997,8 +80996,8 @@ int
+ main ()
+ {
+ 
+-          struct stat st;
+-          return st.st_mtim.tv_nsec;
++	struct stat st;
++	return st.st_mtim.tv_nsec;
+ 
+   ;
+   return 0;
+@@ -81015,19 +81014,19 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_st_mtim = yes; then
++  if test $glibcxx_cv_st_mtim = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_ST_MTIM 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_st_mtim" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_st_mtim" >&5
+ $as_echo "$glibcxx_cv_st_mtim" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fchmod" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fchmod" >&5
+ $as_echo_n "checking for fchmod... " >&6; }
+-    if ${glibcxx_cv_fchmod+:} false; then :
++  if ${glibcxx_cv_fchmod+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <sys/stat.h>
+@@ -81071,24 +81070,24 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_fchmod = yes; then
++  if test $glibcxx_cv_fchmod = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_FCHMOD 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_fchmod" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_fchmod" >&5
+ $as_echo "$glibcxx_cv_fchmod" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fchmodat" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for fchmodat" >&5
+ $as_echo_n "checking for fchmodat... " >&6; }
+-    if ${glibcxx_cv_fchmodat+:} false; then :
++  if ${glibcxx_cv_fchmodat+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-          #include <fcntl.h>
+-          #include <sys/stat.h>
++	#include <fcntl.h>
++	#include <sys/stat.h>
+ 
+ int
+ main ()
+@@ -81111,8 +81110,8 @@ fi
+ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ 
+-          #include <fcntl.h>
+-          #include <sys/stat.h>
++	#include <fcntl.h>
++	#include <sys/stat.h>
+ 
+ int
+ main ()
+@@ -81133,21 +81132,21 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_fchmodat = yes; then
++  if test $glibcxx_cv_fchmodat = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_FCHMODAT 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_fchmodat" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_fchmodat" >&5
+ $as_echo "$glibcxx_cv_fchmodat" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sendfile that can copy files" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for sendfile that can copy files" >&5
+ $as_echo_n "checking for sendfile that can copy files... " >&6; }
+-    if ${glibcxx_cv_sendfile+:} false; then :
++  if ${glibcxx_cv_sendfile+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        case "${target_os}" in
+-        gnu* | linux* | solaris*)
+-          if test x$gcc_no_link = xyes; then
++      case "${target_os}" in
++      gnu* | linux* | solaris*)
++	if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <sys/sendfile.h>
+@@ -81188,27 +81187,27 @@ fi
+ rm -f core conftest.err conftest.$ac_objext \
+     conftest$ac_exeext conftest.$ac_ext
+ fi
+-          ;;
+-        *)
+-          glibcxx_cv_sendfile=no
+-          ;;
+-      esac
++	;;
++      *)
++	glibcxx_cv_sendfile=no
++	;;
++    esac
+ 
+ fi
+ 
+-    if test $glibcxx_cv_sendfile = yes; then
++  if test $glibcxx_cv_sendfile = yes; then
+ 
+ $as_echo "#define _GLIBCXX_USE_SENDFILE 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_sendfile" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_sendfile" >&5
+ $as_echo "$glibcxx_cv_sendfile" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for link" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for link" >&5
+ $as_echo_n "checking for link... " >&6; }
+-    if ${glibcxx_cv_link+:} false; then :
++  if ${glibcxx_cv_link+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <unistd.h>
+@@ -81252,19 +81251,19 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_link = yes; then
++  if test $glibcxx_cv_link = yes; then
+ 
+ $as_echo "#define HAVE_LINK 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_link" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_link" >&5
+ $as_echo "$glibcxx_cv_link" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readlink" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for readlink" >&5
+ $as_echo_n "checking for readlink... " >&6; }
+-    if ${glibcxx_cv_readlink+:} false; then :
++  if ${glibcxx_cv_readlink+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <unistd.h>
+@@ -81308,19 +81307,19 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_readlink = yes; then
++  if test $glibcxx_cv_readlink = yes; then
+ 
+ $as_echo "#define HAVE_READLINK 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_readlink" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_readlink" >&5
+ $as_echo "$glibcxx_cv_readlink" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for symlink" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for symlink" >&5
+ $as_echo_n "checking for symlink... " >&6; }
+-    if ${glibcxx_cv_symlink+:} false; then :
++  if ${glibcxx_cv_symlink+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <unistd.h>
+@@ -81364,19 +81363,19 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_symlink = yes; then
++  if test $glibcxx_cv_symlink = yes; then
+ 
+ $as_echo "#define HAVE_SYMLINK 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_symlink" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_symlink" >&5
+ $as_echo "$glibcxx_cv_symlink" >&6; }
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for truncate" >&5
++  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for truncate" >&5
+ $as_echo_n "checking for truncate... " >&6; }
+-    if ${glibcxx_cv_truncate+:} false; then :
++  if ${glibcxx_cv_truncate+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+-        if test x$gcc_no_link = xyes; then
++      if test x$gcc_no_link = xyes; then
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
+ #include <unistd.h>
+@@ -81420,21 +81419,20 @@ fi
+ 
+ fi
+ 
+-    if test $glibcxx_cv_truncate = yes; then
++  if test $glibcxx_cv_truncate = yes; then
+ 
+ $as_echo "#define HAVE_TRUNCATE 1" >>confdefs.h
+ 
+-    fi
+-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_truncate" >&5
++  fi
++  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_truncate" >&5
+ $as_echo "$glibcxx_cv_truncate" >&6; }
+-    CXXFLAGS="$ac_save_CXXFLAGS"
+-    ac_ext=c
++  CXXFLAGS="$ac_save_CXXFLAGS"
++  ac_ext=c
+ ac_cpp='$CPP $CPPFLAGS'
+ ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ ac_compiler_gnu=$ac_cv_c_compiler_gnu
+ 
+-  fi
+ 
+ 
+ # For Networking TS.
 diff --git a/libstdc++-v3/doc/Makefile.am b/libstdc++-v3/doc/Makefile.am
 index 4427e5da6ad..bd88bdaa8c5 100644
 --- a/libstdc++-v3/doc/Makefile.am
@@ -44162,6 +45281,63 @@ index 266a2487899..7e2a97fd8ec 100644
    /// Swap two executor objects.
    inline void swap(executor& __a, executor& __b) noexcept { __a.swap(__b); }
  
+diff --git a/libstdc++-v3/include/experimental/numeric b/libstdc++-v3/include/experimental/numeric
+index e5123a993d4..5621ca6e0ae 100644
+--- a/libstdc++-v3/include/experimental/numeric
++++ b/libstdc++-v3/include/experimental/numeric
+@@ -53,15 +53,19 @@ inline namespace fundamentals_v2
+   /// Greatest common divisor
+   template<typename _Mn, typename _Nn>
+     constexpr common_type_t<_Mn, _Nn>
+-    gcd(_Mn __m, _Nn __n)
++    gcd(_Mn __m, _Nn __n) noexcept
+     {
+-      static_assert(is_integral_v<_Mn>, "gcd arguments are integers");
+-      static_assert(is_integral_v<_Nn>, "gcd arguments are integers");
+-      static_assert(!is_same_v<remove_cv_t<_Mn>, bool>,
+-		    "gcd arguments are not bools");
+-      static_assert(!is_same_v<remove_cv_t<_Nn>, bool>,
+-		    "gcd arguments are not bools");
+-      return std::__detail::__gcd(__m, __n);
++      static_assert(is_integral_v<_Mn>,
++	  "std::experimental::gcd arguments must be integers");
++      static_assert(is_integral_v<_Nn>,
++	  "std::experimental::gcd arguments must be integers");
++      static_assert(_Mn(2) != _Mn(1),
++	  "std::experimental::gcd arguments must not be bool");
++      static_assert(_Nn(2) != _Nn(1),
++	  "std::experimental::gcd arguments must not be bool");
++      using _Up = make_unsigned_t<common_type_t<_Mn, _Nn>>;
++      return std::__detail::__gcd(std::__detail::__absu<_Up>(__m),
++				  std::__detail::__absu<_Up>(__n));
+     }
+ 
+   /// Least common multiple
+@@ -69,13 +73,17 @@ inline namespace fundamentals_v2
+     constexpr common_type_t<_Mn, _Nn>
+     lcm(_Mn __m, _Nn __n)
+     {
+-      static_assert(is_integral_v<_Mn>, "lcm arguments are integers");
+-      static_assert(is_integral_v<_Nn>, "lcm arguments are integers");
+-      static_assert(!is_same_v<remove_cv_t<_Mn>, bool>,
+-		    "lcm arguments are not bools");
+-      static_assert(!is_same_v<remove_cv_t<_Nn>, bool>,
+-		    "lcm arguments are not bools");
+-      return std::__detail::__lcm(__m, __n);
++      static_assert(is_integral_v<_Mn>,
++	  "std::experimental::lcm arguments must be integers");
++      static_assert(is_integral_v<_Nn>,
++	  "std::experimental::lcm arguments must be integers");
++      static_assert(_Mn(2) != _Mn(1),
++	  "std::experimental::lcm arguments must not be bool");
++      static_assert(_Nn(2) != _Nn(1),
++	  "std::experimental::lcm arguments must not be bool");
++      using _Up = make_unsigned_t<common_type_t<_Mn, _Nn>>;
++      return std::__detail::__lcm(std::__detail::__absu<_Up>(__m),
++				  std::__detail::__absu<_Up>(__n));
+     }
+ } // namespace fundamentals_v2
+ } // namespace experimental
 diff --git a/libstdc++-v3/include/experimental/socket b/libstdc++-v3/include/experimental/socket
 index e80626528ce..cea17312dbd 100644
 --- a/libstdc++-v3/include/experimental/socket
@@ -44375,9 +45551,20 @@ index 9d6cc40593b..4b319f93a61 100644
    template<typename _Tp, typename _Alloc, typename _Predicate>
      inline typename forward_list<_Tp, _Alloc>::size_type 
 diff --git a/libstdc++-v3/include/std/functional b/libstdc++-v3/include/std/functional
-index 528452fed40..4b9c3449383 100644
+index 528452fed40..ec832bab3b0 100644
 --- a/libstdc++-v3/include/std/functional
 +++ b/libstdc++-v3/include/std/functional
+@@ -928,8 +928,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   template<typename _Fn, typename... _Args>
+     _Bind_front_t<_Fn, _Args...>
+     bind_front(_Fn&& __fn, _Args&&... __args)
+-    noexcept(is_nothrow_constructible_v<int, _Bind_front_t<_Fn, _Args...>,
+-					_Fn, _Args...>)
++    noexcept(is_nothrow_constructible_v<_Bind_front_t<_Fn, _Args...>,
++					int, _Fn, _Args...>)
+     {
+       return _Bind_front_t<_Fn, _Args...>(0, std::forward<_Fn>(__fn),
+ 					  std::forward<_Args>(__args)...);
 @@ -974,7 +974,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
        _GLIBCXX_NOT_FN_CALL_OP( const & )
        _GLIBCXX_NOT_FN_CALL_OP( && )
@@ -44424,6 +45611,128 @@ index 7ff5d17afe7..5b6ec60268a 100644
    template<typename _Tp = std::byte>
      class polymorphic_allocator;
  #endif
+diff --git a/libstdc++-v3/include/std/numeric b/libstdc++-v3/include/std/numeric
+index 87a50e572d1..bc2afc65c6e 100644
+--- a/libstdc++-v3/include/std/numeric
++++ b/libstdc++-v3/include/std/numeric
+@@ -60,6 +60,7 @@
+ #include <bits/c++config.h>
+ #include <bits/stl_iterator_base_types.h>
+ #include <bits/stl_numeric.h>
++#include <ext/numeric_traits.h>
+ 
+ #ifdef _GLIBCXX_PARALLEL
+ # include <parallel/numeric>
+@@ -82,38 +83,38 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+ namespace __detail
+ {
+-  // std::abs is not constexpr and doesn't support unsigned integers.
+-  template<typename _Tp>
+-    constexpr
+-    enable_if_t<__and_<is_integral<_Tp>, is_signed<_Tp>>::value, _Tp>
+-    __abs_integral(_Tp __val)
+-    { return __val < 0 ? -__val : __val; }
+-
+-  template<typename _Tp>
+-    constexpr
+-    enable_if_t<__and_<is_integral<_Tp>, is_unsigned<_Tp>>::value, _Tp>
+-    __abs_integral(_Tp __val)
+-    { return __val; }
++  // std::abs is not constexpr, doesn't support unsigned integers,
++  // and std::abs(std::numeric_limits<T>::min()) is undefined.
++  template<typename _Up, typename _Tp>
++    constexpr _Up
++    __absu(_Tp __val)
++    {
++      static_assert(is_unsigned<_Up>::value, "result type must be unsigned");
++      static_assert(sizeof(_Up) >= sizeof(_Tp),
++	  "result type must be at least as wide as the input type");
++      return __val < 0 ? -(_Up)__val : (_Up)__val;
++    }
+ 
+-  void __abs_integral(bool) = delete;
++  template<typename _Up> void __absu(bool) = delete;
+ 
+-  template<typename _Mn, typename _Nn>
+-    constexpr common_type_t<_Mn, _Nn>
+-    __gcd(_Mn __m, _Nn __n)
++  // GCD implementation
++  template<typename _Tp>
++    constexpr _Tp
++    __gcd(_Tp __m, _Tp __n)
+     {
+-      return __m == 0 ? __detail::__abs_integral(__n)
+-	: __n == 0 ? __detail::__abs_integral(__m)
+-	: __detail::__gcd(__n, __m % __n);
++      static_assert(is_unsigned<_Tp>::value, "type must be unsigned");
++      return __m == 0 ? __n
++	: __n == 0 ? __m
++	: __detail::__gcd(__n, _Tp(__m % __n));
+     }
+ 
+-  /// Least common multiple
+-  template<typename _Mn, typename _Nn>
+-    constexpr common_type_t<_Mn, _Nn>
+-    __lcm(_Mn __m, _Nn __n)
++  // LCM implementation
++  template<typename _Tp>
++    constexpr _Tp
++    __lcm(_Tp __m, _Tp __n)
+     {
+       return (__m != 0 && __n != 0)
+-	? (__detail::__abs_integral(__m) / __detail::__gcd(__m, __n))
+-	  * __detail::__abs_integral(__n)
++	? (__m / __detail::__gcd(__m, __n)) * __n
+ 	: 0;
+     }
+ } // namespace __detail
+@@ -128,29 +129,29 @@ namespace __detail
+   /// Greatest common divisor
+   template<typename _Mn, typename _Nn>
+     constexpr common_type_t<_Mn, _Nn>
+-    gcd(_Mn __m, _Nn __n)
++    gcd(_Mn __m, _Nn __n) noexcept
+     {
+-      static_assert(is_integral_v<_Mn>, "gcd arguments are integers");
+-      static_assert(is_integral_v<_Nn>, "gcd arguments are integers");
+-      static_assert(!is_same_v<remove_cv_t<_Mn>, bool>,
+-		    "gcd arguments are not bools");
+-      static_assert(!is_same_v<remove_cv_t<_Nn>, bool>,
+-		    "gcd arguments are not bools");
+-      return __detail::__gcd(__m, __n);
++      static_assert(is_integral_v<_Mn>, "std::gcd arguments must be integers");
++      static_assert(is_integral_v<_Nn>, "std::gcd arguments must be integers");
++      static_assert(_Mn(2) != _Mn(1), "std::gcd arguments must not be bool");
++      static_assert(_Nn(2) != _Nn(1), "std::gcd arguments must not be bool");
++      using _Up = make_unsigned_t<common_type_t<_Mn, _Nn>>;
++      return __detail::__gcd(__detail::__absu<_Up>(__m),
++			     __detail::__absu<_Up>(__n));
+     }
+ 
+   /// Least common multiple
+   template<typename _Mn, typename _Nn>
+     constexpr common_type_t<_Mn, _Nn>
+-    lcm(_Mn __m, _Nn __n)
++    lcm(_Mn __m, _Nn __n) noexcept
+     {
+-      static_assert(is_integral_v<_Mn>, "lcm arguments are integers");
+-      static_assert(is_integral_v<_Nn>, "lcm arguments are integers");
+-      static_assert(!is_same_v<remove_cv_t<_Mn>, bool>,
+-		    "lcm arguments are not bools");
+-      static_assert(!is_same_v<remove_cv_t<_Nn>, bool>,
+-		    "lcm arguments are not bools");
+-      return __detail::__lcm(__m, __n);
++      static_assert(is_integral_v<_Mn>, "std::lcm arguments must be integers");
++      static_assert(is_integral_v<_Nn>, "std::lcm arguments must be integers");
++      static_assert(_Mn(2) == 2, "std::lcm arguments must not be bool");
++      static_assert(_Nn(2) == 2, "std::lcm arguments must not be bool");
++      using _Up = make_unsigned_t<common_type_t<_Mn, _Nn>>;
++      return __detail::__lcm(__detail::__absu<_Up>(__m),
++			     __detail::__absu<_Up>(__n));
+     }
+ 
+ #endif // C++17
 diff --git a/libstdc++-v3/include/std/streambuf b/libstdc++-v3/include/std/streambuf
 index d9ca981d704..f812e32de42 100644
 --- a/libstdc++-v3/include/std/streambuf
@@ -44502,6 +45811,38 @@ index 42822cc41ab..b7a0421950e 100644
        constexpr bool
        starts_with(basic_string_view __x) const noexcept
        { return this->substr(0, __x.size()) == __x; }
+diff --git a/libstdc++-v3/include/std/tuple b/libstdc++-v3/include/std/tuple
+index f942109ed01..164027816f4 100644
+--- a/libstdc++-v3/include/std/tuple
++++ b/libstdc++-v3/include/std/tuple
+@@ -275,13 +275,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 	  _Base(__use_alloc<_Head, _Alloc, _Head>(__a),
+ 	        std::forward<_Head>(_M_head(__in))) { }
+ 
+-      template<typename _Alloc, typename... _UElements>
++      template<typename _Alloc, typename _UHead, typename... _UTails>
+ 	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+-	            const _Tuple_impl<_Idx, _UElements...>& __in)
++		    const _Tuple_impl<_Idx, _UHead, _UTails...>& __in)
+ 	: _Inherited(__tag, __a,
+-		     _Tuple_impl<_Idx, _UElements...>::_M_tail(__in)),
+-	  _Base(__use_alloc<_Head, _Alloc, _Head>(__a),
+-		_Tuple_impl<_Idx, _UElements...>::_M_head(__in)) { }
++		     _Tuple_impl<_Idx, _UHead, _UTails...>::_M_tail(__in)),
++	  _Base(__use_alloc<_Head, _Alloc, const _UHead&>(__a),
++		_Tuple_impl<_Idx, _UHead, _UTails...>::_M_head(__in)) { }
+ 
+       template<typename _Alloc, typename _UHead, typename... _UTails>
+ 	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+@@ -397,7 +397,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       template<typename _Alloc, typename _UHead>
+ 	_Tuple_impl(allocator_arg_t __tag, const _Alloc& __a,
+ 	            const _Tuple_impl<_Idx, _UHead>& __in)
+-	: _Base(__use_alloc<_Head, _Alloc, _Head>(__a),
++	: _Base(__use_alloc<_Head, _Alloc, const _UHead&>(__a),
+ 		_Tuple_impl<_Idx, _UHead>::_M_head(__in)) { }
+ 
+       template<typename _Alloc, typename _UHead>
 diff --git a/libstdc++-v3/include/std/type_traits b/libstdc++-v3/include/std/type_traits
 index 9bad55829ce..35bda61c500 100644
 --- a/libstdc++-v3/include/std/type_traits
@@ -44916,10 +46257,16 @@ index 3c288301952..0f704c054cf 100644
  #endif // C++17
  #endif // C++14
 diff --git a/libstdc++-v3/src/c++17/fs_ops.cc b/libstdc++-v3/src/c++17/fs_ops.cc
-index 5f1f47b9fb7..5bb4b5d0160 100644
+index 5f1f47b9fb7..402ed02143d 100644
 --- a/libstdc++-v3/src/c++17/fs_ops.cc
 +++ b/libstdc++-v3/src/c++17/fs_ops.cc
-@@ -1180,6 +1180,12 @@ fs::path fs::read_symlink(const path& p, error_code& ec)
+@@ -1175,11 +1175,17 @@ fs::path fs::read_symlink(const path& p, error_code& ec)
+   path result;
+ #if defined(_GLIBCXX_HAVE_READLINK) && defined(_GLIBCXX_HAVE_SYS_STAT_H)
+   stat_type st;
+-  if (::lstat(p.c_str(), &st))
++  if (posix::lstat(p.c_str(), &st))
+     {
        ec.assign(errno, std::generic_category());
        return result;
      }
@@ -44991,7 +46338,7 @@ index 54bef75efd8..a6be0e03a78 100644
    const auto orig_type = _M_type();
    const auto orig_size = _M_cmpts.size();
 diff --git a/libstdc++-v3/src/c++17/memory_resource.cc b/libstdc++-v3/src/c++17/memory_resource.cc
-index e28526d1bfe..f39360cb4bf 100644
+index e28526d1bfe..4c5aafc7995 100644
 --- a/libstdc++-v3/src/c++17/memory_resource.cc
 +++ b/libstdc++-v3/src/c++17/memory_resource.cc
 @@ -228,8 +228,8 @@ namespace pmr
@@ -45005,6 +46352,41 @@ index e28526d1bfe..f39360cb4bf 100644
  	  void* __start = (char*)(__ch + 1) - __size;
  	  __r->deallocate(__start, __size, __align);
  	}
+@@ -873,7 +873,18 @@ namespace pmr
+       }
+     else
+       {
+-	// TODO round to preferred granularity ?
++	// Round to preferred granularity.
++	if (opts.max_blocks_per_chunk < size_t(-4))
++	  {
++	    // round up
++	    opts.max_blocks_per_chunk += 3;
++	    opts.max_blocks_per_chunk &= ~size_t(3);
++	  }
++	else
++	  {
++	    // round down
++	    opts.max_blocks_per_chunk &= ~size_t(3);
++	  }
+       }
+ 
+     if (opts.max_blocks_per_chunk > chunk::max_blocks_per_chunk())
+@@ -1013,11 +1024,9 @@ namespace pmr
+ 	  : pool_sizes[i];
+ 
+ 	// Decide on initial number of blocks per chunk.
+-	// Always have at least 16 blocks per chunk:
+-	const size_t min_blocks_per_chunk = 16;
+-	// But for smaller blocks, use a larger initial size:
+-	size_t blocks_per_chunk
+-	  = std::max(1024 / block_size, min_blocks_per_chunk);
++	// At least 16 blocks per chunk seems reasonable,
++	// more for smaller blocks:
++	size_t blocks_per_chunk = std::max(size_t(16), 1024 / block_size);
+ 	// But don't exceed the requested max_blocks_per_chunk:
+ 	blocks_per_chunk
+ 	  = std::min(blocks_per_chunk, _M_opts.max_blocks_per_chunk);
 diff --git a/libstdc++-v3/src/filesystem/ops-common.h b/libstdc++-v3/src/filesystem/ops-common.h
 index 21d0bbabb43..5c907fbca1e 100644
 --- a/libstdc++-v3/src/filesystem/ops-common.h
@@ -45028,10 +46410,16 @@ index 21d0bbabb43..5c907fbca1e 100644
    }
  
 diff --git a/libstdc++-v3/src/filesystem/ops.cc b/libstdc++-v3/src/filesystem/ops.cc
-index 5c5d6b9ef26..913b3c5a024 100644
+index 5c5d6b9ef26..0115cff1907 100644
 --- a/libstdc++-v3/src/filesystem/ops.cc
 +++ b/libstdc++-v3/src/filesystem/ops.cc
-@@ -998,6 +998,12 @@ fs::path fs::read_symlink(const path& p [[gnu::unused]], error_code& ec)
+@@ -993,11 +993,17 @@ fs::path fs::read_symlink(const path& p [[gnu::unused]], error_code& ec)
+   path result;
+ #if defined(_GLIBCXX_HAVE_READLINK) && defined(_GLIBCXX_HAVE_SYS_STAT_H)
+   stat_type st;
+-  if (::lstat(p.c_str(), &st))
++  if (posix::lstat(p.c_str(), &st))
+     {
        ec.assign(errno, std::generic_category());
        return result;
      }
@@ -45319,6 +46707,53 @@ index 00000000000..9d4a77f5c31
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/20_util/function_objects/bind_front/97101.cc b/libstdc++-v3/testsuite/20_util/function_objects/bind_front/97101.cc
+new file mode 100644
+index 00000000000..b159eb02591
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/function_objects/bind_front/97101.cc
+@@ -0,0 +1,41 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++#include <functional>
++
++void
++test01()
++{
++  struct F1
++  {
++    void operator()() { }
++  };
++
++  struct F2
++  {
++    F2() = default;
++    F2(const F2&) noexcept(false) { }
++    void operator()() { }
++  };
++
++  // PR libstdc++/97101
++  static_assert( noexcept(std::bind_front(F1{})) );
++  static_assert( ! noexcept(std::bind_front(F2{})) );
++}
 diff --git a/libstdc++-v3/testsuite/20_util/is_nothrow_constructible/94003.cc b/libstdc++-v3/testsuite/20_util/is_nothrow_constructible/94003.cc
 new file mode 100644
 index 00000000000..392a0878ba5
@@ -45486,6 +46921,110 @@ index 00000000000..4555284416d
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/20_util/tuple/cons/96803.cc b/libstdc++-v3/testsuite/20_util/tuple/cons/96803.cc
+new file mode 100644
+index 00000000000..867a42150e0
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/tuple/cons/96803.cc
+@@ -0,0 +1,62 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do compile { target c++11 } }
++
++#include <tuple>
++#include <memory>
++
++struct X
++{
++  using allocator_type = std::allocator<int>;
++
++  X(X&&) { }
++  X(std::allocator_arg_t, const allocator_type&, X&&) { }
++
++  explicit X(int) { }
++  explicit X(int, allocator_type) { }
++};
++
++void
++test01()
++{
++  // PR libstdc++/96803
++  // std::tuple chooses wrong constructor for uses-allocator construction
++  std::tuple<int> o;
++  std::tuple<X> nok(std::allocator_arg, std::allocator<int>(), o);
++
++  std::tuple<int, int> oo;
++  std::tuple<X, X> nn(std::allocator_arg, std::allocator<int>(), oo);
++}
++
++struct Y
++{
++  using allocator_type = std::allocator<int>;
++
++  Y(const X&) { }
++  Y(const X&, const allocator_type&) { }
++
++  Y(X&&) { }
++  Y(std::allocator_arg_t, const allocator_type&, X&&) { }
++};
++
++void
++test02()
++{
++  std::tuple<X, X> o{1, 1};
++  std::tuple<Y, Y> oo(std::allocator_arg, std::allocator<int>(), o);
++}
+diff --git a/libstdc++-v3/testsuite/20_util/unsynchronized_pool_resource/allocate.cc b/libstdc++-v3/testsuite/20_util/unsynchronized_pool_resource/allocate.cc
+index c5054bd4541..c7f0b087541 100644
+--- a/libstdc++-v3/testsuite/20_util/unsynchronized_pool_resource/allocate.cc
++++ b/libstdc++-v3/testsuite/20_util/unsynchronized_pool_resource/allocate.cc
+@@ -239,6 +239,25 @@ test06()
+   }
+ }
+ 
++void
++test08()
++{
++  std::pmr::pool_options opts;
++  opts.largest_required_pool_block = 64;
++
++  // PR libstdc++/94160
++  // max_blocks_per_chunk=1 causes pool resources to return null pointers
++  for (int i = 0; i < 8; ++i)
++  {
++    opts.max_blocks_per_chunk = i;
++    std::pmr::unsynchronized_pool_resource upr(opts);
++    auto* p = (int*)upr.allocate(4);
++    VERIFY( p != nullptr );
++    *p = i;
++    upr.deallocate(p, 4);
++  }
++}
++
+ int
+ main()
+ {
+@@ -248,4 +267,5 @@ main()
+   test04();
+   test05();
+   test06();
++  test08();
+ }
 diff --git a/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc b/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc
 index 243526725a0..3c04028bb6e 100644
 --- a/libstdc++-v3/testsuite/20_util/unwrap_reference/1.cc
@@ -46135,6 +47674,125 @@ index 00000000000..e84e92c62ae
 +#elif __cpp_lib_constexpr_complex < 201711L
 +# error "Feature test macro for constexpr complex has wrong value in <version>"
 +#endif
+diff --git a/libstdc++-v3/testsuite/26_numerics/gcd/92978.cc b/libstdc++-v3/testsuite/26_numerics/gcd/92978.cc
+new file mode 100644
+index 00000000000..ddf7237df4c
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/gcd/92978.cc
+@@ -0,0 +1,41 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
++
++#include <numeric>
++#include <limits.h>
++
++void
++test01()
++{
++  // PR libstdc++/92978
++  static_assert( std::gcd(-120, 10U) == 10 );
++  static_assert( std::gcd(120U, -10) == 10 );
++}
++
++void
++test02()
++{
++  // |INT_MIN| should not be undefined, as long as it fits in the result type.
++  static_assert( std::gcd(INT_MIN, 0LL) == 1LL+INT_MAX );
++  static_assert( std::gcd(0LL, INT_MIN) == 1LL+INT_MAX );
++  static_assert( std::gcd(INT_MIN, 0LL + INT_MIN) == 1LL + INT_MAX );
++  static_assert( std::gcd(INT_MIN, 1LL + INT_MAX) == 1LL + INT_MAX );
++  static_assert( std::gcd(SHRT_MIN, 1U + SHRT_MAX) == 1U + SHRT_MAX );
++}
+diff --git a/libstdc++-v3/testsuite/26_numerics/gcd/gcd_neg.cc b/libstdc++-v3/testsuite/26_numerics/gcd/gcd_neg.cc
+index 05e21431313..9ca7b5306c2 100644
+--- a/libstdc++-v3/testsuite/26_numerics/gcd/gcd_neg.cc
++++ b/libstdc++-v3/testsuite/26_numerics/gcd/gcd_neg.cc
+@@ -46,9 +46,9 @@ test01()
+   std::gcd<const int&, const int&>(0.1, 0.1);   // { dg-error "from here" }
+ }
+ 
+-// { dg-error "integers" "" { target *-*-* } 133 }
+-// { dg-error "integers" "" { target *-*-* } 134 }
+-// { dg-error "not bools" "" { target *-*-* } 135 }
+-// { dg-error "not bools" "" { target *-*-* } 137 }
++// { dg-error "must be integers" "" { target *-*-* } 134 }
++// { dg-error "must be integers" "" { target *-*-* } 135 }
++// { dg-error "must not be bool" "" { target *-*-* } 136 }
++// { dg-error "must not be bool" "" { target *-*-* } 137 }
+ // { dg-prune-output "deleted function" }
+-// { dg-prune-output "invalid operands" }
++// { dg-prune-output "incomplete type .*make_unsigned" }
+diff --git a/libstdc++-v3/testsuite/26_numerics/lcm/92978.cc b/libstdc++-v3/testsuite/26_numerics/lcm/92978.cc
+new file mode 100644
+index 00000000000..f178e1e5a36
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/lcm/92978.cc
+@@ -0,0 +1,28 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
++
++#include <numeric>
++
++void
++test01()
++{
++  // PR libstdc++/92978
++  static_assert( std::lcm(-42, 21U) == 42U );
++}
+diff --git a/libstdc++-v3/testsuite/26_numerics/lcm/lcm_neg.cc b/libstdc++-v3/testsuite/26_numerics/lcm/lcm_neg.cc
+index 3a0f5bbe3eb..33327232af0 100644
+--- a/libstdc++-v3/testsuite/26_numerics/lcm/lcm_neg.cc
++++ b/libstdc++-v3/testsuite/26_numerics/lcm/lcm_neg.cc
+@@ -46,9 +46,9 @@ test01()
+   std::lcm<const int&, const int&>(0.1, 0.1);   // { dg-error "from here" }
+ }
+ 
+-// { dg-error "integers" "" { target *-*-* } 147 }
+-// { dg-error "integers" "" { target *-*-* } 148 }
+-// { dg-error "not bools" "" { target *-*-* } 149 }
+-// { dg-error "not bools" "" { target *-*-* } 151 }
++// { dg-error "must be integers" "" { target *-*-* } 148 }
++// { dg-error "must be integers" "" { target *-*-* } 149 }
++// { dg-error "must not be bool" "" { target *-*-* } 150 }
++// { dg-error "must not be bool" "" { target *-*-* } 151 }
+ // { dg-prune-output "deleted function" }
+-// { dg-prune-output "invalid operands" }
++// { dg-prune-output "incomplete type .*make_unsigned" }
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
 index 3f31375f51b..5d6e62c421a 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
@@ -47317,6 +48975,60 @@ index 0f89bec16cd..76aff0abb7e 100644
  
  #include <experimental/timer>
  #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/numeric/92978.cc b/libstdc++-v3/testsuite/experimental/numeric/92978.cc
+new file mode 100644
+index 00000000000..e2a4b1adefa
+--- /dev/null
++++ b/libstdc++-v3/testsuite/experimental/numeric/92978.cc
+@@ -0,0 +1,48 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do compile { target c++14 } }
++
++#include <experimental/numeric>
++#include <limits.h>
++
++void
++test01()
++{
++  // PR libstdc++/92978
++  static_assert( std::experimental::gcd(-120, 10U) == 10,
++      "mixed signed/unsigned" );
++  static_assert( std::experimental::gcd(120U, -10) == 10,
++      "mixed signed/unsigned" );
++
++  static_assert( std::experimental::lcm(-42, 21U) == 42U );
++}
++
++void
++test02()
++{
++  static_assert( std::experimental::gcd(INT_MIN, 0LL) == 1LL+INT_MAX,
++      "|INT_MIN| should not be undefined as long as it fits in the result" );
++  static_assert( std::experimental::gcd(0LL, INT_MIN) == 1LL+INT_MAX,
++      "|INT_MIN| should not be undefined" );
++  static_assert( std::experimental::gcd(INT_MIN, 0LL + INT_MIN) == 1LL + INT_MAX,
++      "|INT_MIN| should not be undefined" );
++  static_assert( std::experimental::gcd(INT_MIN, 1LL + INT_MAX) == 1LL + INT_MAX,
++      "|INT_MIN| should not be undefined" );
++  static_assert( std::experimental::gcd(SHRT_MIN, 1U + SHRT_MAX) == 1U + SHRT_MAX,
++      "|SHRT_MIN| should not be undefined" );
++}
 diff --git a/libstdc++-v3/testsuite/ext/malloc_allocator/89510.cc b/libstdc++-v3/testsuite/ext/malloc_allocator/89510.cc
 new file mode 100644
 index 00000000000..f2ab25adb74
