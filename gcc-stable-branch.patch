@@ -72,7 +72,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (194):
+GCC Administrator (195):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -432,7 +433,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (46):
+Jonathan Wakely (47):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -479,6 +480,7 @@ Jonathan Wakely (46):
       libstdc++: Fix std::gcd and std::lcm for unsigned integers [PR 92978]
       libstdc++: Use correct argument type for __use_alloc [PR 96803]
       libstdc++: Use correct argument type for __use_alloc, again [PR 96803]
+      libstdc++: Fix out-of-bounds string_view access in filesystem::path [PR 97167]
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -38465,10 +38467,45 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..c1823865056 100644
+index 45847172291..3c40bbf0764 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,544 @@
+@@ -1,3 +1,579 @@
++2020-09-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-09-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/97167
++	* src/c++17/fs_path.cc (path::_Parser::root_path()): Check
++	for empty string before inspecting the first character.
++	* testsuite/27_io/filesystem/path/append/source.cc: Append
++	empty string_view to path.
++
++2020-09-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-09-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/96803
++	* include/std/tuple
++	(_Tuple_impl(allocator_arg_t, Alloc, const _Tuple_impl<U...>&)):
++	Use correct value category in __use_alloc call.
++	* testsuite/20_util/tuple/cons/96803.cc: Check with constructors
++	that require correct value category to be used.
++
++2020-09-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-08-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/96803
++	* include/std/tuple
++	(_Tuple_impl(allocator_arg_t, Alloc, const _Tuple_impl<U...>&)):
++	Replace parameter pack with a type parameter and a pack and pass
++	the first type to __use_alloc.
++	* testsuite/20_util/tuple/cons/96803.cc: New test.
++
 +2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -46280,9 +46317,18 @@ index 5f1f47b9fb7..402ed02143d 100644
    do
      {
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
-index 54bef75efd8..a6be0e03a78 100644
+index 54bef75efd8..b44fae03da0 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
 +++ b/libstdc++-v3/src/c++17/fs_path.cc
+@@ -74,7 +74,7 @@ struct path::_Parser
+     const size_t len = input.size();
+ 
+     // look for root name or root directory
+-    if (is_dir_sep(input[0]))
++    if (len && is_dir_sep(input[0]))
+       {
+ #if SLASHSLASH_IS_ROOTNAME
+ 	// look for root name, such as "//foo"
 @@ -845,6 +845,26 @@ path::operator+=(const path& p)
        return *this;
      }
@@ -47953,6 +47999,32 @@ index 3f31375f51b..5d6e62c421a 100644
    last_write_time(f.path, time, ec);
    VERIFY( !ec );
    VERIFY( approx_equal(last_write_time(f.path), time) );
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc
+index db80087ba6c..9249cf682ef 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc
+@@ -161,6 +161,15 @@ test06()
+   test(p2, s.c_str());
+ }
+ 
++void
++test07()
++{
++  path p, p0;
++  std::string_view s;
++  p /= s; // PR libstdc++/97167
++  compare_paths(p, p0);
++}
++
+ int
+ main()
+ {
+@@ -170,4 +179,5 @@ main()
+   test04();
+   test05();
+   test06();
++  test07();
+ }
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc
 new file mode 100644
 index 00000000000..9f4c9c0aa08
