@@ -1,9 +1,10 @@
 Alan Modra (1):
       [RS6000] PR94145, make PLT loads volatile
 
-Alex Coplan (2):
+Alex Coplan (3):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
       arm: Don't generate invalid LDRD insns
+      aarch64: Add support for Neoverse V1 CPU
 
 Alexandre Oliva (2):
       [rs6000] fix mffsl emulation
@@ -72,7 +73,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (195):
+GCC Administrator (196):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -8568,10 +8570,10 @@ index 6d5acb02fc6..f22ad437548 100644
       target between implementations that do or do not support ARMv8.2-A
       16-bit floating-point extensions.  */
 diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
-index 82d91d62519..9214686d9d1 100644
+index 82d91d62519..48f1ac3ecf1 100644
 --- a/gcc/config/aarch64/aarch64-cores.def
 +++ b/gcc/config/aarch64/aarch64-cores.def
-@@ -104,11 +104,17 @@ AARCH64_CORE("ares",  ares, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_F
+@@ -104,11 +104,19 @@ AARCH64_CORE("ares",  ares, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_F
  AARCH64_CORE("neoverse-n1",  neoversen1, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_FL_F16 | AARCH64_FL_RCPC | AARCH64_FL_DOTPROD | AARCH64_FL_PROFILE, neoversen1, 0x41, 0xd0c, -1)
  AARCH64_CORE("neoverse-e1",  neoversee1, cortexa53, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_FL_F16 | AARCH64_FL_RCPC | AARCH64_FL_DOTPROD | AARCH64_FL_SSBS, cortexa53, 0x41, 0xd4a, -1)
  
@@ -8585,6 +8587,8 @@ index 82d91d62519..9214686d9d1 100644
  
 +/* ARM ('A') cores. */
 +AARCH64_CORE("zeus", zeus, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversen1, 0x41, 0xd40, -1)
++AARCH64_CORE("neoverse-v1", neoversev1, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversen1, 0x41, 0xd40, -1)
++
 +
  /* Qualcomm ('Q') cores. */
  AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
@@ -8864,7 +8868,7 @@ index e3852c5d182..eb473e01957 100644
    [(set (match_operand:VSTRUCT 0 "aarch64_simd_nonimmediate_operand" "=w,Utv,w")
  	(match_operand:VSTRUCT 1 "aarch64_simd_general_operand" " w,w,Utv"))]
 diff --git a/gcc/config/aarch64/aarch64-tune.md b/gcc/config/aarch64/aarch64-tune.md
-index 2b1ec85ae31..a3bd30754ea 100644
+index 2b1ec85ae31..f5d62de5940 100644
 --- a/gcc/config/aarch64/aarch64-tune.md
 +++ b/gcc/config/aarch64/aarch64-tune.md
 @@ -1,5 +1,5 @@
@@ -8872,7 +8876,7 @@ index 2b1ec85ae31..a3bd30754ea 100644
  ;; Generated automatically by gentune.sh from aarch64-cores.def
  (define_attr "tune"
 -	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
-+	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
++	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
 index b452a53af99..bcf2777313e 100644
@@ -18207,7 +18211,7 @@ index f5becf988d2..3ab83a1cf94 100644
  The @code{scalar_insert_exp}
  functions require a 64-bit environment supporting ISA 3.0 or later.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..cb2dde07343 100644
+index 0ab6c9c6449..67cebf59fb7 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -18268,11 +18272,15 @@ index 0ab6c9c6449..cb2dde07343 100644
  @item -march=@var{name}
  @opindex march
  Specify the name of the target architecture and, optionally, one or
-@@ -15828,9 +15853,11 @@ performance of the code.  Permissible values for this option are:
+@@ -15826,11 +15851,13 @@ performance of the code.  Permissible values for this option are:
+ @samp{generic}, @samp{cortex-a35}, @samp{cortex-a53}, @samp{cortex-a55},
+ @samp{cortex-a57}, @samp{cortex-a72}, @samp{cortex-a73}, @samp{cortex-a75},
  @samp{cortex-a76}, @samp{ares}, @samp{exynos-m1}, @samp{emag}, @samp{falkor},
- @samp{neoverse-e1},@samp{neoverse-n1},@samp{qdf24xx}, @samp{saphira},
- @samp{phecda}, @samp{xgene1}, @samp{vulcan}, @samp{octeontx},
+-@samp{neoverse-e1},@samp{neoverse-n1},@samp{qdf24xx}, @samp{saphira},
+-@samp{phecda}, @samp{xgene1}, @samp{vulcan}, @samp{octeontx},
 -@samp{octeontx81},  @samp{octeontx83}, @samp{thunderx}, @samp{thunderxt88},
++@samp{neoverse-e1},@samp{neoverse-n1},@samp{neoverse-v1},@samp{qdf24xx},
++@samp{saphira}, @samp{phecda}, @samp{xgene1}, @samp{vulcan}, @samp{octeontx},
 +@samp{octeontx81},  @samp{octeontx83},
 +@samp{a64fx},
 +@samp{thunderx}, @samp{thunderxt88},
