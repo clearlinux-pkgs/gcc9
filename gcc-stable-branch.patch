@@ -73,7 +73,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (196):
+GCC Administrator (197):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -277,7 +278,7 @@ Gerald Pfeifer (1):
 Gustavo Romero (1):
       selftest: Work around GCC 4.2 PR33916 bug by optimizing the ctor [PR89494]
 
-H.J. Lu (8):
+H.J. Lu (9):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
       x86: Allow -fcf-protection with external thunk
@@ -286,6 +287,7 @@ H.J. Lu (8):
       x86: Handle -mavx512vpopcntdq for -march=native
       x86: Update Intel processor detection
       x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
+      rtl_data: Add sp_is_clobbered_by_asm
 
 Haijian Zhang (1):
       pr94780.c fails with ICE on aarch64 [PR94820]
@@ -500,7 +502,7 @@ Kewen Lin (8):
       rs6000: Backport fixes for PR92923 and PR93136
       changelog: Fix up changelogs for commit 8c18220564
 
-Kyrylo Tkachov (12):
+Kyrylo Tkachov (14):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -513,6 +515,8 @@ Kyrylo Tkachov (12):
       [AArch64] PR target/94518: Fix memmodel index in aarch64_store_exclusive_pair
       [AArch64] Use __getauxval instead of getauxval in LSE detection code in libgcc
       aarch64: Add initial support for -mcpu=zeus
+      Add support for __jcvt intrinsic
+      Implement __rndr, __rndrrs intrinsics
 
 Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -5529,10 +5533,48 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..9cd3864a8ac 100644
+index d8e53874e68..f358a3494bf 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1841 @@
+@@ -1,3 +1,1879 @@
++2020-09-24  H.J. Lu  <hjl.tools@gmail.com>
++
++	Backported from master:
++	2020-09-16  H.J. Lu  <hjl.tools@gmail.com>
++
++	PR target/97032
++	* cfgexpand.c (asm_clobber_reg_kind): Set sp_is_clobbered_by_asm
++	to true if the stack pointer is clobbered by asm statement.
++	* emit-rtl.h (rtl_data): Add sp_is_clobbered_by_asm.
++	* config/i386/i386.c (ix86_get_drap_rtx): Set need_drap to true
++	if the stack pointer is clobbered by asm statement.
++
++2020-09-24  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-08-04  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++		    Andrea Corallo   <andrea.corallo@arm.com>
++
++	PR target/71233
++	* config/aarch64/aarch64.md (UNSPEC_FJCVTZS): Define.
++	(aarch64_fjcvtzs): New define_insn.
++	* config/aarch64/aarch64.h (TARGET_JSCVT): Define.
++	* config/aarch64/aarch64-builtins.c (aarch64_builtins):
++	Add AARCH64_JSCVT.
++	(aarch64_init_builtins): Initialize __builtin_aarch64_jcvtzs.
++	(aarch64_expand_builtin): Handle AARCH64_JSCVT.
++	* config/aarch64/aarch64-c.c (aarch64_update_cpp_builtins): Define
++	__ARM_FEATURE_JCVT where appropriate.
++	* config/aarch64/arm_acle.h (__jcvt): Define.
++	* doc/sourcebuild.texi (aarch64_fjcvtzs_hw) Document new
++	target supports option.
++
++2020-09-24  Alex Coplan  <alex.coplan@arm.com>
++
++	* config/aarch64/aarch64-cores.def: Add Neoverse V1.
++	* config/aarch64/aarch64-tune.md: Regenerate.
++	* doc/invoke.texi: Document support for Neoverse V1.
++
 +2020-09-18  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -8273,6 +8315,31 @@ index c0582a54c93..24106c126cd 100644
        && TYPE_MAIN_VARIANT (var_type) != var_type)
      C_TYPE_INCOMPLETE_VARS (var_type) = 0;
    return var_type;
+diff --git a/gcc/cfgexpand.c b/gcc/cfgexpand.c
+index e252975f546..1b0591193c3 100644
+--- a/gcc/cfgexpand.c
++++ b/gcc/cfgexpand.c
+@@ -2879,11 +2879,15 @@ asm_clobber_reg_is_valid (int regno, int nregs, const char *regname)
+      as it was before, so no asm can validly clobber the stack pointer in
+      the usual sense.  Adding the stack pointer to the clobber list has
+      traditionally had some undocumented and somewhat obscure side-effects.  */
+-  if (overlaps_hard_reg_set_p (regset, Pmode, STACK_POINTER_REGNUM)
+-      && warning (OPT_Wdeprecated, "listing the stack pointer register"
+-		  " %qs in a clobber list is deprecated", regname))
+-    inform (input_location, "the value of the stack pointer after an %<asm%>"
+-	    " statement must be the same as it was before the statement");
++  if (overlaps_hard_reg_set_p (regset, Pmode, STACK_POINTER_REGNUM))
++    {
++      crtl->sp_is_clobbered_by_asm = true;
++      if (warning (OPT_Wdeprecated, "listing the stack pointer register"
++		   " %qs in a clobber list is deprecated", regname))
++	inform (input_location, "the value of the stack pointer after"
++		" an %<asm%> statement must be the same as it was before"
++		" the statement");
++    }
+ 
+   return is_valid;
+ }
 diff --git a/gcc/cfgloopmanip.c b/gcc/cfgloopmanip.c
 index bfee48ed8cc..3980a9b45f5 100644
 --- a/gcc/cfgloopmanip.c
@@ -8514,10 +8581,132 @@ index e519a0f0ac1..7da89074ce0 100644
    return 0;
  }
 diff --git a/gcc/config/aarch64/aarch64-builtins.c b/gcc/config/aarch64/aarch64-builtins.c
-index d7b1b7bd686..15e23f47af1 100644
+index d7b1b7bd686..f22f64797a2 100644
 --- a/gcc/config/aarch64/aarch64-builtins.c
 +++ b/gcc/config/aarch64/aarch64-builtins.c
-@@ -1945,10 +1945,12 @@ aarch64_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -436,6 +436,11 @@ enum aarch64_builtins
+   /* Special cased Armv8.3-A Complex FMA by Lane quad Builtins.  */
+   AARCH64_SIMD_FCMLA_LANEQ_BUILTIN_BASE,
+   AARCH64_SIMD_FCMLA_LANEQ_BUILTINS
++  /* Builtin for Arm8.3-a Javascript conversion instruction.  */
++  AARCH64_JSCVT,
++  /* Armv8.5-a RNG instruction builtins.  */
++  AARCH64_BUILTIN_RNG_RNDR,
++  AARCH64_BUILTIN_RNG_RNDRRS,
+   AARCH64_BUILTIN_MAX
+ };
+ 
+@@ -1057,6 +1062,25 @@ aarch64_init_pauth_hint_builtins (void)
+ 			    NULL_TREE);
+ }
+ 
++/* Add builtins for Random Number instructions.  */
++
++static void
++aarch64_init_rng_builtins (void)
++{
++  tree unsigned_ptr_type = build_pointer_type (unsigned_intDI_type_node);
++  tree ftype
++    = build_function_type_list (integer_type_node, unsigned_ptr_type, NULL);
++  aarch64_builtin_decls[AARCH64_BUILTIN_RNG_RNDR]
++    = add_builtin_function ("__builtin_aarch64_rndr", ftype,
++			    AARCH64_BUILTIN_RNG_RNDR, BUILT_IN_MD, NULL,
++			    NULL_TREE);
++  aarch64_builtin_decls[AARCH64_BUILTIN_RNG_RNDRRS]
++    = add_builtin_function ("__builtin_aarch64_rndrrs", ftype,
++			    AARCH64_BUILTIN_RNG_RNDRRS, BUILT_IN_MD, NULL,
++			    NULL_TREE);
++}
++
++
+ void
+ aarch64_init_builtins (void)
+ {
+@@ -1085,6 +1109,13 @@ aarch64_init_builtins (void)
+ 
+   aarch64_init_crc32_builtins ();
+   aarch64_init_builtin_rsqrt ();
++  aarch64_init_rng_builtins ();
++
++  tree ftype_jcvt
++    = build_function_type_list (intSI_type_node, double_type_node, NULL);
++  aarch64_builtin_decls[AARCH64_JSCVT]
++    = add_builtin_function ("__builtin_aarch64_jcvtzs", ftype_jcvt,
++			    AARCH64_JSCVT, BUILT_IN_MD, NULL, NULL_TREE);
+ 
+   /* Initialize pointer authentication builtins which are backed by instructions
+      in NOP encoding space.
+@@ -1497,6 +1528,42 @@ aarch64_expand_fcmla_builtin (tree exp, rtx target, int fcode)
+   return target;
+ }
+ 
++/* Expand a random number builtin EXP with code FCODE, putting the result
++   int TARGET.  If IGNORE is true the return value is ignored.  */
++
++rtx
++aarch64_expand_rng_builtin (tree exp, rtx target, int fcode, int ignore)
++{
++  rtx pat;
++  enum insn_code icode;
++  if (fcode == AARCH64_BUILTIN_RNG_RNDR)
++    icode = CODE_FOR_aarch64_rndr;
++  else if (fcode == AARCH64_BUILTIN_RNG_RNDRRS)
++    icode = CODE_FOR_aarch64_rndrrs;
++  else
++    gcc_unreachable ();
++
++  rtx rand = gen_reg_rtx (DImode);
++  pat = GEN_FCN (icode) (rand);
++  if (!pat)
++    return NULL_RTX;
++
++  tree arg0 = CALL_EXPR_ARG (exp, 0);
++  rtx res_addr = expand_normal (arg0);
++  res_addr = convert_memory_address (Pmode, res_addr);
++  rtx res_mem = gen_rtx_MEM (DImode, res_addr);
++  emit_insn (pat);
++  emit_move_insn (res_mem, rand);
++  /* If the status result is unused don't generate the CSET code.  */
++  if (ignore)
++    return target;
++
++  rtx cc_reg = gen_rtx_REG (CC_Zmode, CC_REGNUM);
++  rtx cmp_rtx = gen_rtx_fmt_ee (NE, SImode, cc_reg, const0_rtx);
++  emit_insn (gen_aarch64_cstoresi (target, cmp_rtx, cc_reg));
++  return target;
++}
++
+ /* Expand an expression EXP that calls a built-in function,
+    with result going to TARGET if that's convenient.  */
+ rtx
+@@ -1576,6 +1643,16 @@ aarch64_expand_builtin (tree exp,
+ 
+       return target;
+ 
++    case AARCH64_JSCVT:
++      {
++	expand_operand ops[2];
++	create_output_operand (&ops[0], target, SImode);
++	op0 = expand_normal (CALL_EXPR_ARG (exp, 0));
++	create_input_operand (&ops[1], op0, DFmode);
++	expand_insn (CODE_FOR_aarch64_fjcvtzs, 2, ops);
++	return ops[0].value;
++      }
++
+     case AARCH64_SIMD_BUILTIN_FCMLA_LANEQ0_V2SF:
+     case AARCH64_SIMD_BUILTIN_FCMLA_LANEQ90_V2SF:
+     case AARCH64_SIMD_BUILTIN_FCMLA_LANEQ180_V2SF:
+@@ -1585,6 +1662,9 @@ aarch64_expand_builtin (tree exp,
+     case AARCH64_SIMD_BUILTIN_FCMLA_LANEQ180_V4HF:
+     case AARCH64_SIMD_BUILTIN_FCMLA_LANEQ270_V4HF:
+       return aarch64_expand_fcmla_builtin (exp, target, fcode);
++    case AARCH64_BUILTIN_RNG_RNDR:
++    case AARCH64_BUILTIN_RNG_RNDRRS:
++      return aarch64_expand_rng_builtin (exp, target, fcode, ignore);
+     }
+ 
+   if (fcode >= AARCH64_SIMD_BUILTIN_BASE && fcode <= AARCH64_SIMD_BUILTIN_MAX)
+@@ -1945,10 +2025,12 @@ aarch64_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
    mask_sr = build_int_cst (unsigned_type_node,
  			   ~(AARCH64_FE_ALL_EXCEPT));
  
@@ -8534,7 +8723,7 @@ index d7b1b7bd686..15e23f47af1 100644
  
    masked_fenv_cr = build2 (BIT_AND_EXPR, unsigned_type_node, fenv_cr, mask_cr);
    masked_fenv_sr = build2 (BIT_AND_EXPR, unsigned_type_node, fenv_sr, mask_sr);
-@@ -1980,8 +1982,9 @@ aarch64_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -1980,8 +2062,9 @@ aarch64_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
         __atomic_feraiseexcept (new_fenv_var);  */
  
    new_fenv_var = create_tmp_var_raw (unsigned_type_node);
@@ -8547,10 +8736,18 @@ index d7b1b7bd686..15e23f47af1 100644
    atomic_feraiseexcept = builtin_decl_implicit (BUILT_IN_ATOMIC_FERAISEEXCEPT);
    update_call = build_call_expr (atomic_feraiseexcept, 1,
 diff --git a/gcc/config/aarch64/aarch64-c.c b/gcc/config/aarch64/aarch64-c.c
-index 6d5acb02fc6..f22ad437548 100644
+index 6d5acb02fc6..1812387dee6 100644
 --- a/gcc/config/aarch64/aarch64-c.c
 +++ b/gcc/config/aarch64/aarch64-c.c
-@@ -156,6 +156,18 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
+@@ -110,6 +110,7 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
+   aarch64_def_or_undef (TARGET_CRC32, "__ARM_FEATURE_CRC32", pfile);
+   aarch64_def_or_undef (TARGET_DOTPROD, "__ARM_FEATURE_DOTPROD", pfile);
+   aarch64_def_or_undef (TARGET_COMPLEX, "__ARM_FEATURE_COMPLEX", pfile);
++  aarch64_def_or_undef (TARGET_JSCVT, "__ARM_FEATURE_JCVT", pfile);
+ 
+   cpp_undef (pfile, "__AARCH64_CMODEL_TINY__");
+   cpp_undef (pfile, "__AARCH64_CMODEL_SMALL__");
+@@ -156,6 +157,20 @@ aarch64_update_cpp_builtins (cpp_reader *pfile)
    aarch64_def_or_undef (TARGET_SM4, "__ARM_FEATURE_SM4", pfile);
    aarch64_def_or_undef (TARGET_F16FML, "__ARM_FEATURE_FP16_FML", pfile);
  
@@ -8565,6 +8762,8 @@ index 6d5acb02fc6..f22ad437548 100644
 +	v |= 4;
 +      builtin_define_with_int_value ("__ARM_FEATURE_PAC_DEFAULT", v);
 +    }
++
++  aarch64_def_or_undef (TARGET_RNG, "__ARM_FEATURE_RNG", pfile);
 +
    /* Not for ACLE, but required to keep "float.h" correct if we switch
       target between implementations that do or do not support ARMv8.2-A
@@ -9750,18 +9949,36 @@ index b452a53af99..bcf2777313e 100644
  
  #include "gt-aarch64.h"
 diff --git a/gcc/config/aarch64/aarch64.h b/gcc/config/aarch64/aarch64.h
-index 772a9729688..47f2ff6874f 100644
+index 772a9729688..ace80ac4cef 100644
 --- a/gcc/config/aarch64/aarch64.h
 +++ b/gcc/config/aarch64/aarch64.h
-@@ -235,6 +235,7 @@ extern unsigned aarch64_architecture_version;
+@@ -234,7 +234,9 @@ extern unsigned aarch64_architecture_version;
+ #define AARCH64_ISA_SHA3	   (aarch64_isa_flags & AARCH64_FL_SHA3)
  #define AARCH64_ISA_F16FML	   (aarch64_isa_flags & AARCH64_FL_F16FML)
  #define AARCH64_ISA_RCPC8_4	   (aarch64_isa_flags & AARCH64_FL_RCPC8_4)
++#define AARCH64_ISA_RNG		   (aarch64_isa_flags & AARCH64_FL_RNG)
  #define AARCH64_ISA_V8_5	   (aarch64_isa_flags & AARCH64_FL_V8_5)
 +#define AARCH64_ISA_SB		   (aarch64_isa_flags & AARCH64_FL_SB)
  
  /* Crypto is an optional extension to AdvSIMD.  */
  #define TARGET_CRYPTO (TARGET_SIMD && AARCH64_ISA_CRYPTO)
-@@ -285,6 +286,9 @@ extern unsigned aarch64_architecture_version;
+@@ -273,9 +275,15 @@ extern unsigned aarch64_architecture_version;
+ /* ARMv8.3-A features.  */
+ #define TARGET_ARMV8_3	(AARCH64_ISA_V8_3)
+ 
++/* Javascript conversion instruction from Armv8.3-a.  */
++#define TARGET_JSCVT	(TARGET_FLOAT && AARCH64_ISA_V8_3)
++
+ /* Armv8.3-a Complex number extension to AdvSIMD extensions.  */
+ #define TARGET_COMPLEX (TARGET_SIMD && TARGET_ARMV8_3)
+ 
++/* Random number instructions from Armv8.5-a.  */
++#define TARGET_RNG (AARCH64_ISA_RNG)
++
+ /* Make sure this is always defined so we don't have to check for ifdefs
+    but rather use normal ifs.  */
+ #ifndef TARGET_FIX_ERR_A53_835769_DEFAULT
+@@ -285,6 +293,9 @@ extern unsigned aarch64_architecture_version;
  #define TARGET_FIX_ERR_A53_835769_DEFAULT 1
  #endif
  
@@ -9771,7 +9988,7 @@ index 772a9729688..47f2ff6874f 100644
  /* Apply the workaround for Cortex-A53 erratum 835769.  */
  #define TARGET_FIX_ERR_A53_835769	\
    ((aarch64_fix_a53_err835769 == 2)	\
-@@ -536,6 +540,16 @@ extern unsigned aarch64_architecture_version;
+@@ -536,6 +547,16 @@ extern unsigned aarch64_architecture_version;
  #define GP_REGNUM_P(REGNO)						\
    (((unsigned) (REGNO - R0_REGNUM)) <= (R30_REGNUM - R0_REGNUM))
  
@@ -9788,7 +10005,7 @@ index 772a9729688..47f2ff6874f 100644
  #define FP_REGNUM_P(REGNO)			\
    (((unsigned) (REGNO - V0_REGNUM)) <= (V31_REGNUM - V0_REGNUM))
  
-@@ -557,6 +571,7 @@ enum reg_class
+@@ -557,6 +578,7 @@ enum reg_class
  {
    NO_REGS,
    TAILCALL_ADDR_REGS,
@@ -9796,7 +10013,7 @@ index 772a9729688..47f2ff6874f 100644
    GENERAL_REGS,
    STACK_REG,
    POINTER_REGS,
-@@ -576,6 +591,7 @@ enum reg_class
+@@ -576,6 +598,7 @@ enum reg_class
  {						\
    "NO_REGS",					\
    "TAILCALL_ADDR_REGS",				\
@@ -9804,7 +10021,7 @@ index 772a9729688..47f2ff6874f 100644
    "GENERAL_REGS",				\
    "STACK_REG",					\
    "POINTER_REGS",				\
-@@ -592,6 +608,7 @@ enum reg_class
+@@ -592,6 +615,7 @@ enum reg_class
  {									\
    { 0x00000000, 0x00000000, 0x00000000 },	/* NO_REGS */		\
    { 0x00030000, 0x00000000, 0x00000000 },	/* TAILCALL_ADDR_REGS */\
@@ -9812,7 +10029,7 @@ index 772a9729688..47f2ff6874f 100644
    { 0x7fffffff, 0x00000000, 0x00000003 },	/* GENERAL_REGS */	\
    { 0x80000000, 0x00000000, 0x00000000 },	/* STACK_REG */		\
    { 0xffffffff, 0x00000000, 0x00000003 },	/* POINTER_REGS */	\
-@@ -731,6 +748,8 @@ typedef struct GTY (()) machine_function
+@@ -731,6 +755,8 @@ typedef struct GTY (()) machine_function
    struct aarch64_frame frame;
    /* One entry for each hard register.  */
    bool reg_is_wrapped_separately[LAST_SAVED_REGNUM];
@@ -9821,7 +10038,7 @@ index 772a9729688..47f2ff6874f 100644
    bool label_is_assembled;
  } machine_function;
  #endif
-@@ -931,8 +950,10 @@ typedef struct
+@@ -931,8 +957,10 @@ typedef struct
  
  #define RETURN_ADDR_RTX aarch64_return_addr
  
@@ -9834,7 +10051,7 @@ index 772a9729688..47f2ff6874f 100644
  
  /* Trampolines contain dwords, so must be dword aligned.  */
  #define TRAMPOLINE_ALIGNMENT 64
-@@ -968,7 +989,7 @@ typedef struct
+@@ -968,7 +996,7 @@ typedef struct
  #define PROFILE_HOOK(LABEL)						\
    {									\
      rtx fun, lr;							\
@@ -9844,10 +10061,27 @@ index 772a9729688..47f2ff6874f 100644
      emit_library_call (fun, LCT_NORMAL, VOIDmode, lr, Pmode);		\
    }
 diff --git a/gcc/config/aarch64/aarch64.md b/gcc/config/aarch64/aarch64.md
-index cc5a887d404..9598bac387f 100644
+index cc5a887d404..8d71994611d 100644
 --- a/gcc/config/aarch64/aarch64.md
 +++ b/gcc/config/aarch64/aarch64.md
-@@ -331,10 +331,25 @@
+@@ -138,6 +138,7 @@
+     UNSPEC_CRC32X
+     UNSPEC_FCVTZS
+     UNSPEC_FCVTZU
++    UNSPEC_FJCVTZS
+     UNSPEC_URECPE
+     UNSPEC_FRECPE
+     UNSPEC_FRECPS
+@@ -246,6 +247,8 @@
+     UNSPECV_BTI_C		; Represent BTI c.
+     UNSPECV_BTI_J		; Represent BTI j.
+     UNSPECV_BTI_JC		; Represent BTI jc.
++    UNSPEC_RNDR			; Represent RNDR
++    UNSPEC_RNDRRS		; Represent RNDRRS
+   ]
+ )
+ 
+@@ -331,10 +334,25 @@
  ;; Attribute that specifies whether the alternative uses MOVPRFX.
  (define_attr "movprfx" "no,yes" (const_string "no"))
  
@@ -9874,7 +10108,7 @@ index cc5a887d404..9598bac387f 100644
  
  ;; Strictly for compatibility with AArch32 in pipeline models, since AArch64 has
  ;; no predicated insns.
-@@ -370,8 +385,12 @@
+@@ -370,8 +388,12 @@
  (define_insn "indirect_jump"
    [(set (pc) (match_operand:DI 0 "register_operand" "r"))]
    ""
@@ -9889,7 +10123,7 @@ index cc5a887d404..9598bac387f 100644
  )
  
  (define_insn "jump"
-@@ -657,7 +676,7 @@
+@@ -657,7 +679,7 @@
    "*
    return aarch64_output_casesi (operands);
    "
@@ -9898,7 +10132,7 @@ index cc5a887d404..9598bac387f 100644
     (set_attr "type" "branch")]
  )
  
-@@ -736,14 +755,18 @@
+@@ -736,14 +758,18 @@
    [(return)]
    ""
    {
@@ -9921,7 +10155,7 @@ index cc5a887d404..9598bac387f 100644
  )
  
  (define_expand "return"
-@@ -755,8 +778,12 @@
+@@ -755,8 +781,12 @@
  (define_insn "simple_return"
    [(simple_return)]
    "aarch64_use_simple_return_insn_p ()"
@@ -9936,7 +10170,7 @@ index cc5a887d404..9598bac387f 100644
  )
  
  (define_insn "*cb<optab><mode>1"
-@@ -881,15 +908,14 @@
+@@ -881,15 +911,14 @@
  )
  
  (define_insn "*call_insn"
@@ -9955,7 +10189,7 @@ index cc5a887d404..9598bac387f 100644
  
  (define_expand "call_value"
    [(parallel [(set (match_operand 0 "" "")
-@@ -907,12 +933,12 @@
+@@ -907,12 +936,12 @@
  
  (define_insn "*call_value_insn"
    [(set (match_operand 0 "" "")
@@ -9970,7 +10204,7 @@ index cc5a887d404..9598bac387f 100644
    bl\\t%c1"
    [(set_attr "type" "call, call")]
  )
-@@ -947,10 +973,16 @@
+@@ -947,10 +976,16 @@
  	 (match_operand 1 "" ""))
     (return)]
    "SIBLING_CALL_P (insn)"
@@ -9991,7 +10225,7 @@ index cc5a887d404..9598bac387f 100644
  )
  
  (define_insn "*sibcall_value_insn"
-@@ -960,10 +992,16 @@
+@@ -960,10 +995,16 @@
  	      (match_operand 2 "" "")))
     (return)]
    "SIBLING_CALL_P (insn)"
@@ -10012,7 +10246,24 @@ index cc5a887d404..9598bac387f 100644
  )
  
  ;; Call subroutine returning any type.
-@@ -6947,10 +6985,8 @@
+@@ -6798,6 +6839,16 @@
+   [(set_attr "length" "0")]
+ )
+ 
++(define_insn "aarch64_fjcvtzs"
++  [(set (match_operand:SI 0 "register_operand" "=r")
++	(unspec:SI [(match_operand:DF 1 "register_operand" "w")]
++		   UNSPEC_FJCVTZS))
++   (clobber (reg:CC CC_REGNUM))]
++  "TARGET_JSCVT"
++  "fjcvtzs\\t%w0, %d1"
++  [(set_attr "type" "f_cvtf2i")]
++)
++
+ ;; Pointer authentication patterns are always provided.  In architecture
+ ;; revisions prior to ARMv8.3-A these HINT instructions operate as NOPs.
+ ;; This lets the user write portable software which authenticates pointers
+@@ -6947,10 +6998,8 @@
     (match_operand 2)]
    ""
  {
@@ -10023,7 +10274,7 @@ index cc5a887d404..9598bac387f 100644
    if (aarch64_stack_protector_guard != SSP_GLOBAL)
    {
      /* Generate access through the system register. The
-@@ -6975,29 +7011,27 @@
+@@ -6975,29 +7024,27 @@
      operands[1] = gen_rtx_MEM (mode, tmp_reg);
    }
    emit_insn ((mode == DImode
@@ -10068,6 +10319,33 @@ index cc5a887d404..9598bac387f 100644
     (set_attr "type" "multiple")])
  
  ;; Write Floating-point Control Register.
+@@ -7225,6 +7272,26 @@
+    (set_attr "speculation_barrier" "true")]
+ )
+ 
++(define_insn "aarch64_rndr"
++  [(set (match_operand:DI 0 "register_operand" "=r")
++	(unspec_volatile:DI [(const_int 0)] UNSPEC_RNDR))
++   (set (reg:CC_Z CC_REGNUM)
++	(unspec_volatile:CC_Z [(const_int 0)] UNSPEC_RNDR))]
++  "TARGET_RNG"
++  "mrs\t%0, RNDR"
++  [(set_attr "type" "mrs")]
++)
++
++(define_insn "aarch64_rndrrs"
++  [(set (match_operand:DI 0 "register_operand" "=r")
++	(unspec_volatile:DI [(const_int 0)] UNSPEC_RNDRRS))
++   (set (reg:CC_Z CC_REGNUM)
++	(unspec_volatile:CC_Z [(const_int 0)] UNSPEC_RNDRRS))]
++  "TARGET_RNG"
++  "mrs\t%0, RNDRRS"
++  [(set_attr "type" "mrs")]
++)
++
+ ;; AdvSIMD Stuff
+ (include "aarch64-simd.md")
+ 
 diff --git a/gcc/config/aarch64/aarch64.opt b/gcc/config/aarch64/aarch64.opt
 index 3c6d1cc90ad..4beb2d3d243 100644
 --- a/gcc/config/aarch64/aarch64.opt
@@ -10090,6 +10368,56 @@ index 3c6d1cc90ad..4beb2d3d243 100644
 +moutline-atomics
 +Target Report Mask(OUTLINE_ATOMICS) Save
 +Generate local calls to out-of-line atomic operations.
+diff --git a/gcc/config/aarch64/arm_acle.h b/gcc/config/aarch64/arm_acle.h
+index 534a989c39a..423136ecefd 100644
+--- a/gcc/config/aarch64/arm_acle.h
++++ b/gcc/config/aarch64/arm_acle.h
+@@ -29,6 +29,20 @@
+ 
+ #include <stdint.h>
+ 
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#pragma GCC push_options
++#pragma GCC target ("arch=armv8.3-a")
++__extension__ static __inline int32_t __attribute__ ((__always_inline__))
++__jcvt (double __a)
++{
++  return __builtin_aarch64_jcvtzs (__a);
++}
++
++#pragma GCC pop_options
++
+ #pragma GCC push_options
+ 
+ #pragma GCC target ("+nothing+crc")
+@@ -85,6 +99,24 @@ __crc32d (uint32_t __a, uint64_t __b)
+   return __builtin_aarch64_crc32x (__a, __b);
+ }
+ 
++#pragma GCC pop_options
++
++#pragma GCC push_options
++#pragma GCC target ("+nothing+rng")
++__extension__ static __inline int __attribute__ ((__always_inline__))
++__rndr (uint64_t *__res)
++{
++  return __builtin_aarch64_rndr (__res);
++}
++
++__extension__ static __inline int __attribute__ ((__always_inline__))
++__rndrrs (uint64_t *__res)
++{
++  return __builtin_aarch64_rndrrs (__res);
++}
++
++#pragma GCC pop_options
++
+ #ifdef __cplusplus
+ }
+ #endif
 diff --git a/gcc/config/aarch64/arm_neon.h b/gcc/config/aarch64/arm_neon.h
 index 314ef30187d..9ecc00c46b9 100644
 --- a/gcc/config/aarch64/arm_neon.h
@@ -13351,7 +13679,7 @@ index 5e7e46fcebe..f06fea1a8a5 100644
  
    if (!TARGET_80387)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..5978e51e8ea 100644
+index 1bca5a7eea6..f968d033972 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -2535,7 +2535,12 @@ rest_of_insert_endbranch (void)
@@ -13386,7 +13714,22 @@ index 1bca5a7eea6..5978e51e8ea 100644
  	  && (flag_cf_protection & CF_RETURN))
  	error ("%<-mfunction-return%> and %<-fcf-protection%> are not "
  	       "compatible");
-@@ -14347,8 +14356,13 @@ ix86_expand_epilogue (int style)
+@@ -12274,10 +12283,12 @@ ix86_update_stack_boundary (void)
+ static rtx
+ ix86_get_drap_rtx (void)
+ {
+-  /* We must use DRAP if there are outgoing arguments on stack and
++  /* We must use DRAP if there are outgoing arguments on stack or
++     the stack pointer register is clobbered by asm statment and
+      ACCUMULATE_OUTGOING_ARGS is false.  */
+   if (ix86_force_drap
+-      || (cfun->machine->outgoing_args_on_stack
++      || ((cfun->machine->outgoing_args_on_stack
++	   || crtl->sp_is_clobbered_by_asm)
+ 	  && !ACCUMULATE_OUTGOING_ARGS))
+     crtl->need_drap = true;
+ 
+@@ -14347,8 +14358,13 @@ ix86_expand_epilogue (int style)
  	      t = plus_constant (Pmode, t, m->fs.fp_offset - UNITS_PER_WORD);
  	      emit_insn (gen_rtx_SET (sa, t));
  
@@ -13402,7 +13745,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
  
  	      /* Note that we use SA as a temporary CFA, as the return
  		 address is at the proper place relative to it.  We
-@@ -14363,7 +14377,7 @@ ix86_expand_epilogue (int style)
+@@ -14363,7 +14379,7 @@ ix86_expand_epilogue (int style)
  	      add_reg_note (insn, REG_CFA_DEF_CFA,
  			    plus_constant (Pmode, sa, UNITS_PER_WORD));
  	      ix86_add_queued_cfa_restore_notes (insn);
@@ -13411,7 +13754,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
  	      RTX_FRAME_RELATED_P (insn) = 1;
  
  	      m->fs.cfa_reg = sa;
-@@ -44150,43 +44164,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+@@ -44150,43 +44166,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
        break;
      case E_V64QImode:
      case E_V32HImode:
@@ -13492,7 +13835,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
        break;
      default:
        gcc_unreachable ();
-@@ -46667,7 +46689,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
+@@ -46667,7 +46691,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
  	      /* vpshufb only works intra lanes, it is not
  		 possible to shuffle bytes in between the lanes.  */
  	      for (i = 0; i < nelt; ++i)
@@ -13501,7 +13844,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
  		  return false;
  	    }
  	}
-@@ -50265,7 +50287,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
+@@ -50265,7 +50289,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
    if ((TARGET_AVX512F && vector_size == 64)
        || (TARGET_AVX512VL && (vector_size == 32 || vector_size == 16)))
      {
@@ -13512,7 +13855,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
  	return smallest_int_mode_for_size (nunits);
      }
  
-@@ -50919,11 +50943,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50919,11 +50945,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        *clear = build_call_expr (fnclex, 0);
        tree sw_var = create_tmp_var_raw (short_unsigned_type_node);
        tree fnstsw_call = build_call_expr (fnstsw, 0);
@@ -13529,7 +13872,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
        *update = build2 (COMPOUND_EXPR, integer_type_node,
  			sw_mod, update_mod);
        tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
-@@ -50936,15 +50961,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50936,15 +50963,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        tree stmxcsr = ix86_builtins[IX86_BUILTIN_STMXCSR];
        tree ldmxcsr = ix86_builtins[IX86_BUILTIN_LDMXCSR];
        tree stmxcsr_hold_call = build_call_expr (stmxcsr, 0);
@@ -13551,7 +13894,7 @@ index 1bca5a7eea6..5978e51e8ea 100644
        tree ldmxcsr_hold_call = build_call_expr (ldmxcsr, 1, mxcsr_mod_var);
        tree hold_all = build2 (COMPOUND_EXPR, unsigned_type_node,
  			      hold_assign_orig, hold_assign_mod);
-@@ -50973,8 +51000,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50973,8 +51002,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  			    exceptions_assign);
  	}
        else
@@ -18342,7 +18685,7 @@ index 0ab6c9c6449..67cebf59fb7 100644
  @option{-mfunction-return=thunk} and
  @option{-mfunction-return=thunk-extern} since the thunk function may
 diff --git a/gcc/doc/sourcebuild.texi b/gcc/doc/sourcebuild.texi
-index 546af7f7261..7b44b886a66 100644
+index 546af7f7261..6bed48907c8 100644
 --- a/gcc/doc/sourcebuild.texi
 +++ b/gcc/doc/sourcebuild.texi
 @@ -1244,6 +1244,18 @@ This DejaGnu directive compares @var{regexp} to the combined output
@@ -18364,6 +18707,16 @@ index 546af7f7261..7b44b886a66 100644
  @subsubsection Specify additional files for a test
  
  @table @code
+@@ -1915,6 +1927,9 @@ AArch64 target which generates instruction sequences for big endian.
+ Binutils installed on test system supports relocation types required by -fpic
+ for AArch64 small memory model.
+ 
++@item aarch64_fjcvtzs_hw
++AArch64 target that is able to generate and execute armv8.3-a FJCVTZS
++instruction.
+ @end table
+ 
+ @subsubsection MIPS-specific attributes
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
 index 8c8978bb13a..7f5c370d97a 100644
 --- a/gcc/doc/tm.texi
@@ -18628,6 +18981,20 @@ index 122891c1edb..712e39033f4 100644
  	{
  	  unsigned int gen = canon_candidate (next_candidate);
  
+diff --git a/gcc/emit-rtl.h b/gcc/emit-rtl.h
+index 7b1cecd3c44..b8a07d21d37 100644
+--- a/gcc/emit-rtl.h
++++ b/gcc/emit-rtl.h
+@@ -266,6 +266,9 @@ struct GTY(()) rtl_data {
+      pass_stack_ptr_mod has run.  */
+   bool sp_is_unchanging;
+ 
++  /* True if the stack pointer is clobbered by asm statement.  */
++  bool sp_is_clobbered_by_asm;
++
+   /* Nonzero if function being compiled doesn't contain any calls
+      (ignoring the prologue and epilogue).  This is set prior to
+      register allocation in IRA and is valid for the remaining
 diff --git a/gcc/fold-const.c b/gcc/fold-const.c
 index c717f24501e..8388bde0434 100644
 --- a/gcc/fold-const.c
@@ -20959,10 +21326,31 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..bf2220d383a 100644
+index e132f2657ef..b158c420f93 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1441 @@
+@@ -1,3 +1,1462 @@
++2020-09-24  H.J. Lu  <hjl.tools@gmail.com>
++
++	Backported from master:
++	2020-09-16  H.J. Lu  <hjl.tools@gmail.com>
++
++	PR target/97032
++	* gcc.target/i386/pr97032.c: New test.
++
++2020-09-24  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-08-04  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++		    Andrea Corallo   <andrea.corallo@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/acle/jcvt_1.c: New test.
++	* gcc.target/aarch64/acle/jcvt_2.c: New testcase.
++	* lib/target-supports.exp
++	(check_effective_target_aarch64_fjcvtzs_hw): Add new check for
++	FJCVTZS hw.
++
 +2020-09-19  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -25947,6 +26335,125 @@ index 00000000000..84d9b9b2749
 +}
 +
 +/* { dg-final { run-gcov remove-gcda gcov-pr94029.c } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/acle/jcvt_1.c b/gcc/testsuite/gcc.target/aarch64/acle/jcvt_1.c
+new file mode 100644
+index 00000000000..0c900b1b57c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/acle/jcvt_1.c
+@@ -0,0 +1,15 @@
++/* Test the __jcvt ACLE intrinsic.  */
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=armv8.3-a" } */
++
++#include <arm_acle.h>
++
++#ifdef __ARM_FEATURE_JCVT
++int32_t
++test_jcvt (double a)
++{
++  return __jcvt (a);
++}
++#endif
++
++/* { dg-final { scan-assembler-times "fjcvtzs\tw\[0-9\]+, d\[0-9\]+\n" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/acle/jcvt_2.c b/gcc/testsuite/gcc.target/aarch64/acle/jcvt_2.c
+new file mode 100644
+index 00000000000..ea2dfd14cf2
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/acle/jcvt_2.c
+@@ -0,0 +1,33 @@
++/* Test the __jcvt ACLE intrinsic.  */
++/* { dg-do run } */
++/* { dg-options "-O2 -march=armv8.3-a -save-temps" } */
++/* { dg-require-effective-target aarch64_fjcvtzs_hw } */
++
++#include <arm_acle.h>
++
++extern void abort (void);
++
++#ifdef __ARM_FEATURE_JCVT
++volatile int32_t x;
++
++int __attribute__((noinline))
++foo (double a, int b, int c)
++{
++  b = b > c;
++  x = __jcvt (a);
++  return b;
++}
++
++int
++main (void)
++{
++  int x = foo (1.1, 2, 3);
++  if (x)
++    abort ();
++
++  return 0;
++}
++
++#endif
++
++/* { dg-final { scan-assembler-times "fjcvtzs\tw\[0-9\]+, d\[0-9\]+\n" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/acle/rng_1.c b/gcc/testsuite/gcc.target/aarch64/acle/rng_1.c
+new file mode 100644
+index 00000000000..1fbdb627663
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/acle/rng_1.c
+@@ -0,0 +1,53 @@
++/* Test the __rndr ACLE intrinsic.  */
++/* { dg-do compile } */
++/* { dg-options "-O2 -march=armv8.5-a+rng" } */
++
++#include <arm_acle.h>
++
++#ifdef __ARM_FEATURE_RNG
++/* Check that instruction is generated when status result is unused.  */
++uint64_t
++test_rndr_no_stat (void)
++{
++  uint64_t res;
++  __rndr (&res);
++  return res;
++}
++
++/* Check that instruction is generated when random number result
++   is unused.  */
++int
++test_rndr_error_check (void)
++{
++  uint64_t res;
++  int fail = __rndr (&res);
++  if (fail)
++    return 0;
++  return -1;
++}
++
++/* { dg-final { scan-assembler-times "mrs\tx..?, RNDR\n" 2 } } */
++
++/* Check that instruction is generated when status result is unused.  */
++uint64_t
++test_rndrrs_no_stat (void)
++{
++  uint64_t res;
++  __rndrrs (&res);
++  return res;
++}
++
++/* Check that instruction is generated when random number result
++   is unused.  */
++int
++test_rndrrs_error_check (void)
++{
++  uint64_t res;
++  int fail = __rndrrs (&res);
++  if (fail)
++    return 0;
++  return -1;
++}
++
++/* { dg-final { scan-assembler-times "mrs\tx..?, RNDRRS\n" 2 } } */
++#endif
 diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vld1x4.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vld1x4.c
 new file mode 100644
 index 00000000000..451a0afc6aa
@@ -28299,6 +28806,35 @@ index 00000000000..34a1e069eac
 +{
 +  return __builtin_ia32_movq128 (v);  /* { dg-error "" } */
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/pr97032.c b/gcc/testsuite/gcc.target/i386/pr97032.c
+new file mode 100644
+index 00000000000..7cbbe9bc22a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr97032.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile { target { ia32 && fstack_protector } } } */
++/* { dg-options "-O2 -mincoming-stack-boundary=2 -fstack-protector-all" } */
++
++#include <stdarg.h>
++
++extern int *__errno_location (void);
++
++long
++sys_socketcall (int op, ...)
++{
++  long int res;
++  va_list ap;
++  va_start (ap, op);
++  asm volatile ("push %%ebx; movl %2, %%ebx; int $0x80; pop %%ebx"
++  /* { dg-warning "listing the stack pointer register" "" { target *-*-* } .-1 } */
++		: "=a" (res) : "0" (102), "ri" (16), "c" (ap) : "memory", "esp");
++  if (__builtin_expect (res > 4294963200UL, 0))
++    *__errno_location () = -res;
++  va_end (ap);
++  return res;
++}
++
++/* { dg-final { scan-assembler "call\[ \t\]*_?__errno_location" } } */
 diff --git a/gcc/testsuite/gcc.target/i386/xsave-avx-1.c b/gcc/testsuite/gcc.target/i386/xsave-avx-1.c
 new file mode 100644
 index 00000000000..ca87a791446
@@ -33557,10 +34093,38 @@ index c56e8e80ae0..547b6465d74 100644
        lappend saved_compiler_env_var [list $var 1 $::env($var)]
      } else {
 diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
-index ea9a50ccb27..79482f9b69c 100644
+index ea9a50ccb27..3ac86eff3e5 100644
 --- a/gcc/testsuite/lib/target-supports.exp
 +++ b/gcc/testsuite/lib/target-supports.exp
-@@ -8579,7 +8579,8 @@ proc check_effective_target_aarch64_tiny { } {
+@@ -4414,6 +4414,27 @@ proc check_effective_target_aarch64_bti_hw { } {
+     } "-O2" ]
+ }
+ 
++# Return 1 if the target supports executing the armv8.3-a FJCVTZS
++# instruction.
++proc check_effective_target_aarch64_fjcvtzs_hw { } {
++    if { ![istarget aarch64*-*-*] } {
++	return 0
++    }
++    return [check_runtime aarch64_fjcvtzs_hw_available {
++	int
++	main (void)
++	{
++	  double in = 25.1;
++	  int out;
++	  asm volatile ("fjcvtzs %w0, %d1"
++			: "=r" (out)
++			: "w" (in)
++			: /* No clobbers.  */);
++	  return out != 25;
++	}
++    } "-march=armv8.3-a" ]
++}
++
+ # Return 1 if GCC was configured with --enable-standard-branch-protection
+ proc check_effective_target_default_branch_protection { } {
+     return [check_configured_with "enable-standard-branch-protection"]
+@@ -8579,7 +8600,8 @@ proc check_effective_target_aarch64_tiny { } {
  # Create functions to check that the AArch64 assembler supports the
  # various architecture extensions via the .arch_extension pseudo-op.
  
