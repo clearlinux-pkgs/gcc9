@@ -39,9 +39,10 @@ Carl Love (4):
       rs6000, Fix header comment for intrinsic function _mm_movemask_epi8
       pr94833, fix vec_first_match_index for nulls
 
-Christophe Lyon (2):
+Christophe Lyon (3):
       testsuite: Fix gcc.target/arm/stack-protector-1.c for Cortex-M
       arm: Fix -mpure-code support/-mslow-flash-data for armv8-m.base [PR94538]
+      testsuite: [aarch64] Fix aarch64/advsimd-intrinsics/v{trn,uzp,zip}_half.c
 
 Claudiu Zissulescu (1):
       arc: Allow more ABIs in GLIBC_DYNAMIC_LINKER
@@ -73,7 +74,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (197):
+GCC Administrator (200):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -336,7 +340,7 @@ Iain Sandoe (1):
 Ian Lance Taylor (1):
       go.test: update issue4085b.go to version from Go 1.13
 
-Jakub Jelinek (79):
+Jakub Jelinek (80):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -416,6 +420,7 @@ Jakub Jelinek (79):
       dwarf2out: Fix up dwarf2out_next_real_insn caching [PR96729]
       c++: Disable -frounding-math during manifestly constant evaluation [PR96862]
       store-merging: Consider also overlapping stores earlier in the by bitpos sorting [PR97053]
+      optabs: Don't reuse target for multi-word expansions if it overlaps operand(s) [PR97073]
 
 Jason Merrill (12):
       c++: Fix CTAD with multiple-arg ctor template [93248].
@@ -502,7 +507,7 @@ Kewen Lin (8):
       rs6000: Backport fixes for PR92923 and PR93136
       changelog: Fix up changelogs for commit 8c18220564
 
-Kyrylo Tkachov (14):
+Kyrylo Tkachov (22):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -517,6 +522,14 @@ Kyrylo Tkachov (14):
       aarch64: Add initial support for -mcpu=zeus
       Add support for __jcvt intrinsic
       Implement __rndr, __rndrrs intrinsics
+      AArch64: Implement poly-type vadd intrinsics
+      AArch64: Implement missing vceq*_p* intrinsics
+      AArch64: Implement missing vcls intrinsics on unsigned types
+      AArch64: Implement vstrq_p128 intrinsic
+      AArch64: Implement vldrq_p128 intrinsic
+      AArch64: Implement missing _p64 intrinsics for vector permutes
+      AArch64: Implement missing vrndns_f32 intrinsic
+      AArch64: Implement missing p128<->f64 reinterpret intrinsics
 
 Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -524,7 +537,7 @@ Marek Polacek (4):
       c++: Fix ICE in check_local_shadow with enum [PR95560]
       c++: Fix bogus -Wparentheses warning [PR95344]
 
-Mark Eggleston (14):
+Mark Eggleston (16):
       fortran: ICE using undeclared symbol in array constructor PR93484
       fortran: ICE equivalence with an element of an array PR94030
       fortran : ICE in gfc_resolve_findloc PR93498
@@ -539,6 +552,8 @@ Mark Eggleston (14):
       Fortran  : ICE in gfc_check_pointer_assign PR95612
       Fortran  :  get_environment_variable runtime error PR96486
       Fortran  : ICE for division by zero in declaration PR95882
+      Fortran  :  ICE in build_field PR95614
+      Revert "Fortran  :  ICE in build_field PR95614"
 
 Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
@@ -5533,10 +5548,40 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..f358a3494bf 100644
+index d8e53874e68..c0176b8fec4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1879 @@
+@@ -1,3 +1,1909 @@
++2020-09-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-09-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/97073
++	* optabs.c (expand_binop, expand_absneg_bit, expand_unop,
++	expand_copysign_bit): Check reg_overlap_mentioned_p between target
++	and operand(s) and if it returns true, force a pseudo as target.
++
++2020-09-25  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/aarch64.md (UNSPEC_RNDR, UNSPEC_RNDRRS):
++	Define.
++	(aarch64_rndr): New define_insn.
++	(aarch64_rndrrs): Likewise.
++	* config/aarch64/aarch64.h (AARCH64_ISA_RNG): Define.
++	(TARGET_RNG): Likewise.
++	* config/aarch64/aarch64-builtins.c (enum aarch64_builtins):
++	Add AARCH64_BUILTIN_RNG_RNDR, AARCH64_BUILTIN_RNG_RNDRRS.
++	(aarch64_init_rng_builtins): Define.
++	(aarch64_init_builtins): Call aarch64_init_rng_builtins.
++	(aarch64_expand_rng_builtin): Define.
++	(aarch64_expand_builtin): Use IGNORE argument, handle
++	RNG builtins.
++	* config/aarch64/aarch64-c.c (aarch64_update_cpp_builtins):
++	Define __ARM_FEATURE_RNG when TARGET_RNG.
++	* config/aarch64/arm_acle.h (__rndr, __rndrrs): Define.
++
 +2020-09-24  H.J. Lu  <hjl.tools@gmail.com>
 +
 +	Backported from master:
@@ -8828,10 +8873,24 @@ index c083cad5327..c9e5d586a51 100644
 +
  #endif /* GCC_AARCH64_PROTOS_H */
 diff --git a/gcc/config/aarch64/aarch64-simd-builtins.def b/gcc/config/aarch64/aarch64-simd-builtins.def
-index 17bb0c4869b..f6c096b9186 100644
+index 17bb0c4869b..20af5ebb5c7 100644
 --- a/gcc/config/aarch64/aarch64-simd-builtins.def
 +++ b/gcc/config/aarch64/aarch64-simd-builtins.def
-@@ -465,12 +465,18 @@
+@@ -314,12 +314,11 @@
+   BUILTIN_VHSDF (UNOP, nearbyint, 2)
+   BUILTIN_VHSDF (UNOP, rint, 2)
+   BUILTIN_VHSDF (UNOP, round, 2)
+-  BUILTIN_VHSDF_DF (UNOP, frintn, 2)
++  BUILTIN_VHSDF_HSDF (UNOP, frintn, 2)
+ 
+   VAR1 (UNOP, btrunc, 2, hf)
+   VAR1 (UNOP, ceil, 2, hf)
+   VAR1 (UNOP, floor, 2, hf)
+-  VAR1 (UNOP, frintn, 2, hf)
+   VAR1 (UNOP, nearbyint, 2, hf)
+   VAR1 (UNOP, rint, 2, hf)
+   VAR1 (UNOP, round, 2, hf)
+@@ -465,12 +464,18 @@
    /* Implemented by aarch64_ld1x3<VALLDIF:mode>.  */
    BUILTIN_VALLDIF (LOADSTRUCT, ld1x3, 0)
  
@@ -10419,10 +10478,122 @@ index 534a989c39a..423136ecefd 100644
  }
  #endif
 diff --git a/gcc/config/aarch64/arm_neon.h b/gcc/config/aarch64/arm_neon.h
-index 314ef30187d..9ecc00c46b9 100644
+index 314ef30187d..1fd8faae80f 100644
 --- a/gcc/config/aarch64/arm_neon.h
 +++ b/gcc/config/aarch64/arm_neon.h
-@@ -17968,6 +17968,288 @@ vld1q_u64 (const uint64_t *a)
+@@ -6055,6 +6055,20 @@ vreinterpretq_u32_p128 (poly128_t __a)
+   return (uint32x4_t)__a;
+ }
+ 
++__extension__ extern __inline float64x2_t
++__attribute__  ((__always_inline__, __gnu_inline__, __artificial__))
++vreinterpretq_f64_p128 (poly128_t __a)
++{
++  return (float64x2_t) __a;
++}
++
++__extension__ extern __inline poly128_t
++__attribute__  ((__always_inline__, __gnu_inline__, __artificial__))
++vreinterpretq_p128_f64 (float64x2_t __a)
++{
++  return (poly128_t) __a;
++}
++
+ /* vset_lane  */
+ 
+ __extension__ extern __inline float16x4_t
+@@ -12801,6 +12815,13 @@ vceqq_u64 (uint64x2_t __a, uint64x2_t __b)
+   return (__a == __b);
+ }
+ 
++__extension__ extern __inline uint64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vceqq_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++  return (__a == __b);
++}
++
+ /* vceq - scalar.  */
+ 
+ __extension__ extern __inline uint32_t
+@@ -12910,6 +12931,13 @@ vceqz_u64 (uint64x1_t __a)
+   return (__a == __AARCH64_UINT64_C (0));
+ }
+ 
++__extension__ extern __inline uint64x1_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vceqz_p64 (poly64x1_t __a)
++{
++  return (__a == __AARCH64_UINT64_C (0));
++}
++
+ __extension__ extern __inline uint32x4_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+ vceqzq_f32 (float32x4_t __a)
+@@ -12987,6 +13015,13 @@ vceqzq_u64 (uint64x2_t __a)
+   return (__a == __AARCH64_UINT64_C (0));
+ }
+ 
++__extension__ extern __inline uint64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vceqzq_p64 (poly64x2_t __a)
++{
++  return (__a == __AARCH64_UINT64_C (0));
++}
++
+ /* vceqz - scalar.  */
+ 
+ __extension__ extern __inline uint32_t
+@@ -14185,6 +14220,48 @@ vclsq_s32 (int32x4_t __a)
+   return __builtin_aarch64_clrsbv4si (__a);
+ }
+ 
++__extension__ extern __inline int8x8_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vcls_u8 (uint8x8_t __a)
++{
++  return __builtin_aarch64_clrsbv8qi ((int8x8_t) __a);
++}
++
++__extension__ extern __inline int16x4_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vcls_u16 (uint16x4_t __a)
++{
++  return __builtin_aarch64_clrsbv4hi ((int16x4_t) __a);
++}
++
++__extension__ extern __inline int32x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vcls_u32 (uint32x2_t __a)
++{
++  return __builtin_aarch64_clrsbv2si ((int32x2_t) __a);
++}
++
++__extension__ extern __inline int8x16_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vclsq_u8 (uint8x16_t __a)
++{
++  return __builtin_aarch64_clrsbv16qi ((int8x16_t) __a);
++}
++
++__extension__ extern __inline int16x8_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vclsq_u16 (uint16x8_t __a)
++{
++  return __builtin_aarch64_clrsbv8hi ((int16x8_t) __a);
++}
++
++__extension__ extern __inline int32x4_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vclsq_u32 (uint32x4_t __a)
++{
++  return __builtin_aarch64_clrsbv4si ((int32x4_t) __a);
++}
++
+ /* vclz.  */
+ 
+ __extension__ extern __inline int8x8_t
+@@ -17968,6 +18045,288 @@ vld1q_u64 (const uint64_t *a)
      __builtin_aarch64_ld1v2di ((const __builtin_aarch64_simd_di *) a);
  }
  
@@ -10711,7 +10882,35 @@ index 314ef30187d..9ecc00c46b9 100644
  /* vld1_dup  */
  
  __extension__ extern __inline float16x4_t
-@@ -28596,6 +28878,232 @@ vst1q_p64_x3 (poly64_t * __a, poly64x2x3_t val)
+@@ -19462,6 +19821,13 @@ vld4q_p64 (const poly64_t * __a)
+   return ret;
+ }
+ 
++__extension__ extern __inline poly128_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vldrq_p128 (const poly128_t * __ptr)
++{
++  return *__ptr;
++}
++
+ /* vldn_dup */
+ 
+ __extension__ extern __inline int8x8x2_t
+@@ -25852,6 +26218,13 @@ vrndmq_f64 (float64x2_t __a)
+ 
+ /* vrndn  */
+ 
++__extension__ extern __inline float32_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vrndns_f32 (float32_t __a)
++{
++  return __builtin_aarch64_frintnsf (__a);
++}
++
+ __extension__ extern __inline float32x2_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+ vrndn_f32 (float32x2_t __a)
+@@ -28596,6 +28969,232 @@ vst1q_p64_x3 (poly64_t * __a, poly64x2x3_t val)
    __builtin_aarch64_st1x3v2di ((__builtin_aarch64_simd_di *) __a, __o);
  }
  
@@ -10944,6 +11143,185 @@ index 314ef30187d..9ecc00c46b9 100644
  /* vstn */
  
  __extension__ extern __inline void
+@@ -29708,6 +30307,13 @@ vst4q_p64 (poly64_t * __a, poly64x2x4_t val)
+   __builtin_aarch64_st4v2di ((__builtin_aarch64_simd_di *) __a, __o);
+ }
+ 
++__extension__ extern __inline void
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vstrq_p128 (poly128_t * __ptr, poly128_t __val)
++{
++  *__ptr = __val;
++}
++
+ /* vsub */
+ 
+ __extension__ extern __inline int64_t
+@@ -30095,6 +30701,17 @@ vtrn1q_u32 (uint32x4_t __a, uint32x4_t __b)
+ #endif
+ }
+ 
++__extension__ extern __inline poly64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vtrn1q_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++#ifdef __AARCH64EB__
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {3, 1});
++#else
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {0, 2});
++#endif
++}
++
+ __extension__ extern __inline uint64x2_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+ vtrn1q_u64 (uint64x2_t __a, uint64x2_t __b)
+@@ -30365,6 +30982,18 @@ vtrn2q_u64 (uint64x2_t __a, uint64x2_t __b)
+ #endif
+ }
+ 
++
++__extension__ extern __inline poly64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vtrn2q_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++#ifdef __AARCH64EB__
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {2, 0});
++#else
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {1, 3});
++#endif
++}
++
+ __extension__ extern __inline float16x4x2_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+ vtrn_f16 (float16x4_t __a, float16x4_t __b)
+@@ -31011,6 +31640,17 @@ vuzp1q_u64 (uint64x2_t __a, uint64x2_t __b)
+ #endif
+ }
+ 
++__extension__ extern __inline poly64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vuzp1q_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++#ifdef __AARCH64EB__
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {3, 1});
++#else
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {0, 2});
++#endif
++}
++
+ __extension__ extern __inline float16x4_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+ vuzp2_f16 (float16x4_t __a, float16x4_t __b)
+@@ -31270,6 +31910,17 @@ vuzp2q_u64 (uint64x2_t __a, uint64x2_t __b)
+ #endif
+ }
+ 
++__extension__ extern __inline poly64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vuzp2q_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++#ifdef __AARCH64EB__
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {2, 0});
++#else
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {1, 3});
++#endif
++}
++
+ __INTERLEAVE_LIST (uzp)
+ 
+ /* vzip */
+@@ -31538,6 +32189,17 @@ vzip1q_u64 (uint64x2_t __a, uint64x2_t __b)
+ #endif
+ }
+ 
++__extension__ extern __inline poly64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vzip1q_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++#ifdef __AARCH64EB__
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {3, 1});
++#else
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {0, 2});
++#endif
++}
++
+ __extension__ extern __inline float16x4_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+ vzip2_f16 (float16x4_t __a, float16x4_t __b)
+@@ -31802,6 +32464,17 @@ vzip2q_u64 (uint64x2_t __a, uint64x2_t __b)
+ #endif
+ }
+ 
++__extension__ extern __inline poly64x2_t
++__attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
++vzip2q_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++#ifdef __AARCH64EB__
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {2, 0});
++#else
++  return __builtin_shuffle (__a, __b, (poly64x2_t) {1, 3});
++#endif
++}
++
+ __INTERLEAVE_LIST (zip)
+ 
+ #undef __INTERLEAVE_LIST
+@@ -33961,6 +34634,55 @@ vfmlslq_laneq_high_f16 (float32x4_t __r, float16x8_t __a, float16x8_t __b,
+ 
+ #pragma GCC pop_options
+ 
++__extension__ extern __inline poly8x8_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vadd_p8 (poly8x8_t __a, poly8x8_t __b)
++{
++  return __a ^ __b;
++}
++
++__extension__ extern __inline poly16x4_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vadd_p16 (poly16x4_t __a, poly16x4_t __b)
++{
++  return __a ^ __b;
++}
++
++__extension__ extern __inline poly64x1_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vadd_p64 (poly64x1_t __a, poly64x1_t __b)
++{
++  return __a ^ __b;
++}
++
++__extension__ extern __inline poly8x16_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vaddq_p8 (poly8x16_t __a, poly8x16_t __b)
++{
++  return __a ^ __b;
++}
++
++__extension__ extern __inline poly16x8_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vaddq_p16 (poly16x8_t __a, poly16x8_t __b)
++{
++  return __a ^__b;
++}
++
++__extension__ extern __inline poly64x2_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vaddq_p64 (poly64x2_t __a, poly64x2_t __b)
++{
++  return __a ^ __b;
++}
++
++__extension__ extern __inline poly128_t
++__attribute ((__always_inline__, __gnu_inline__, __artificial__))
++vaddq_p128 (poly128_t __a, poly128_t __b)
++{
++  return __a ^ __b;
++}
++
+ #undef __aarch64_vget_lane_any
+ 
+ #undef __aarch64_vdup_lane_any
 diff --git a/gcc/config/aarch64/atomics.md b/gcc/config/aarch64/atomics.md
 index 0f357662ac3..e7f3dad652f 100644
 --- a/gcc/config/aarch64/atomics.md
@@ -19053,10 +19431,30 @@ index c717f24501e..8388bde0434 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..7df0d7d9201 100644
+index 8fefea2b63d..5ef43289799 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,426 @@
+@@ -1,3 +1,446 @@
++2020-09-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master:
++	2020-09-27  Steven G. Kargl  <kargl@gcc.gnu.org>
++		    Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95614
++	* decl.c (gfc_get_common): Use gfc_match_common_name instead
++	of match_common_name.
++	* decl.c (gfc_bind_idents): Use gfc_match_common_name instead
++	of match_common_name.
++	* match.c : Rename match_common_name to gfc_match_common_name.
++	* match.c (gfc_match_common): Use gfc_match_common_name instead
++	of match_common_name.
++	* match.h : Rename match_common_name to gfc_match_common_name.
++	* resolve.c (resolve_common_vars): Check each symbol in a
++	common block has a global symbol.  If there is a global symbol
++	issue an error if the symbol type is known as is not a common
++	block name.
++
 +2020-09-19  Tobias Burnus  <tobias@codesourcery.com>
 +
 +	Backported from master:
@@ -21153,10 +21551,66 @@ index e865828f569..f403c0a2b9c 100644
  
  	  memset (&wi, 0, sizeof (wi));
 diff --git a/gcc/optabs.c b/gcc/optabs.c
-index 7d7efe0a4a2..f469e809939 100644
+index 7d7efe0a4a2..0ae429cad8e 100644
 --- a/gcc/optabs.c
 +++ b/gcc/optabs.c
-@@ -5559,6 +5559,8 @@ expand_vec_perm_const (machine_mode mode, rtx v0, rtx v1,
+@@ -1395,6 +1395,8 @@ expand_binop (machine_mode mode, optab binoptab, rtx op0, rtx op1,
+       if (target == 0
+ 	  || target == op0
+ 	  || target == op1
++	  || reg_overlap_mentioned_p (target, op0)
++	  || reg_overlap_mentioned_p (target, op1)
+ 	  || !valid_multiword_target_p (target))
+ 	target = gen_reg_rtx (int_mode);
+ 
+@@ -1475,6 +1477,8 @@ expand_binop (machine_mode mode, optab binoptab, rtx op0, rtx op1,
+ 	  if (target == 0
+ 	      || target == op0
+ 	      || target == op1
++	      || reg_overlap_mentioned_p (target, op0)
++	      || reg_overlap_mentioned_p (target, op1)
+ 	      || !valid_multiword_target_p (target))
+ 	    target = gen_reg_rtx (int_mode);
+ 
+@@ -1533,6 +1537,8 @@ expand_binop (machine_mode mode, optab binoptab, rtx op0, rtx op1,
+ 	  || target == op0
+ 	  || target == op1
+ 	  || !REG_P (target)
++	  || reg_overlap_mentioned_p (target, op0)
++	  || reg_overlap_mentioned_p (target, op1)
+ 	  || !valid_multiword_target_p (target))
+ 	target = gen_reg_rtx (int_mode);
+ 
+@@ -2670,6 +2676,7 @@ expand_absneg_bit (enum rtx_code code, scalar_float_mode mode,
+ 
+   if (target == 0
+       || target == op0
++      || reg_overlap_mentioned_p (target, op0)
+       || (nwords > 1 && !valid_multiword_target_p (target)))
+     target = gen_reg_rtx (mode);
+ 
+@@ -2948,7 +2955,10 @@ expand_unop (machine_mode mode, optab unoptab, rtx op0, rtx target,
+       int i;
+       rtx_insn *insns;
+ 
+-      if (target == 0 || target == op0 || !valid_multiword_target_p (target))
++      if (target == 0
++	  || target == op0
++	  || reg_overlap_mentioned_p (target, op0)
++	  || !valid_multiword_target_p (target))
+ 	target = gen_reg_rtx (int_mode);
+ 
+       start_sequence ();
+@@ -3458,6 +3468,8 @@ expand_copysign_bit (scalar_float_mode mode, rtx op0, rtx op1, rtx target,
+   if (target == 0
+       || target == op0
+       || target == op1
++      || reg_overlap_mentioned_p (target, op0)
++      || reg_overlap_mentioned_p (target, op1)
+       || (nwords > 1 && !valid_multiword_target_p (target)))
+     target = gen_reg_rtx (mode);
+ 
+@@ -5559,6 +5571,8 @@ expand_vec_perm_const (machine_mode mode, rtx v0, rtx v1,
        if (shift_amt)
  	{
  	  struct expand_operand ops[3];
@@ -21326,10 +21780,33 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..b158c420f93 100644
+index e132f2657ef..479618b96c1 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1462 @@
+@@ -1,3 +1,1485 @@
++2020-09-27  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-09-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR middle-end/97073
++	* gcc.c-torture/execute/pr97073.c: New test.
++
++2020-09-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Backported from master:
++	2020-09-27  Steven G. Kargl  <kargl@gcc.gnu.org>
++		    Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95614
++	* gfortran.dg/pr95614_1.f90: New test.
++	* gfortran.dg/pr95614_2.f90: New test.
++
++2020-09-25  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/acle/rng_1.c: New test.
++
 +2020-09-24  H.J. Lu  <hjl.tools@gmail.com>
 +
 +	Backported from master:
@@ -25045,6 +25522,33 @@ index 00000000000..ce55e8f92d4
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr97073.c b/gcc/testsuite/gcc.c-torture/execute/pr97073.c
+new file mode 100644
+index 00000000000..1955e6b8bd2
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr97073.c
+@@ -0,0 +1,21 @@
++/* PR middle-end/97073 */
++/* { dg-additional-options "-mno-stv" { target i?86-*-* x86_64-*-* } } */
++
++typedef unsigned long long L;
++union U { L i; struct T { unsigned k; L l; } j; } u;
++
++__attribute__((noinline,noclone)) void
++foo (L x)
++{
++  u.j.l = u.i & x;
++}
++
++int
++main ()
++{
++  u.i = 5;
++  foo (-1ULL);
++  if (u.j.l != 5)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/Wunused-var-4.c b/gcc/testsuite/gcc.dg/Wunused-var-4.c
 new file mode 100644
 index 00000000000..08ddcf4407e
@@ -26454,6 +26958,39 @@ index 00000000000..1fbdb627663
 +
 +/* { dg-final { scan-assembler-times "mrs\tx..?, RNDRRS\n" 2 } } */
 +#endif
+diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/arm-neon-ref.h b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/arm-neon-ref.h
+index fde6029b7fc..791972c737e 100644
+--- a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/arm-neon-ref.h
++++ b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/arm-neon-ref.h
+@@ -460,6 +460,8 @@ static void clean_results (void)
+ #endif
+   CLEAN(result, float, 32, 4);
+ 
++  AARCH64_ONLY(CLEAN(result, float, 64, 2));
++
+ #if defined(__aarch64__)
+   /* On AArch64, make sure to return DefaultNaN to have the same
+      results as on AArch32.  */
+@@ -544,7 +546,8 @@ static void clean_results (void)
+   DECL_VARIABLE(VAR, poly, 16, 8);		\
+   DECL_VARIABLE_CRYPTO(VAR, poly, 64, 2);	\
+   DECL_VARIABLE(VAR, float, 16, 8);		\
+-  DECL_VARIABLE(VAR, float, 32, 4)
++  DECL_VARIABLE(VAR, float, 32, 4);		\
++  AARCH64_ONLY(DECL_VARIABLE(VAR, float, 64, 2))
+ #else
+ #define DECL_VARIABLE_128BITS_VARIANTS(VAR)	\
+   DECL_VARIABLE_128BITS_SIGNED_VARIANTS(VAR);	\
+@@ -552,7 +555,8 @@ static void clean_results (void)
+   DECL_VARIABLE(VAR, poly, 8, 16);		\
+   DECL_VARIABLE(VAR, poly, 16, 8);		\
+   DECL_VARIABLE_CRYPTO(VAR, poly, 64, 2);	\
+-  DECL_VARIABLE(VAR, float, 32, 4)
++  DECL_VARIABLE(VAR, float, 32, 4);		\
++  AARCH64_ONLY(DECL_VARIABLE(VAR, float, 64, 2))
+ #endif
+ /* Declare all variants.  */
+ #define DECL_VARIABLE_ALL_VARIANTS(VAR)		\
 diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vld1x4.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vld1x4.c
 new file mode 100644
 index 00000000000..451a0afc6aa
@@ -26543,6 +27080,63 @@ index 00000000000..451a0afc6aa
 +
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vreinterpret_p128.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vreinterpret_p128.c
+index 25b348223f3..67f809c7065 100644
+--- a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vreinterpret_p128.c
++++ b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vreinterpret_p128.c
+@@ -33,6 +33,10 @@ VECT_VAR_DECL(vreint_expected_q_p128_f32,poly,64,2) [] = { 0xc1700000c1800000,
+ 							   0xc1500000c1600000 };
+ VECT_VAR_DECL(vreint_expected_q_p128_f16,poly,64,2) [] = { 0xca80cb00cb80cc00,
+ 							   0xc880c900c980ca00 };
++#ifdef __aarch64__
++VECT_VAR_DECL(vreint_expected_q_p128_f64,poly,64,2) [] = { 0xc030000000000000,
++							   0xc02e000000000000 };
++#endif
+ 
+ /* Expected results: vreinterpretq_*_p128.  */
+ VECT_VAR_DECL(vreint_expected_q_s8_p128,int,8,16) [] = { 0xf0, 0xff, 0xff, 0xff,
+@@ -75,6 +79,10 @@ VECT_VAR_DECL(vreint_expected_q_f16_p128,hfloat,16,8) [] = { 0xfff0, 0xffff,
+ 							     0xffff, 0xffff,
+ 							     0xfff1, 0xffff,
+ 							     0xffff, 0xffff };
++#ifdef __aarch64__
++VECT_VAR_DECL(vreint_expected_q_f64_p128,hfloat,64,2) [] = { 0xfffffffffffffff0,
++							     0xfffffffffffffff1 };
++#endif
+ 
+ int main (void)
+ {
+@@ -90,6 +98,10 @@ int main (void)
+ #endif
+   VLOAD(vreint_vector, buffer, q, float, f, 32, 4);
+ 
++#ifdef __aarch64__
++  VLOAD(vreint_vector, buffer, q, float, f, 64, 2);
++#endif
++
+   /* vreinterpretq_p128_* tests.  */
+ #undef TEST_MSG
+ #define TEST_MSG "VREINTERPRETQ_P128_*"
+@@ -121,6 +133,10 @@ int main (void)
+ #endif
+   TEST_VREINTERPRET128(q, poly, p, 128, 1, float, f, 32, 4, vreint_expected_q_p128_f32);
+ 
++#ifdef __aarch64__
++  TEST_VREINTERPRET128(q, poly, p, 128, 1, float, f, 64, 2, vreint_expected_q_p128_f64);
++#endif
++
+   /* vreinterpretq_*_p128 tests.  */
+ #undef TEST_MSG
+ #define TEST_MSG "VREINTERPRETQ_*_P128"
+@@ -161,5 +177,8 @@ int main (void)
+ #endif
+   TEST_VREINTERPRET_FP_FROM_P128(q, float, f, 32, 4, poly, p, 128, 1, vreint_expected_q_f32_p128);
+ 
++#ifdef __aarch64__
++  TEST_VREINTERPRET_FP_FROM_P128(q, float, f, 64, 2, poly, p, 128, 1, vreint_expected_q_f64_p128);
++#endif
+   return 0;
+ }
 diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vst1x4.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vst1x4.c
 new file mode 100644
 index 00000000000..1f17b5342de
@@ -26632,6 +27226,54 @@ index 00000000000..1f17b5342de
 +
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vtrn_half.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vtrn_half.c
+index 63f820fbf5a..25a0f198518 100644
+--- a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vtrn_half.c
++++ b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vtrn_half.c
+@@ -73,11 +73,8 @@ void exec_vtrn_half (void)
+   /* Input vector can only have 64 bits.  */
+   DECL_VARIABLE_ALL_VARIANTS(vector);
+   DECL_VARIABLE_ALL_VARIANTS(vector2);
+-  DECL_VARIABLE(vector, float, 64, 2);
+-  DECL_VARIABLE(vector2, float, 64, 2);
+ 
+   DECL_VARIABLE_ALL_VARIANTS(vector_res);
+-  DECL_VARIABLE(vector_res, float, 64, 2);
+ 
+   clean_results ();
+   /* We don't have vtrn1_T64x1, so set expected to the clean value.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vuzp_half.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vuzp_half.c
+index 8706f248591..2e6b666b71d 100644
+--- a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vuzp_half.c
++++ b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vuzp_half.c
+@@ -70,11 +70,8 @@ void exec_vuzp_half (void)
+   /* Input vector can only have 64 bits.  */
+   DECL_VARIABLE_ALL_VARIANTS(vector);
+   DECL_VARIABLE_ALL_VARIANTS(vector2);
+-  DECL_VARIABLE(vector, float, 64, 2);
+-  DECL_VARIABLE(vector2, float, 64, 2);
+ 
+   DECL_VARIABLE_ALL_VARIANTS(vector_res);
+-  DECL_VARIABLE(vector_res, float, 64, 2);
+ 
+   clean_results ();
+   /* We don't have vuzp1_T64x1, so set expected to the clean value.  */
+diff --git a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vzip_half.c b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vzip_half.c
+index 619d6b2e6ed..ef42451c82e 100644
+--- a/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vzip_half.c
++++ b/gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vzip_half.c
+@@ -73,11 +73,8 @@ void exec_vzip_half (void)
+   /* Input vector can only have 64 bits.  */
+   DECL_VARIABLE_ALL_VARIANTS(vector);
+   DECL_VARIABLE_ALL_VARIANTS(vector2);
+-  DECL_VARIABLE(vector, float, 64, 2);
+-  DECL_VARIABLE(vector2, float, 64, 2);
+ 
+   DECL_VARIABLE_ALL_VARIANTS(vector_res);
+-  DECL_VARIABLE(vector_res, float, 64, 2);
+ 
+   clean_results ();
+   /* We don't have vzip1_T64x1, so set expected to the clean value.  */
 diff --git a/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c b/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c
 index 49ca5d0d09c..a828a72aa75 100644
 --- a/gcc/testsuite/gcc.target/aarch64/atomic-comp-swap-release-acquire.c
@@ -27730,6 +28372,263 @@ index 0140bee194f..232ba67ade0 100644
 -/* { dg-final { scan-assembler-times "paciasp" 4 } } */
 +/* { dg-final { scan-assembler-times "autiasp" 3 } } */
 +/* { dg-final { scan-assembler-times "paciasp" 3 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/trn_zip_p64_1.c b/gcc/testsuite/gcc.target/aarch64/simd/trn_zip_p64_1.c
+new file mode 100644
+index 00000000000..a47321db80b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/trn_zip_p64_1.c
+@@ -0,0 +1,44 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++poly64x2_t
++foo (poly64x2_t a, poly64x2_t b)
++{
++  return vtrn1q_p64 (a, b);
++}
++
++poly64x2_t
++foo1 (poly64x2_t a, poly64x2_t b)
++{
++  return vtrn2q_p64 (a, b);
++}
++
++poly64x2_t
++foo2 (poly64x2_t a, poly64x2_t b)
++{
++  return vuzp1q_p64 (a, b);
++}
++
++poly64x2_t
++foo3 (poly64x2_t a, poly64x2_t b)
++{
++  return vuzp2q_p64 (a, b);
++}
++
++poly64x2_t
++foo4 (poly64x2_t a, poly64x2_t b)
++{
++  return vzip1q_p64 (a, b);
++}
++
++poly64x2_t
++foo5 (poly64x2_t a, poly64x2_t b)
++{
++  return vzip2q_p64 (a, b);
++}
++
++/* { dg-final { scan-assembler-times {zip1\tv0.2d, v0.2d, v1.2d} 3 } } */
++/* { dg-final { scan-assembler-times {zip2\tv0.2d, v0.2d, v1.2d} 3 } } */
++
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/vadd_poly_1.c b/gcc/testsuite/gcc.target/aarch64/simd/vadd_poly_1.c
+new file mode 100644
+index 00000000000..a5cdf290b0d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/vadd_poly_1.c
+@@ -0,0 +1,50 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++poly8x8_t
++foo (poly8x8_t a, poly8x8_t b)
++{
++  return vadd_p8 (a, b);
++}
++
++poly16x4_t
++foo16 (poly16x4_t a, poly16x4_t b)
++{
++  return vadd_p16 (a, b);
++}
++
++poly64x1_t
++foo64 (poly64x1_t a, poly64x1_t b)
++{
++  return vadd_p64 (a, b);
++}
++
++poly8x16_t
++fooq (poly8x16_t a, poly8x16_t b)
++{
++  return vaddq_p8 (a, b);
++}
++
++poly16x8_t
++fooq16 (poly16x8_t a, poly16x8_t b)
++{
++  return vaddq_p16 (a, b);
++}
++
++poly64x2_t
++fooq64 (poly64x2_t a, poly64x2_t b)
++{
++  return vaddq_p64 (a, b);
++}
++
++poly128_t
++fooq128 (poly128_t a, poly128_t b)
++{
++  return vaddq_p128 (a, b);
++}
++
++/* { dg-final { scan-assembler-times "eor\\tv\[0-9\]+\.8b, v\[0-9\]+\.8b, v\[0-9\]+\.8b" 3 } } */
++/* { dg-final { scan-assembler-times "eor\\tv\[0-9\]+\.16b, v\[0-9\]+\.16b, v\[0-9\]+\.16b" 3 } } */
++/* { dg-final { scan-assembler-times "eor\\tx\[0-9\]+, x\[0-9\]+, x\[0-9\]+" 2 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/vceq_poly_1.c b/gcc/testsuite/gcc.target/aarch64/simd/vceq_poly_1.c
+new file mode 100644
+index 00000000000..7d43352266c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/vceq_poly_1.c
+@@ -0,0 +1,29 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++uint64x2_t
++foo (poly64x2_t a, poly64x2_t b)
++{
++  return vceqq_p64 (a, b);
++}
++
++/* { dg-final { scan-assembler-times "cmeq\\tv\[0-9\]+\.2d, v\[0-9\]+\.2d, v\[0-9\]+\.2d" 1 } } */
++
++uint64x1_t
++fooz (poly64x1_t a)
++{
++  return vceqz_p64 (a);
++}
++
++/* { dg-final { scan-assembler-times "cmeq\\td\[0-9\]+, d\[0-9\]+, #0" 1 } } */
++
++uint64x2_t
++fooqz (poly64x2_t a)
++{
++  return vceqzq_p64 (a);
++}
++
++/* { dg-final { scan-assembler-times "cmeq\\tv\[0-9\]+\.2d, v\[0-9\]+\.2d, #0" 1 } } */
++
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/vcls_unsigned_1.c b/gcc/testsuite/gcc.target/aarch64/simd/vcls_unsigned_1.c
+new file mode 100644
+index 00000000000..f7078d1a67c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/vcls_unsigned_1.c
+@@ -0,0 +1,54 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++int16x8_t
++test_16x8 (uint16x8_t a)
++{
++  return vclsq_u16 (a);
++}
++
++/* { dg-final { scan-assembler-times "cls\\tv\[0-9\]+\.8h, v\[0-9\]+\.8h" 1 } } */
++
++
++int8x16_t
++test_8x16 (uint8x16_t a)
++{
++  return vclsq_u8 (a);
++}
++
++/* { dg-final { scan-assembler-times "cls\\tv\[0-9\]+\.16b, v\[0-9\]+\.16b" 1 } } */
++
++int32x4_t
++test_32x4 (uint32x4_t a)
++{
++  return vclsq_u32 (a);
++}
++
++/* { dg-final { scan-assembler-times "cls\\tv\[0-9\]+\.4s, v\[0-9\]+\.4s" 1 } } */
++
++int16x4_t
++test_16x4 (uint16x4_t a)
++{
++  return vcls_u16 (a);
++}
++
++/* { dg-final { scan-assembler-times "cls\\tv\[0-9\]+\.4h, v\[0-9\]+\.4h" 1 } } */
++
++int8x8_t
++test_8x8 (uint8x8_t a)
++{
++  return vcls_u8 (a);
++}
++
++/* { dg-final { scan-assembler-times "cls\\tv\[0-9\]+\.8b, v\[0-9\]+\.8b" 1 } } */
++
++int32x2_t
++test32x2 (uint32x2_t a)
++{
++  return vcls_u32 (a);
++}
++
++/* { dg-final { scan-assembler-times "cls\\tv\[0-9\]+\.2s, v\[0-9\]+\.2s" 1 } } */
++
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/vldrq_p128_1.c b/gcc/testsuite/gcc.target/aarch64/simd/vldrq_p128_1.c
+new file mode 100644
+index 00000000000..9c7e01b9e10
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/vldrq_p128_1.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++poly128_t
++test (poly128_t * p)
++{
++  return vldrq_p128 (p);
++}
++
++/* { dg-final { scan-assembler-times {ldp.*x0,.*x1,.*[x0]} 1 } } */
++
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/vrndns_f32_1.c b/gcc/testsuite/gcc.target/aarch64/simd/vrndns_f32_1.c
+new file mode 100644
+index 00000000000..960e4f6f768
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/vrndns_f32_1.c
+@@ -0,0 +1,13 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++float32_t
++test (float32_t a)
++{
++  return vrndns_f32 (a);
++}
++
++/* { dg-final { scan-assembler-times "frintn\\ts\[0-9\]+, s\[0-9\]+" 1 } } */
++
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/vstrq_p128_1.c b/gcc/testsuite/gcc.target/aarch64/simd/vstrq_p128_1.c
+new file mode 100644
+index 00000000000..8d036fde0f1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/vstrq_p128_1.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++#include <arm_neon.h>
++
++void
++test (poly128_t *ptr, poly128_t a)
++{
++  vstrq_p128 (ptr, a);
++}
++
++/* { dg-final { scan-assembler-times {stp.*x2,.*x3,.*[x0]} 1 } } */
 diff --git a/gcc/testsuite/gcc.target/aarch64/sls-mitigation/sls-miti-blr-bti.c b/gcc/testsuite/gcc.target/aarch64/sls-mitigation/sls-miti-blr-bti.c
 new file mode 100644
 index 00000000000..b1fb754c7b6
