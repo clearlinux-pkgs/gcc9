@@ -1,10 +1,11 @@
 Alan Modra (1):
       [RS6000] PR94145, make PLT loads volatile
 
-Alex Coplan (3):
+Alex Coplan (4):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
       arm: Don't generate invalid LDRD insns
       aarch64: Add support for Neoverse V1 CPU
+      arm: Add support for Neoverse V1 CPU
 
 Alexandre Oliva (2):
       [rs6000] fix mffsl emulation
@@ -74,7 +75,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (200):
+GCC Administrator (201):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5548,10 +5550,80 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..c0176b8fec4 100644
+index d8e53874e68..fae2ef68ef1 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1909 @@
+@@ -1,3 +1,1979 @@
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vreinterpretq_f64_p128,
++	vreinterpretq_p128_f64): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/aarch64-simd-builtins.def (frintn): Use BUILTIN_VHSDF_HSDF
++	for modes.  Remove explicit hf instantiation.
++	* config/aarch64/arm_neon.h (vrndns_f32): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vtrn1q_p64, vtrn2q_p64, vuzp1q_p64,
++	vuzp2q_p64, vzip1q_p64, vzip2q_p64): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vldrq_p128): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vstrq_p128): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-22  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vcls_u8, vcls_u16, vcls_u32,
++	vclsq_u8, vclsq_u16, vclsq_u32): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-22  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vceqq_p64, vceqz_p64, vceqzq_p64): Define.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-22  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* config/aarch64/arm_neon.h (vadd_p8, vadd_p16, vadd_p64, vaddq_p8,
++	vaddq_p16, vaddq_p64, vaddq_p128): Define.
++
 +2020-09-27  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -11976,6 +12048,54 @@ index 55bbb487097..ba74ab832da 100644
    restore_fnenv = build_call_expr (set_fpscr, 1, fenv_var);
    atomic_feraiseexcept = builtin_decl_implicit (BUILT_IN_ATOMIC_FERAISEEXCEPT);
    update_call = build_call_expr (atomic_feraiseexcept, 1,
+diff --git a/gcc/config/arm/arm-cpus.in b/gcc/config/arm/arm-cpus.in
+index 3a55f6ac6d2..747767ab386 100644
+--- a/gcc/config/arm/arm-cpus.in
++++ b/gcc/config/arm/arm-cpus.in
+@@ -1362,6 +1362,16 @@ begin cpu cortex-a76.cortex-a55
+  costs cortex_a57
+ end cpu cortex-a76.cortex-a55
+ 
++# Armv8.4 A-profile Architecture Processors
++begin cpu neoverse-v1
++  cname neoversev1
++  tune for cortex-a57
++  tune flags LDSCHED
++  architecture armv8.4-a+fp16
++  option crypto add FP_ARMv8 CRYPTO
++  costs cortex_a57
++end cpu neoverse-v1
++
+ # V8 M-profile implementations.
+ begin cpu cortex-m23
+  cname cortexm23
+diff --git a/gcc/config/arm/arm-tables.opt b/gcc/config/arm/arm-tables.opt
+index bba54aea3d6..5384284b53a 100644
+--- a/gcc/config/arm/arm-tables.opt
++++ b/gcc/config/arm/arm-tables.opt
+@@ -243,6 +243,9 @@ Enum(processor_type) String(cortex-a75.cortex-a55) Value( TARGET_CPU_cortexa75co
+ EnumValue
+ Enum(processor_type) String(cortex-a76.cortex-a55) Value( TARGET_CPU_cortexa76cortexa55)
+ 
++EnumValue
++Enum(processor_type) String(neoverse-v1) Value( TARGET_CPU_neoversev1)
++
+ EnumValue
+ Enum(processor_type) String(cortex-m23) Value( TARGET_CPU_cortexm23)
+ 
+diff --git a/gcc/config/arm/arm-tune.md b/gcc/config/arm/arm-tune.md
+index b9dfb66ec84..1257daff074 100644
+--- a/gcc/config/arm/arm-tune.md
++++ b/gcc/config/arm/arm-tune.md
+@@ -45,6 +45,6 @@
+ 	cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,
+ 	cortexa73cortexa53,cortexa55,cortexa75,
+ 	cortexa76,neoversen1,cortexa75cortexa55,
+-	cortexa76cortexa55,cortexm23,cortexm33,
+-	cortexr52"
++	cortexa76cortexa55,neoversev1,cortexm23,
++	cortexm33,cortexr52"
+ 	(const (symbol_ref "((enum attr_tune) arm_tune)")))
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
 index cdfc0f9e72f..d4e2ad2a317 100644
 --- a/gcc/config/arm/arm.c
@@ -18932,7 +19052,7 @@ index f5becf988d2..3ab83a1cf94 100644
  The @code{scalar_insert_exp}
  functions require a 64-bit environment supporting ISA 3.0 or later.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..67cebf59fb7 100644
+index 0ab6c9c6449..c85e31fb02c 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -19029,6 +19149,19 @@ index 0ab6c9c6449..67cebf59fb7 100644
  @item -msve-vector-bits=@var{bits}
  @opindex msve-vector-bits
  Specify the number of bits in an SVE vector register.  This option only has
+@@ -17532,9 +17570,9 @@ Permissible names are: @samp{arm7tdmi}, @samp{arm7tdmi-s}, @samp{arm710t},
+ @samp{cortex-m4}, @samp{cortex-m7}, @samp{cortex-m23}, @samp{cortex-m33},
+ @samp{cortex-m1.small-multiply}, @samp{cortex-m0.small-multiply},
+ @samp{cortex-m0plus.small-multiply}, @samp{exynos-m1}, @samp{marvell-pj4},
+-@samp{neoverse-n1}, @samp{xscale}, @samp{iwmmxt}, @samp{iwmmxt2},
+-@samp{ep9312}, @samp{fa526}, @samp{fa626}, @samp{fa606te}, @samp{fa626te},
+-@samp{fmp626}, @samp{fa726te}, @samp{xgene1}.
++@samp{neoverse-n1}, @samp{neoverse-v1}, @samp{xscale}, @samp{iwmmxt},
++@samp{iwmmxt2}, @samp{ep9312}, @samp{fa526}, @samp{fa626}, @samp{fa606te},
++@samp{fa626te}, @samp{fmp626}, @samp{fa726te}, @samp{xgene1}.
+ 
+ Additionally, this option can specify that GCC should tune the performance
+ of the code for a big.LITTLE system.  Permissible names are:
 @@ -17926,7 +17964,7 @@ is only available when generating non-pic code for M-profile targets.
  @opindex mcmse
  Generate secure code as per the "ARMv8-M Security Extensions: Requirements on
@@ -19431,10 +19564,30 @@ index c717f24501e..8388bde0434 100644
  				    "when distributing negation across "
  				    "division"),
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index 8fefea2b63d..5ef43289799 100644
+index 8fefea2b63d..022b1f4c8f8 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,446 @@
+@@ -1,3 +1,466 @@
++2020-09-28  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Revert:
++	2020-09-27  Steven G. Kargl  <kargl@gcc.gnu.org>
++		    Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95614
++	* decl.c (gfc_get_common): Use gfc_match_common_name instead
++	of match_common_name.
++	* decl.c (gfc_bind_idents): Use gfc_match_common_name instead
++	of match_common_name.
++	* match.c : Rename match_common_name to gfc_match_common_name.
++	* match.c (gfc_match_common): Use gfc_match_common_name instead
++	of match_common_name.
++	* match.h : Rename match_common_name to gfc_match_common_name.
++	* resolve.c (resolve_common_vars): Check each symbol in a
++	common block has a global symbol.  If there is a global symbol
++	issue an error if the symbol type is known as is not a common
++	block name.
++
 +2020-09-27  Mark Eggleston  <markeggleston@gcc.gnu.org>
 +
 +	Backported from master:
@@ -21780,10 +21933,99 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..479618b96c1 100644
+index e132f2657ef..0cd4e8fada9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1485 @@
+@@ -1,3 +1,1574 @@
++2020-09-28  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	Backported from master:
++	2020-09-25  Christophe Lyon  <christophe.lyon@linaro.org>
++
++	PR target/71233
++	* gcc.target/aarch64/advsimd-intrinsics/vtrn_half.c: Remove
++	declarations of vector, vector2, vector_res for float64x2 type.
++	* gcc.target/aarch64/advsimd-intrinsics/vuzp_half.c: Likewise.
++	* gcc.target/aarch64/advsimd-intrinsics/vzip_half.c: Likewise.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/advsimd-intrinsics/arm-neon-ref.h
++	(clean_results): Add float64x2_t cleanup.
++	(DECL_VARIABLE_128BITS_VARIANTS): Add float64x2_t variable.
++	* gcc.target/aarch64/advsimd-intrinsics/vreinterpret_p128.c: Add
++	testing of vreinterpretq_f64_p128, vreinterpretq_p128_f64.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/vrndns_f32_1.c: New test.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/trn_zip_p64_1.c: New test.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/vldrq_p128_1.c: New test.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-23  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/vstrq_p128_1.c: New test.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-22  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/vcls_unsigned_1.c: New test.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-22  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/vceq_poly_1.c: New test.
++
++2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-09-22  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/71233
++	* gcc.target/aarch64/simd/vadd_poly_1.c: New test.
++
++2020-09-28  Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	Revert:
++	2020-09-28  Steven G. Kargl  <kargl@gcc.gnu.org>
++		    Mark Eggleston  <markeggleston@gcc.gnu.org>
++
++	PR fortran/95614
++	* gfortran.dg/pr95614_1.f90: New test.
++	* gfortran.dg/pr95614_2.f90: New test.
++
 +2020-09-27  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
