@@ -75,7 +75,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (201):
+GCC Administrator (202):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -284,7 +285,7 @@ Gerald Pfeifer (1):
 Gustavo Romero (1):
       selftest: Work around GCC 4.2 PR33916 bug by optimizing the ctor [PR89494]
 
-H.J. Lu (9):
+H.J. Lu (10):
       x86: Insert ENDBR if function will be called indirectly
       x86: Restore the frame pointer in word_mode
       x86: Allow -fcf-protection with external thunk
@@ -294,6 +295,7 @@ H.J. Lu (9):
       x86: Update Intel processor detection
       x96: Remove PTA_CLWB from PTA_ICELAKE_CLIENT
       rtl_data: Add sp_is_clobbered_by_asm
+      x86: Use SET operation in MOVDIRI and MOVDIR64B
 
 Haijian Zhang (1):
       pr94780.c fails with ICE on aarch64 [PR94820]
@@ -323,6 +325,9 @@ Harald Anlauf (24):
       PR fortran/89574 - ICE in conv_function_val, at fortran/trans-expr.c:3792
       PR fortran/96890 - Wrong answer with intrinsic IALL
       PR fortran/93423 - ICE on invalid with argument list for module procedure
+
+Hongyu Wang (1):
+      Add missing FSF copyright notes for x86 intrinsic headers.
 
 Iain Buclaw (10):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
@@ -509,7 +514,7 @@ Kewen Lin (8):
       rs6000: Backport fixes for PR92923 and PR93136
       changelog: Fix up changelogs for commit 8c18220564
 
-Kyrylo Tkachov (22):
+Kyrylo Tkachov (23):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -532,6 +537,7 @@ Kyrylo Tkachov (22):
       AArch64: Implement missing _p64 intrinsics for vector permutes
       AArch64: Implement missing vrndns_f32 intrinsic
       AArch64: Implement missing p128<->f64 reinterpret intrinsics
+      AArch64: Add Linux cpuinfo string for rng feature
 
 Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -5550,10 +5556,26 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..fae2ef68ef1 100644
+index d8e53874e68..d1feb7dfc0c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,1979 @@
+@@ -1,3 +1,1995 @@
++2020-09-29  Hongyu Wang  <hongyu.wang@intel.com>
++
++	Backported from master:
++	2020-09-29  Hongyu Wang  <hongyu.wang@intel.com>
++
++	PR target/97231
++	* config/i386/pconfigintrin.h: Add FSF copyright notes.
++	* config/i386/wbnoinvdintrin.h: Ditto.
++
++2020-09-29  Alex Coplan  <alex.coplan@arm.com>
++
++	* config/arm/arm-cpus.in (neoverse-v1): New.
++	* config/arm/arm-tables.opt: Regenerate.
++	* config/arm/arm-tune.md: Regenerate.
++	* doc/invoke.texi: Document AArch32 support for Neoverse V1.
++
 +2020-09-28  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	Backported from master:
@@ -8909,6 +8931,19 @@ index 82d91d62519..48f1ac3ecf1 100644
  /* Qualcomm ('Q') cores. */
  AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
  
+diff --git a/gcc/config/aarch64/aarch64-option-extensions.def b/gcc/config/aarch64/aarch64-option-extensions.def
+index 010fd3ccf76..76d581bb300 100644
+--- a/gcc/config/aarch64/aarch64-option-extensions.def
++++ b/gcc/config/aarch64/aarch64-option-extensions.def
+@@ -118,7 +118,7 @@ AARCH64_OPT_EXTENSION("sve", AARCH64_FL_SVE, AARCH64_FL_FP | AARCH64_FL_SIMD | A
+ AARCH64_OPT_EXTENSION("profile", AARCH64_FL_PROFILE, 0, 0, false, "")
+ 
+ /* Enabling/Disabling "rng" only changes "rng".  */
+-AARCH64_OPT_EXTENSION("rng", AARCH64_FL_RNG, 0, 0, false, "")
++AARCH64_OPT_EXTENSION("rng", AARCH64_FL_RNG, 0, 0, false, "rng")
+ 
+ /* Enabling/Disabling "memtag" only changes "memtag".  */
+ AARCH64_OPT_EXTENSION("memtag", AARCH64_FL_MEMTAG, 0, 0, false, "")
 diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
 index c083cad5327..c9e5d586a51 100644
 --- a/gcc/config/aarch64/aarch64-protos.h
@@ -14434,9 +14469,31 @@ index 14e5a392f62..ad1949b2371 100644
    | PTA_AVX512F | PTA_AVX512CD;
  const wide_int_bitmask PTA_BONNELL = PTA_CORE2 | PTA_MOVBE;
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
-index 698c31a0a97..237c0054a09 100644
+index 698c31a0a97..8ae7ea68c16 100644
 --- a/gcc/config/i386/i386.md
 +++ b/gcc/config/i386/i386.md
+@@ -185,6 +185,10 @@
+ 
+   ;; IRET support
+   UNSPEC_INTERRUPT_RETURN
++
++  ;; For MOVDIRI and MOVDIR64B support
++  UNSPEC_MOVDIRI
++  UNSPEC_MOVDIR64B
+ ])
+ 
+ (define_c_enum "unspecv" [
+@@ -279,10 +283,6 @@
+   UNSPECV_SETSSBSY
+   UNSPECV_CLRSSBSY
+ 
+-  ;; For MOVDIRI and MOVDIR64B support
+-  UNSPECV_MOVDIRI
+-  UNSPECV_MOVDIR64B
+-
+   ;; For WAITPKG support
+   UNSPECV_UMWAIT
+   UNSPECV_UMONITOR
 @@ -18158,8 +18158,11 @@
        emit_insn (tmp);
  
@@ -14450,6 +14507,61 @@ index 698c31a0a97..237c0054a09 100644
        tmp = gen_rtx_EQ (VOIDmode, flags, const0_rtx);
        tmp = gen_rtx_IF_THEN_ELSE (VOIDmode, tmp,
  				  gen_rtx_LABEL_REF (VOIDmode, noadj_label),
+@@ -20425,17 +20428,17 @@
+ ;; MOVDIRI and MOVDIR64B
+ 
+ (define_insn "movdiri<mode>"
+-  [(unspec_volatile:SWI48 [(match_operand:SWI48 0 "memory_operand" "m")
+-			   (match_operand:SWI48 1 "register_operand" "r")]
+-			  UNSPECV_MOVDIRI)]
++  [(set (match_operand:SWI48 0 "memory_operand" "=m")
++	(unspec:SWI48 [(match_operand:SWI48 1 "register_operand" "r")]
++		      UNSPEC_MOVDIRI))]
+   "TARGET_MOVDIRI"
+   "movdiri\t{%1, %0|%0, %1}"
+   [(set_attr "type" "other")])
+ 
+ (define_insn "movdir64b_<mode>"
+-  [(unspec_volatile:XI [(match_operand:P 0 "register_operand" "r")
+-			(match_operand:XI 1 "memory_operand")]
+-		       UNSPECV_MOVDIR64B)]
++  [(set (mem:XI (match_operand:P 0 "register_operand" "r"))
++	(unspec:XI [(match_operand:XI 1 "memory_operand" "m")]
++		   UNSPEC_MOVDIR64B))]
+   "TARGET_MOVDIR64B"
+   "movdir64b\t{%1, %0|%0, %1}"
+   [(set_attr "type" "other")])
+diff --git a/gcc/config/i386/pconfigintrin.h b/gcc/config/i386/pconfigintrin.h
+index d2a3261e470..709119e999c 100644
+--- a/gcc/config/i386/pconfigintrin.h
++++ b/gcc/config/i386/pconfigintrin.h
+@@ -1,3 +1,26 @@
++/* Copyright (C) 2018-2020 Free Software Foundation, Inc.
++
++   This file is part of GCC.
++
++   GCC is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++
++   GCC is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
+ #ifndef _IMMINTRIN_H_INCLUDED
+ #error "Never use <pconfigintrin.h> directly; include <immintrin.h> instead."
+ #endif
 diff --git a/gcc/config/i386/shaintrin.h b/gcc/config/i386/shaintrin.h
 index 3ab222fa77c..5741c7f6611 100644
 --- a/gcc/config/i386/shaintrin.h
@@ -14607,6 +14719,37 @@ index 18cc39ae521..3b51fef56f2 100644
  	    (vec_concat:V2SI
  	      (plusminus:SI
  		(vec_select:SI (match_dup 2) (parallel [(const_int 4)]))
+diff --git a/gcc/config/i386/wbnoinvdintrin.h b/gcc/config/i386/wbnoinvdintrin.h
+index 5393698c6bb..94e58e9ce43 100644
+--- a/gcc/config/i386/wbnoinvdintrin.h
++++ b/gcc/config/i386/wbnoinvdintrin.h
+@@ -1,3 +1,26 @@
++/* Copyright (C) 2018-2020 Free Software Foundation, Inc.
++
++   This file is part of GCC.
++
++   GCC is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 3, or (at your option)
++   any later version.
++
++   GCC is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   Under Section 7 of GPL version 3, you are granted additional
++   permissions described in the GCC Runtime Library Exception, version
++   3.1, as published by the Free Software Foundation.
++
++   You should have received a copy of the GNU General Public License and
++   a copy of the GCC Runtime Library Exception along with this program;
++   see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
++   <http://www.gnu.org/licenses/>.  */
++
+ #ifndef _IMMINTRIN_H_INCLUDED
+ #error "Never use <wbnoinvdintrin.h> directly; include <immintrin.h> instead."
+ #endif
 diff --git a/gcc/config/pa/pa.h b/gcc/config/pa/pa.h
 index 24739e56f97..3c9f249c920 100644
 --- a/gcc/config/pa/pa.h
@@ -29774,6 +29917,105 @@ index 00000000000..a0c52e426c8
 +  V v = 0 <= (0 >= w);
 +  bar (v);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/movdir64b.c b/gcc/testsuite/gcc.target/i386/movdir64b.c
+new file mode 100644
+index 00000000000..01451a8eb9b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/movdir64b.c
+@@ -0,0 +1,29 @@
++/* { dg-do run { target movdir } } */
++/* { dg-options "-mmovdir64b -O2" } */
++
++#include <x86intrin.h>
++#include <cpuid.h>
++#include <string.h>
++
++unsigned long long int src[8] = {1, 2, 3, 4, 5, 6, 7, 8};
++unsigned long long int dest[8] __attribute__ ((aligned (64)))
++  = {-1, -1, -1, -1, -1, -1, -1, -1};
++
++int
++main ()
++{
++  unsigned int eax, ebx, ecx, edx;
++
++  if (!__get_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx))
++    return 0;
++
++  if ((ecx & bit_MOVDIR64B) == 0)
++    return 0;
++
++  _movdir64b (dest, src);
++
++  if (memcmp (dest, src, sizeof (dest)) != 0)
++    abort ();
++
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/movdiri32.c b/gcc/testsuite/gcc.target/i386/movdiri32.c
+new file mode 100644
+index 00000000000..04a412f9bf3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/movdiri32.c
+@@ -0,0 +1,26 @@
++/* { dg-do run { target movdir } } */
++/* { dg-options "-mmovdiri -O2" } */
++
++#include <x86intrin.h>
++#include <cpuid.h>
++
++unsigned int dest = -1;
++
++int
++main ()
++{
++  unsigned int eax, ebx, ecx, edx;
++
++  if (!__get_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx))
++    return 0;
++
++  if ((ecx & bit_MOVDIRI) == 0)
++    return 0;
++
++  _directstoreu_u32 (&dest, 0xbadbeef);
++
++  if (dest != 0xbadbeef)
++    abort ();
++
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/movdiri64.c b/gcc/testsuite/gcc.target/i386/movdiri64.c
+new file mode 100644
+index 00000000000..e0cb6081496
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/movdiri64.c
+@@ -0,0 +1,26 @@
++/* { dg-do run { target { movdir && { ! ia32 } } } } */
++/* { dg-options "-mmovdiri -O2" } */
++
++#include <x86intrin.h>
++#include <cpuid.h>
++
++unsigned long long int dest = -1LL;
++
++int
++main ()
++{
++  unsigned int eax, ebx, ecx, edx;
++
++  if (!__get_cpuid_count (7, 0, &eax, &ebx, &ecx, &edx))
++    return 0;
++
++  if ((ecx & bit_MOVDIRI) == 0)
++    return 0;
++
++  _directstoreu_u64 (&dest, 0x12345678badbeef);
++
++  if (dest != 0x12345678badbeef)
++    abort ();
++
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr93654.c b/gcc/testsuite/gcc.target/i386/pr93654.c
 new file mode 100644
 index 00000000000..ec5bdce86a6
@@ -35234,7 +35476,7 @@ index c56e8e80ae0..547b6465d74 100644
        lappend saved_compiler_env_var [list $var 1 $::env($var)]
      } else {
 diff --git a/gcc/testsuite/lib/target-supports.exp b/gcc/testsuite/lib/target-supports.exp
-index ea9a50ccb27..3ac86eff3e5 100644
+index ea9a50ccb27..5e10c098a6c 100644
 --- a/gcc/testsuite/lib/target-supports.exp
 +++ b/gcc/testsuite/lib/target-supports.exp
 @@ -4414,6 +4414,27 @@ proc check_effective_target_aarch64_bti_hw { } {
@@ -35275,6 +35517,27 @@ index ea9a50ccb27..3ac86eff3e5 100644
      eval [string map [list FUNC $aarch64_ext] {
  	proc check_effective_target_aarch64_asm_FUNC_ok { } {
  	  if { [istarget aarch64*-*-*] } {
+@@ -9400,3 +9422,20 @@ proc check_effective_target_mfentry { } {
+ 	        void foo (void) { }
+     } "-mfentry"]
+ }
++
++# Return 1 if we're able to assemble movdiri and movdir64b
++
++proc check_effective_target_movdir { } {
++    return [check_no_compiler_messages movdir object {
++	void
++	foo (unsigned int *d, unsigned int s)
++	{
++	  __builtin_ia32_directstoreu_u32 (d, s);
++	}
++	void
++	bar (void *d, const void *s)
++	{
++	  __builtin_ia32_movdir64b (d, s);
++	}
++    } "-mmovdiri -mmovdir64b" ]
++}
 diff --git a/gcc/tree-cfg.c b/gcc/tree-cfg.c
 index 0c4ae81aa05..e5dfd17ded9 100644
 --- a/gcc/tree-cfg.c
