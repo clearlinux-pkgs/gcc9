@@ -1,12 +1,14 @@
 Alan Modra (1):
       [RS6000] PR94145, make PLT loads volatile
 
-Alex Coplan (5):
+Alex Coplan (7):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
       arm: Don't generate invalid LDRD insns
       aarch64: Add support for Neoverse V1 CPU
       arm: Add support for Neoverse V1 CPU
       aarch64: Add support for Neoverse N2 CPU
+      arm: Add support for Neoverse N2 CPU
+      arm: Add missing part number for Neoverse V1
 
 Alexandre Oliva (2):
       [rs6000] fix mffsl emulation
@@ -76,7 +78,12 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (203):
+GCC Administrator (208):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -517,7 +524,7 @@ Kewen Lin (8):
       rs6000: Backport fixes for PR92923 and PR93136
       changelog: Fix up changelogs for commit 8c18220564
 
-Kyrylo Tkachov (24):
+Kyrylo Tkachov (26):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -542,6 +549,8 @@ Kyrylo Tkachov (24):
       AArch64: Implement missing p128<->f64 reinterpret intrinsics
       AArch64: Add Linux cpuinfo string for rng feature
       AArch64: Add rng feature to Neoverse V1
+      AArch64: Add prefer_advsimd_autovec internal tune_flag
+      AArch64: Add Neoverse V1 tuning struct
 
 Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -571,7 +580,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (15):
+Martin Liska (18):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -587,6 +596,9 @@ Martin Liska (15):
       gcc-changelog: sync from master.
       gcc-changelog: fix when somebody reverts a backport
       gcc-changelog: fix combining of arguments.
+      gcov: fix streaming corruption
+      gcov: fix streaming of HIST_TYPE_IOR histogram type.
+      GCOV: do not mangle .gcno files.
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -707,10 +719,11 @@ Thomas Schwinge (3):
       'libgomp.oacc-fortran/{error_,}stop-{1,2,3}.f': initialize before the checkpoint
       [HSA] Avoid ICE when "HSA does not implement indirect calls"
 
-Tobias Burnus (3):
+Tobias Burnus (4):
       [Fortran] Fix result-variable handling of MODULE PROCEDURE (PR94348)
       ICE in gfc_get_dataptr_offset, at fortran/trans-array.c:6951
       Fortran: Avoid double-free with parse error (PR96041, PR93423)
+      configure: Fix in-tree building of GMP on BSD [PR97302]
 
 Uros Bizjak (6):
       i386: Fix REDUC_SSE_SMINMAX_MODE mode conditions.
@@ -761,6 +774,30 @@ index 9605d767a80..30c7aaf6cc0 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/configure b/configure
+index abd93a990a9..8de7fd3afc3 100755
+--- a/configure
++++ b/configure
+@@ -3679,6 +3679,7 @@ case "${target}" in
+     ;;
+   *-*-freebsd*)
+     if test "x$with_gmp" = x && test "x$with_gmp_dir" = x \
++	&& ! test -d ${srcdir}/gmp \
+ 	&& test -f /usr/local/include/gmp.h; then
+       with_gmp=/usr/local
+     fi
+diff --git a/configure.ac b/configure.ac
+index 9db4fd14aa2..4aab1482e34 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -961,6 +961,7 @@ case "${target}" in
+     ;;
+   *-*-freebsd*)
+     if test "x$with_gmp" = x && test "x$with_gmp_dir" = x \
++	&& ! test -d ${srcdir}/gmp \
+ 	&& test -f /usr/local/include/gmp.h; then
+       with_gmp=/usr/local
+     fi
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index fde2d2b76eb..17151424a88 100644
 --- a/contrib/ChangeLog
@@ -5560,10 +5597,83 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..cb40805391f 100644
+index d8e53874e68..3924fa1386f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2016 @@
+@@ -1,3 +1,2089 @@
++2020-10-05  Alex Coplan  <alex.coplan@arm.com>
++
++	* config/arm/arm-cpus.in (neoverse-v1): Add missing vendor and
++	part numbers.
++
++2020-10-02  Alex Coplan  <alex.coplan@arm.com>
++
++	* config/arm/arm-cpus.in (neoverse-n2): New.
++	* config/arm/arm-tables.opt: Regenerate.
++	* config/arm/arm-tune.md: Regenerate.
++	* doc/invoke.texi: Document support for Neoverse N2.
++
++2020-10-02  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/aarch64.c (neoversev1_tunings): Define.
++	* config/aarch64/aarch64-cores.def (zeus): Use it.
++	(neoverse-v1): Likewise.
++
++2020-10-02  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-10-02  Martin Liska  <mliska@suse.cz>
++
++	PR gcov-profile/97193
++	* coverage.c (coverage_init): GCDA note files should not be
++	mangled and should end in output directory.
++
++2020-10-02  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-09-25  Martin Liska  <mliska@suse.cz>
++
++	PR gcov-profile/64636
++	* value-prof.c (stream_out_histogram_value): Allow negative
++	values for HIST_TYPE_IOR.
++
++2020-10-02  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-09-23  Martin Liska  <mliska@suse.cz>
++
++	PR gcov-profile/97069
++	* profile.c (branch_prob): Line number must be at least 1.
++
++2020-10-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/aarch64-tuning-flags.def
++	(PREFER_ADVSIMD_AUTOVEC): Define.
++	* config/aarch64/aarch64.c (aarch64_preferred_simd_mode): Use
++	it.
++	(aarch64_autovectorize_vector_sizes): Likewise.
++
++2020-10-01  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/aarch64-cores.def (zeus): Add AARCH64_FL_RNG to
++	features.
++	(neoverse-v1): Likewise.
++
++2020-10-01  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2020-10-01  Jakub Jelinek  <jakub@redhat.com>
++
++	* config/s390/s390.c (s390_atomic_assign_expand_fenv): Use
++	TARGET_EXPR instead of MODIFY_EXPR for the first assignments to
++	fenv_var and old_fpc.  Formatting fixes.
++
++2020-10-01  Alex Coplan  <alex.coplan@arm.com>
++
++	* config/aarch64/aarch64-cores.def: Add Neoverse N2.
++	* config/aarch64/aarch64-tune.md: Regenerate.
++	* doc/invoke.texi: Document AArch64 support for Neoverse N2.
++
 +2020-09-30  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	Backported from master:
@@ -8933,7 +9043,7 @@ index 6d5acb02fc6..1812387dee6 100644
       target between implementations that do or do not support ARMv8.2-A
       16-bit floating-point extensions.  */
 diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
-index 82d91d62519..4e827f89aae 100644
+index 82d91d62519..54ef105811c 100644
 --- a/gcc/config/aarch64/aarch64-cores.def
 +++ b/gcc/config/aarch64/aarch64-cores.def
 @@ -104,14 +104,25 @@ AARCH64_CORE("ares",  ares, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_F
@@ -8949,8 +9059,8 @@ index 82d91d62519..4e827f89aae 100644
  /* ARMv8.4-A Architecture Processors.  */
  
 +/* ARM ('A') cores. */
-+AARCH64_CORE("zeus", zeus, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversen1, 0x41, 0xd40, -1)
-+AARCH64_CORE("neoverse-v1", neoversev1, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversen1, 0x41, 0xd40, -1)
++AARCH64_CORE("zeus", zeus, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversev1, 0x41, 0xd40, -1)
++AARCH64_CORE("neoverse-v1", neoversev1, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversev1, 0x41, 0xd40, -1)
 +
 +
  /* Qualcomm ('Q') cores. */
@@ -9274,8 +9384,20 @@ index 2b1ec85ae31..0a73e105e08 100644
 -	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,tsv110,saphira,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
 +	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
+diff --git a/gcc/config/aarch64/aarch64-tuning-flags.def b/gcc/config/aarch64/aarch64-tuning-flags.def
+index 91a0ff5ea04..47852b509d3 100644
+--- a/gcc/config/aarch64/aarch64-tuning-flags.def
++++ b/gcc/config/aarch64/aarch64-tuning-flags.def
+@@ -46,4 +46,7 @@ AARCH64_EXTRA_TUNING_OPTION ("no_ldp_stp_qregs", NO_LDP_STP_QREGS)
+ 
+ AARCH64_EXTRA_TUNING_OPTION ("rename_load_regs", RENAME_LOAD_REGS)
+ 
++/* Prefer Advanced SIMD over SVE for auto-vectorization.  */
++AARCH64_EXTRA_TUNING_OPTION ("prefer_advsimd_autovec", PREFER_ADVSIMD_AUTOVEC)
++
+ #undef AARCH64_EXTRA_TUNING_OPTION
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..bcf2777313e 100644
+index b452a53af99..ab15c24b830 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -681,6 +681,17 @@ static const cpu_prefetch_tune xgene1_prefetch_tune =
@@ -9296,10 +9418,37 @@ index b452a53af99..bcf2777313e 100644
  static const struct tune_params generic_tunings =
  {
    &cortexa57_extra_costs,
-@@ -1111,6 +1122,32 @@ static const struct tune_params neoversen1_tunings =
+@@ -1111,6 +1122,59 @@ static const struct tune_params neoversen1_tunings =
    &generic_prefetch_tune
  };
  
++static const struct tune_params neoversev1_tunings =
++{
++  &cortexa57_extra_costs,
++  &generic_addrcost_table,
++  &generic_regmove_cost,
++  &cortexa57_vector_cost,
++  &generic_branch_cost,
++  &generic_approx_modes,
++  SVE_256, /* sve_width  */
++  4, /* memmov_cost  */
++  3, /* issue_rate  */
++  AARCH64_FUSE_AES_AESMC, /* fusible_ops  */
++  "32:16",      /* function_align.  */
++  "32:16",      /* jump_align.  */
++  "32:16",      /* loop_align.  */
++  2,    /* int_reassoc_width.  */
++  4,    /* fp_reassoc_width.  */
++  2,    /* vec_reassoc_width.  */
++  2,    /* min_div_recip_mul_sf.  */
++  2,    /* min_div_recip_mul_df.  */
++  0,    /* max_case_values.  */
++  tune_params::AUTOPREFETCHER_WEAK,     /* autoprefetcher_model.  */
++  (AARCH64_EXTRA_TUNE_PREFER_ADVSIMD_AUTOVEC),    /* tune_flags.  */
++  &generic_prefetch_tune
++};
++
++
 +static const struct tune_params a64fx_tunings =
 +{
 +  &generic_extra_costs,
@@ -9329,7 +9478,7 @@ index b452a53af99..bcf2777313e 100644
  /* Support for fine-grained override of the tuning structures.  */
  struct aarch64_tuning_override_function
  {
-@@ -1879,10 +1916,33 @@ emit_set_insn (rtx x, rtx y)
+@@ -1879,10 +1943,33 @@ emit_set_insn (rtx x, rtx y)
  rtx
  aarch64_gen_compare_reg (RTX_CODE code, rtx x, rtx y)
  {
@@ -9342,11 +9491,11 @@ index b452a53af99..bcf2777313e 100644
 +  if (cmp_mode == TImode)
 +    {
 +      gcc_assert (code == NE);
-+
-+      cc_mode = CCmode;
-+      cc_reg = gen_rtx_REG (cc_mode, CC_REGNUM);
  
 -  emit_set_insn (cc_reg, gen_rtx_COMPARE (mode, x, y));
++      cc_mode = CCmode;
++      cc_reg = gen_rtx_REG (cc_mode, CC_REGNUM);
++
 +      rtx x_lo = operand_subword (x, 0, 0, TImode);
 +      rtx y_lo = operand_subword (y, 0, 0, TImode);
 +      emit_set_insn (cc_reg, gen_rtx_COMPARE (cc_mode, x_lo, y_lo));
@@ -9366,7 +9515,7 @@ index b452a53af99..bcf2777313e 100644
    return cc_reg;
  }
  
-@@ -1895,7 +1955,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
+@@ -1895,7 +1982,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
    if (y_mode == E_QImode || y_mode == E_HImode)
      {
        if (CONST_INT_P (y))
@@ -9378,7 +9527,7 @@ index b452a53af99..bcf2777313e 100644
        else
  	{
  	  rtx t, cc_reg;
-@@ -2818,7 +2881,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2818,7 +2908,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    gcc_assert (emit_move_imm || temp1 != NULL_RTX);
    gcc_assert (temp1 == NULL_RTX || !reg_overlap_mentioned_p (temp1, src));
  
@@ -9387,7 +9536,7 @@ index b452a53af99..bcf2777313e 100644
    rtx_insn *insn;
  
    if (!moffset)
-@@ -2862,7 +2925,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2862,7 +2952,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    if (emit_move_imm)
      {
        gcc_assert (temp1 != NULL_RTX || can_create_pseudo_p ());
@@ -9397,7 +9546,7 @@ index b452a53af99..bcf2777313e 100644
      }
    insn = emit_insn (offset < 0
  		    ? gen_sub3_insn (dest, src, temp1)
-@@ -4854,6 +4918,17 @@ aarch64_return_address_signing_enabled (void)
+@@ -4854,6 +4945,17 @@ aarch64_return_address_signing_enabled (void)
    /* This function should only be called after frame laid out.   */
    gcc_assert (cfun->machine->frame.laid_out);
  
@@ -9415,7 +9564,7 @@ index b452a53af99..bcf2777313e 100644
    /* If signing scope is AARCH64_FUNCTION_NON_LEAF, we only sign a leaf function
       if it's LR is pushed onto stack.  */
    return (aarch64_ra_sign_scope == AARCH64_FUNCTION_ALL
-@@ -7541,7 +7616,7 @@ sizetochar (int size)
+@@ -7541,7 +7643,7 @@ sizetochar (int size)
       'S/T/U/V':		Print a FP/SIMD register name for a register list.
  			The register printed is the FP/SIMD register name
  			of X + 0/1/2/3 for S/T/U/V.
@@ -9424,7 +9573,7 @@ index b452a53af99..bcf2777313e 100644
       'X':		Print bottom 16 bits of integer constant in hex.
       'w/x':		Print a general register name or the zero register
  			(32-bit or 64-bit).
-@@ -7733,12 +7808,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
+@@ -7733,12 +7835,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
        break;
  
      case 'R':
@@ -9444,7 +9593,7 @@ index b452a53af99..bcf2777313e 100644
        break;
  
      case 'X':
-@@ -8190,6 +8266,9 @@ aarch64_label_mentioned_p (rtx x)
+@@ -8190,6 +8293,9 @@ aarch64_label_mentioned_p (rtx x)
  enum reg_class
  aarch64_regno_regclass (unsigned regno)
  {
@@ -9454,7 +9603,7 @@ index b452a53af99..bcf2777313e 100644
    if (GP_REGNUM_P (regno))
      return GENERAL_REGS;
  
-@@ -8397,6 +8476,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
+@@ -8397,6 +8503,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
    return cfun->machine->frame.frame_size;
  }
  
@@ -9479,7 +9628,7 @@ index b452a53af99..bcf2777313e 100644
  /* Implement RETURN_ADDR_RTX.  We do not support moving back to a
     previous frame.  */
  
-@@ -8405,15 +8502,15 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
+@@ -8405,15 +8529,15 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
  {
    if (count != 0)
      return const0_rtx;
@@ -9498,7 +9647,7 @@ index b452a53af99..bcf2777313e 100644
  
    if (aarch64_bti_enabled ())
      {
-@@ -8436,6 +8533,17 @@ aarch64_asm_trampoline_template (FILE *f)
+@@ -8436,6 +8560,17 @@ aarch64_asm_trampoline_template (FILE *f)
      }
    asm_fprintf (f, "\tbr\t%s\n", reg_names [IP1_REGNUM]);
  
@@ -9516,7 +9665,7 @@ index b452a53af99..bcf2777313e 100644
    /* The trampoline needs an extra padding instruction.  In case if BTI is
       enabled the padding instruction is replaced by the BTI instruction at
       the beginning.  */
-@@ -8450,10 +8558,14 @@ static void
+@@ -8450,10 +8585,14 @@ static void
  aarch64_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
  {
    rtx fnaddr, mem, a_tramp;
@@ -9533,7 +9682,7 @@ index b452a53af99..bcf2777313e 100644
  		   GEN_INT (tramp_code_sz), BLOCK_OP_NORMAL);
    mem = adjust_address (m_tramp, ptr_mode, tramp_code_sz);
    fnaddr = XEXP (DECL_RTL (fndecl), 0);
-@@ -8484,6 +8596,7 @@ aarch64_class_max_nregs (reg_class_t regclass, machine_mode mode)
+@@ -8484,6 +8623,7 @@ aarch64_class_max_nregs (reg_class_t regclass, machine_mode mode)
    unsigned int nregs;
    switch (regclass)
      {
@@ -9541,7 +9690,7 @@ index b452a53af99..bcf2777313e 100644
      case TAILCALL_ADDR_REGS:
      case POINTER_REGS:
      case GENERAL_REGS:
-@@ -8640,6 +8753,8 @@ aarch64_output_casesi (rtx *operands)
+@@ -8640,6 +8780,8 @@ aarch64_output_casesi (rtx *operands)
    output_asm_insn (buf, operands);
    output_asm_insn (patterns[index][1], operands);
    output_asm_insn ("br\t%3", operands);
@@ -9550,7 +9699,7 @@ index b452a53af99..bcf2777313e 100644
    assemble_label (asm_out_file, label);
    return "";
  }
-@@ -10676,10 +10791,12 @@ aarch64_register_move_cost (machine_mode mode,
+@@ -10676,10 +10818,12 @@ aarch64_register_move_cost (machine_mode mode,
      = aarch64_tune_params.regmove_cost;
  
    /* Caller save and pointer regs are equivalent to GENERAL_REGS.  */
@@ -9565,7 +9714,7 @@ index b452a53af99..bcf2777313e 100644
      from = GENERAL_REGS;
  
    /* Moving between GPR and stack cost is the same as GP2GP.  */
-@@ -11734,6 +11851,79 @@ aarch64_validate_mcpu (const char *str, const struct processor **res,
+@@ -11734,6 +11878,79 @@ aarch64_validate_mcpu (const char *str, const struct processor **res,
    return false;
  }
  
@@ -9645,7 +9794,7 @@ index b452a53af99..bcf2777313e 100644
  /* Parses CONST_STR for branch protection features specified in
     aarch64_branch_protect_types, and set any global variables required.  Returns
     the parsing result and assigns LAST_STR to the last processed token from
-@@ -11972,6 +12162,9 @@ aarch64_override_options (void)
+@@ -11972,6 +12189,9 @@ aarch64_override_options (void)
    selected_arch = NULL;
    selected_tune = NULL;
  
@@ -9655,7 +9804,7 @@ index b452a53af99..bcf2777313e 100644
    if (aarch64_branch_protection_string)
      aarch64_validate_mbranch_protection (aarch64_branch_protection_string);
  
-@@ -12517,6 +12710,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
+@@ -12517,6 +12737,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
       aarch64_handle_attr_branch_protection, OPT_mbranch_protection_ },
    { "sign-return-address", aarch64_attr_enum, false, NULL,
       OPT_msign_return_address_ },
@@ -9664,7 +9813,34 @@ index b452a53af99..bcf2777313e 100644
    { NULL, aarch64_attr_custom, false, NULL, OPT____ }
  };
  
-@@ -15426,16 +15621,26 @@ static void
+@@ -14105,7 +14327,12 @@ aarch64_simd_container_mode (scalar_mode mode, poly_int64 width)
+ static machine_mode
+ aarch64_preferred_simd_mode (scalar_mode mode)
+ {
+-  poly_int64 bits = TARGET_SVE ? BITS_PER_SVE_VECTOR : 128;
++  /* If current tuning prefers Advanced SIMD, bypass SVE.  */
++  bool use_sve
++    = TARGET_SVE
++      && !(aarch64_tune_params.extra_tuning_flags
++	   & AARCH64_EXTRA_TUNE_PREFER_ADVSIMD_AUTOVEC);
++  poly_int64 bits = use_sve ? BITS_PER_SVE_VECTOR : 128;
+   return aarch64_simd_container_mode (mode, bits);
+ }
+ 
+@@ -14114,7 +14341,11 @@ aarch64_preferred_simd_mode (scalar_mode mode)
+ static void
+ aarch64_autovectorize_vector_sizes (vector_sizes *sizes)
+ {
+-  if (TARGET_SVE)
++  bool use_sve
++    = TARGET_SVE
++      && !(aarch64_tune_params.extra_tuning_flags
++	   & AARCH64_EXTRA_TUNE_PREFER_ADVSIMD_AUTOVEC);
++  if (use_sve)
+     sizes->safe_push (BYTES_PER_SVE_VECTOR);
+   sizes->safe_push (16);
+   sizes->safe_push (8);
+@@ -15426,16 +15657,26 @@ static void
  aarch64_emit_load_exclusive (machine_mode mode, rtx rval,
  			     rtx mem, rtx model_rtx)
  {
@@ -9694,7 +9870,7 @@ index b452a53af99..bcf2777313e 100644
  }
  
  /* Mark the previous jump instruction as unlikely.  */
-@@ -15447,6 +15652,82 @@ aarch64_emit_unlikely_jump (rtx insn)
+@@ -15447,6 +15688,82 @@ aarch64_emit_unlikely_jump (rtx insn)
    add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
  }
  
@@ -9777,7 +9953,7 @@ index b452a53af99..bcf2777313e 100644
  /* Expand a compare and swap pattern.  */
  
  void
-@@ -15493,6 +15774,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
+@@ -15493,6 +15810,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
  						   newval, mod_s));
        cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
      }
@@ -9795,7 +9971,7 @@ index b452a53af99..bcf2777313e 100644
    else
      {
        /* The oldval predicate varies by mode.  Test it and force to reg.  */
-@@ -15538,13 +15830,11 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15538,13 +15866,11 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* Split after prolog/epilog to avoid interactions with shrinkwrapping.  */
    gcc_assert (epilogue_completed);
  
@@ -9810,7 +9986,7 @@ index b452a53af99..bcf2777313e 100644
  
    rval = operands[0];
    mem = operands[1];
-@@ -15565,7 +15855,8 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15565,7 +15891,8 @@ aarch64_split_compare_and_swap (rtx operands[])
  	CBNZ	scratch, .label1
      .label2:
  	CMP	rval, 0.  */
@@ -9820,7 +9996,7 @@ index b452a53af99..bcf2777313e 100644
  
    label1 = NULL;
    if (!is_weak)
-@@ -15578,35 +15869,20 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15578,35 +15905,20 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* The initial load can be relaxed for a __sync operation since a final
       barrier will be emitted to stop code hoisting.  */
    if (is_mm_sync (model))
@@ -9863,7 +10039,7 @@ index b452a53af99..bcf2777313e 100644
  
    aarch64_emit_store_exclusive (mode, scratch, mem, newval, model_rtx);
  
-@@ -15627,22 +15903,16 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15627,22 +15939,16 @@ aarch64_split_compare_and_swap (rtx operands[])
        aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
      }
    else
@@ -9890,7 +10066,7 @@ index b452a53af99..bcf2777313e 100644
    /* Emit any final barrier needed for a __sync operation.  */
    if (is_mm_sync (model))
      aarch64_emit_post_barrier (model);
-@@ -16415,7 +16685,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
+@@ -16415,7 +16721,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
  
    if (d->vec_flags == VEC_SVE_PRED
        || !d->one_vector_p
@@ -9900,7 +10076,7 @@ index b452a53af99..bcf2777313e 100644
      return false;
  
    size = (diff + 1) * GET_MODE_UNIT_SIZE (d->vmode);
-@@ -18900,6 +19171,231 @@ aarch64_file_end_indicate_exec_stack ()
+@@ -18900,6 +19207,231 @@ aarch64_file_end_indicate_exec_stack ()
  #undef GNU_PROPERTY_AARCH64_FEATURE_1_BTI
  #undef GNU_PROPERTY_AARCH64_FEATURE_1_AND
  
@@ -10132,7 +10308,7 @@ index b452a53af99..bcf2777313e 100644
  /* Target-specific selftests.  */
  
  #if CHECKING_P
-@@ -19420,6 +19916,12 @@ aarch64_libgcc_floating_mode_supported_p
+@@ -19420,6 +19952,12 @@ aarch64_libgcc_floating_mode_supported_p
  #define TARGET_RUN_TARGET_SELFTESTS selftest::aarch64_run_selftests
  #endif /* #if CHECKING_P */
  
@@ -12115,10 +12291,10 @@ index 55bbb487097..ba74ab832da 100644
    atomic_feraiseexcept = builtin_decl_implicit (BUILT_IN_ATOMIC_FERAISEEXCEPT);
    update_call = build_call_expr (atomic_feraiseexcept, 1,
 diff --git a/gcc/config/arm/arm-cpus.in b/gcc/config/arm/arm-cpus.in
-index 3a55f6ac6d2..747767ab386 100644
+index 3a55f6ac6d2..f87044fd25c 100644
 --- a/gcc/config/arm/arm-cpus.in
 +++ b/gcc/config/arm/arm-cpus.in
-@@ -1362,6 +1362,16 @@ begin cpu cortex-a76.cortex-a55
+@@ -1362,6 +1362,30 @@ begin cpu cortex-a76.cortex-a55
   costs cortex_a57
  end cpu cortex-a76.cortex-a55
  
@@ -12130,27 +12306,44 @@ index 3a55f6ac6d2..747767ab386 100644
 +  architecture armv8.4-a+fp16
 +  option crypto add FP_ARMv8 CRYPTO
 +  costs cortex_a57
++  vendor 41
++  part 0xd40
 +end cpu neoverse-v1
++
++# Armv8.5 A-profile Architecture Processors
++begin cpu neoverse-n2
++  cname neoversen2
++  tune for cortex-a57
++  tune flags LDSCHED
++  architecture armv8.5-a+fp16
++  option crypto add FP_ARMv8 CRYPTO
++  costs cortex_a57
++  vendor 41
++  part 0xd49
++end cpu neoverse-n2
 +
  # V8 M-profile implementations.
  begin cpu cortex-m23
   cname cortexm23
 diff --git a/gcc/config/arm/arm-tables.opt b/gcc/config/arm/arm-tables.opt
-index bba54aea3d6..5384284b53a 100644
+index bba54aea3d6..5befadddf9e 100644
 --- a/gcc/config/arm/arm-tables.opt
 +++ b/gcc/config/arm/arm-tables.opt
-@@ -243,6 +243,9 @@ Enum(processor_type) String(cortex-a75.cortex-a55) Value( TARGET_CPU_cortexa75co
+@@ -243,6 +243,12 @@ Enum(processor_type) String(cortex-a75.cortex-a55) Value( TARGET_CPU_cortexa75co
  EnumValue
  Enum(processor_type) String(cortex-a76.cortex-a55) Value( TARGET_CPU_cortexa76cortexa55)
  
 +EnumValue
 +Enum(processor_type) String(neoverse-v1) Value( TARGET_CPU_neoversev1)
 +
++EnumValue
++Enum(processor_type) String(neoverse-n2) Value( TARGET_CPU_neoversen2)
++
  EnumValue
  Enum(processor_type) String(cortex-m23) Value( TARGET_CPU_cortexm23)
  
 diff --git a/gcc/config/arm/arm-tune.md b/gcc/config/arm/arm-tune.md
-index b9dfb66ec84..1257daff074 100644
+index b9dfb66ec84..102765e6568 100644
 --- a/gcc/config/arm/arm-tune.md
 +++ b/gcc/config/arm/arm-tune.md
 @@ -45,6 +45,6 @@
@@ -12159,8 +12352,8 @@ index b9dfb66ec84..1257daff074 100644
  	cortexa76,neoversen1,cortexa75cortexa55,
 -	cortexa76cortexa55,cortexm23,cortexm33,
 -	cortexr52"
-+	cortexa76cortexa55,neoversev1,cortexm23,
-+	cortexm33,cortexr52"
++	cortexa76cortexa55,neoversev1,neoversen2,
++	cortexm23,cortexm33,cortexr52"
  	(const (symbol_ref "((enum attr_tune) arm_tune)")))
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
 index cdfc0f9e72f..d4e2ad2a317 100644
@@ -17274,13 +17467,15 @@ index 3a7251102ef..eef4f1acd01 100644
      ;;
  esac
 diff --git a/gcc/coverage.c b/gcc/coverage.c
-index 1ffefd5f482..9be446a862d 100644
+index 1ffefd5f482..c442e2fb008 100644
 --- a/gcc/coverage.c
 +++ b/gcc/coverage.c
-@@ -1201,6 +1201,11 @@ coverage_obj_finish (vec<constructor_elt, va_gc> *ctor)
+@@ -1201,6 +1201,13 @@ coverage_obj_finish (vec<constructor_elt, va_gc> *ctor)
  void
  coverage_init (const char *filename)
  {
++  const char *original_filename = filename;
++  int original_len = strlen (original_filename);
 +#if HAVE_DOS_BASED_FILE_SYSTEM
 +  const char *separator = "\\";
 +#else
@@ -17289,7 +17484,7 @@ index 1ffefd5f482..9be446a862d 100644
    int len = strlen (filename);
    int prefix_len = 0;
  
-@@ -1217,11 +1222,6 @@ coverage_init (const char *filename)
+@@ -1217,11 +1224,6 @@ coverage_init (const char *filename)
  	 of filename in order to prevent file path clashing.  */
        if (profile_data_prefix)
  	{
@@ -17301,7 +17496,7 @@ index 1ffefd5f482..9be446a862d 100644
  	  filename = concat (getpwd (), separator, filename, NULL);
  	  filename = mangle_path (filename);
  	  len = strlen (filename);
-@@ -1240,7 +1240,7 @@ coverage_init (const char *filename)
+@@ -1240,7 +1242,7 @@ coverage_init (const char *filename)
    if (profile_data_prefix)
      {
        memcpy (da_file_name, profile_data_prefix, prefix_len);
@@ -17310,6 +17505,19 @@ index 1ffefd5f482..9be446a862d 100644
      }
    memcpy (da_file_name + prefix_len, filename, len);
    strcpy (da_file_name + prefix_len + len, GCOV_DATA_SUFFIX);
+@@ -1255,9 +1257,9 @@ coverage_init (const char *filename)
+   /* Name of bbg file.  */
+   if (flag_test_coverage && !flag_compare_debug)
+     {
+-      bbg_file_name = XNEWVEC (char, len + strlen (GCOV_NOTE_SUFFIX) + 1);
+-      memcpy (bbg_file_name, filename, len);
+-      strcpy (bbg_file_name + len, GCOV_NOTE_SUFFIX);
++      bbg_file_name = XNEWVEC (char, original_len + strlen (GCOV_NOTE_SUFFIX) + 1);
++      memcpy (bbg_file_name, original_filename, original_len);
++      strcpy (bbg_file_name + original_len, GCOV_NOTE_SUFFIX);
+ 
+       if (!gcov_open (bbg_file_name, -1))
+ 	{
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
 index 6441d647a54..504737621a7 100644
 --- a/gcc/cp/ChangeLog
@@ -19257,7 +19465,7 @@ index f5becf988d2..3ab83a1cf94 100644
  The @code{scalar_insert_exp}
  functions require a 64-bit environment supporting ISA 3.0 or later.
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..e4cc83ba5cb 100644
+index 0ab6c9c6449..2eb2c82dc47 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -19361,9 +19569,9 @@ index 0ab6c9c6449..e4cc83ba5cb 100644
 -@samp{neoverse-n1}, @samp{xscale}, @samp{iwmmxt}, @samp{iwmmxt2},
 -@samp{ep9312}, @samp{fa526}, @samp{fa626}, @samp{fa606te}, @samp{fa626te},
 -@samp{fmp626}, @samp{fa726te}, @samp{xgene1}.
-+@samp{neoverse-n1}, @samp{neoverse-v1}, @samp{xscale}, @samp{iwmmxt},
-+@samp{iwmmxt2}, @samp{ep9312}, @samp{fa526}, @samp{fa626}, @samp{fa606te},
-+@samp{fa626te}, @samp{fmp626}, @samp{fa726te}, @samp{xgene1}.
++@samp{neoverse-n1}, @samp{neoverse-n2}, @samp{neoverse-v1}, @samp{xscale},
++@samp{iwmmxt}, @samp{iwmmxt2}, @samp{ep9312}, @samp{fa526}, @samp{fa626},
++@samp{fa606te}, @samp{fa626te}, @samp{fmp626}, @samp{fa726te}, @samp{xgene1}.
  
  Additionally, this option can specify that GCC should tune the performance
  of the code for a big.LITTLE system.  Permissible names are:
@@ -22010,6 +22218,37 @@ index fbb108568b3..819b8473d9d 100644
        break;
      case SYMBOL_REF:
        pp_printf (pp, "`%s'", XSTR (x, 0));
+diff --git a/gcc/profile.c b/gcc/profile.c
+index a1dba1ac8fb..9ac3a7e93fe 100644
+--- a/gcc/profile.c
++++ b/gcc/profile.c
+@@ -1293,7 +1293,7 @@ branch_prob (bool thunk)
+ 	      seen_locations.add (loc);
+ 	      expanded_location curr_location = expand_location (loc);
+ 	      output_location (&streamed_locations, curr_location.file,
+-			       curr_location.line, &offset, bb);
++			       MAX (1, curr_location.line), &offset, bb);
+ 	    }
+ 
+ 	  for (gsi = gsi_start_bb (bb); !gsi_end_p (gsi); gsi_next (&gsi))
+@@ -1304,7 +1304,7 @@ branch_prob (bool thunk)
+ 		{
+ 		  seen_locations.add (loc);
+ 		  output_location (&streamed_locations, gimple_filename (stmt),
+-				   gimple_lineno (stmt), &offset, bb);
++				   MAX (1, gimple_lineno (stmt)), &offset, bb);
+ 		}
+ 	    }
+ 
+@@ -1319,7 +1319,7 @@ branch_prob (bool thunk)
+ 	    {
+ 	      expanded_location curr_location = expand_location (loc);
+ 	      output_location (&streamed_locations, curr_location.file,
+-			       curr_location.line, &offset, bb);
++			       MAX (1, curr_location.line), &offset, bb);
+ 	    }
+ 
+ 	  if (offset)
 diff --git a/gcc/reorg.c b/gcc/reorg.c
 index 81349382b81..a93cf90e0ab 100644
 --- a/gcc/reorg.c
@@ -22138,10 +22377,18 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..cdf0f8432b7 100644
+index e132f2657ef..8bac20fa0c8 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1585 @@
+@@ -1,3 +1,1593 @@
++2020-10-02  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-09-23  Martin Liska  <mliska@suse.cz>
++
++	PR gcov-profile/97069
++	* g++.dg/gcov/pr97069.C: New test.
++
 +2020-09-30  H.J. Lu  <hjl.tools@gmail.com>
 +
 +	Backported from master:
@@ -24660,6 +24907,32 @@ index 00000000000..6e84cccea1f
 +
 +#define SA(X) static_assert (X,#X)
 +SA (alignof(T<int>) == S<int>::b);
+diff --git a/gcc/testsuite/g++.dg/gcov/pr97069.C b/gcc/testsuite/g++.dg/gcov/pr97069.C
+new file mode 100644
+index 00000000000..040e336662a
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/gcov/pr97069.C
+@@ -0,0 +1,20 @@
++// PR gcov-profile/97069
++// { dg-options "--coverage" }
++// { dg-do run { target native } }
++
++# 0 "pr97069.C"
++# 0 "<built-in>"
++# 0 "<command-line>"
++# 1 "/usr/include/stdc-predef.h" 1 3 4
++# 0 "<command-line>" 2
++# 1 "pr97069.C"
++int main()
++{
++  return 0;
++}
++# 0 "pr97069.C"
++void zero_line_directive()
++{
++}
++
++// { dg-final { run-gcov pr97069.C } }
 diff --git a/gcc/testsuite/g++.dg/gomp/pr94477.C b/gcc/testsuite/g++.dg/gomp/pr94477.C
 new file mode 100644
 index 00000000000..e7fdc23d6d3
@@ -36944,6 +37217,22 @@ index d2696302bd0..5d4af79177c 100644
    layout_type (ret);
  
    /* Now, fill in the type.  */
+diff --git a/gcc/value-prof.c b/gcc/value-prof.c
+index 5013956cf86..b8ce4bd82ce 100644
+--- a/gcc/value-prof.c
++++ b/gcc/value-prof.c
+@@ -363,7 +363,10 @@ stream_out_histogram_value (struct output_block *ob, histogram_value hist)
+       /* When user uses an unsigned type with a big value, constant converted
+ 	 to gcov_type (a signed type) can be negative.  */
+       gcov_type value = hist->hvalue.counters[i];
+-      if (hist->type == HIST_TYPE_SINGLE_VALUE && i == 0)
++      if ((hist->type == HIST_TYPE_SINGLE_VALUE && i == 0)
++	  || hist->type == HIST_TYPE_IOR)
++	/* Note that the IOR counter tracks pointer values and these can have
++	   sign bit set.  */
+ 	;
+       else
+ 	gcc_assert (value >= 0);
 diff --git a/gcc/varasm.c b/gcc/varasm.c
 index 8f006dcff67..8d87e28cc7c 100644
 --- a/gcc/varasm.c
