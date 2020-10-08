@@ -1,5 +1,6 @@
-Alan Modra (1):
+Alan Modra (2):
       [RS6000] PR94145, make PLT loads volatile
+      [RS6000] ICE in decompose, at rtl.h:2282
 
 Alex Coplan (7):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
@@ -78,7 +79,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (209):
+GCC Administrator (210):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -460,7 +462,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (47):
+Jonathan Wakely (48):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -508,6 +510,7 @@ Jonathan Wakely (47):
       libstdc++: Use correct argument type for __use_alloc [PR 96803]
       libstdc++: Use correct argument type for __use_alloc, again [PR 96803]
       libstdc++: Fix out-of-bounds string_view access in filesystem::path [PR 97167]
+      libstdc++: Fix non-reserved name in header
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -16192,7 +16195,7 @@ index d0d69beafd4..47a5d0576d0 100644
  
  /* Deal with ports that do not have -mstrict-align.  */
 diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
-index 87d60078bb0..55334bfa217 100644
+index 87d60078bb0..deec1e08e5c 100644
 --- a/gcc/config/rs6000/rs6000.c
 +++ b/gcc/config/rs6000/rs6000.c
 @@ -4099,6 +4099,14 @@ rs6000_option_override_internal (bool global_init_p)
@@ -16251,6 +16254,15 @@ index 87d60078bb0..55334bfa217 100644
  
  	  element_offset = base_tmp;
  	}
+@@ -8361,7 +8371,7 @@ rs6000_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
+ 	low_int = 0;
+       high_int = INTVAL (XEXP (x, 1)) - low_int;
+       sum = force_operand (gen_rtx_PLUS (Pmode, XEXP (x, 0),
+-					 GEN_INT (high_int)), 0);
++					 gen_int_mode (high_int, Pmode)), 0);
+       return plus_constant (Pmode, sum, low_int);
+     }
+   else if (GET_CODE (x) == PLUS
 @@ -15721,7 +15731,16 @@ rs6000_gimple_fold_builtin (gimple_stmt_iterator *gsi)
        gsi_replace (gsi, g, true);
        return true;
@@ -47191,6 +47203,19 @@ index c90a35080f1..80ecf5b420d 100644
  
    /**
     * @brief Obtain address referenced by a pointer to an object
+diff --git a/libstdc++-v3/include/bits/random.h b/libstdc++-v3/include/bits/random.h
+index 14f680f50c4..889b05ac5a9 100644
+--- a/libstdc++-v3/include/bits/random.h
++++ b/libstdc++-v3/include/bits/random.h
+@@ -6066,7 +6066,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     { }
+ 
+     template<typename _IntType>
+-      seed_seq(std::initializer_list<_IntType> il);
++      seed_seq(std::initializer_list<_IntType> __il);
+ 
+     template<typename _InputIterator>
+       seed_seq(_InputIterator __begin, _InputIterator __end);
 diff --git a/libstdc++-v3/include/bits/regex.h b/libstdc++-v3/include/bits/regex.h
 index 7576cd7a9c0..2bfed517d16 100644
 --- a/libstdc++-v3/include/bits/regex.h
@@ -48827,6 +48852,22 @@ index 5c5d6b9ef26..0115cff1907 100644
    std::string buf(st.st_size ? st.st_size + 1 : 128, '\0');
    do
      {
+diff --git a/libstdc++-v3/testsuite/17_intro/names.cc b/libstdc++-v3/testsuite/17_intro/names.cc
+index a47d53503e3..efb0bd137a7 100644
+--- a/libstdc++-v3/testsuite/17_intro/names.cc
++++ b/libstdc++-v3/testsuite/17_intro/names.cc
+@@ -104,6 +104,11 @@
+ #define uses_allocator  (
+ #endif
+ 
++#if __cplusplus < 201402L
++// <complex> defines operator""il
++#define il  (
++#endif
++
+ #if __cplusplus < 201703L
+ // <charconv> defines to_chars_result::ptr and to_chars_result::ec
+ #define ec (
 diff --git a/libstdc++-v3/testsuite/20_util/allocator/89510.cc b/libstdc++-v3/testsuite/20_util/allocator/89510.cc
 new file mode 100644
 index 00000000000..a3100a2b062
