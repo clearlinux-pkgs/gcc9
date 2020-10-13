@@ -79,7 +79,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (214):
+GCC Administrator (215):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -534,7 +535,7 @@ Kewen Lin (8):
       rs6000: Backport fixes for PR92923 and PR93136
       changelog: Fix up changelogs for commit 8c18220564
 
-Kyrylo Tkachov (29):
+Kyrylo Tkachov (30):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -564,6 +565,7 @@ Kyrylo Tkachov (29):
       PR target/96313 AArch64: vqmovun* return types should be unsigned
       PR target/97150 AArch64: 2nd parameter of unsigned Neon scalar shift intrinsics should be signed
       Implement ACLE intrinsics for FRINT[32,64][Z,X]
+      PR target/97349 AArch64: Incorrect types for some Neon vdupq_n_<...> intrinsics
 
 Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -10964,7 +10966,7 @@ index 534a989c39a..56147352c23 100644
  }
  #endif
 diff --git a/gcc/config/aarch64/arm_neon.h b/gcc/config/aarch64/arm_neon.h
-index 314ef30187d..636ac1de44a 100644
+index 314ef30187d..3e165c032c5 100644
 --- a/gcc/config/aarch64/arm_neon.h
 +++ b/gcc/config/aarch64/arm_neon.h
 @@ -6055,6 +6055,20 @@ vreinterpretq_u32_p128 (poly128_t __a)
@@ -11079,6 +11081,67 @@ index 314ef30187d..636ac1de44a 100644
  /* vclz.  */
  
  __extension__ extern __inline int8x8_t
+@@ -15669,7 +15746,7 @@ vdupq_n_f64 (float64_t __a)
+ 
+ __extension__ extern __inline poly8x16_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_p8 (uint32_t __a)
++vdupq_n_p8 (poly8_t __a)
+ {
+   return (poly8x16_t) {__a, __a, __a, __a, __a, __a, __a, __a,
+ 		       __a, __a, __a, __a, __a, __a, __a, __a};
+@@ -15677,21 +15754,21 @@ vdupq_n_p8 (uint32_t __a)
+ 
+ __extension__ extern __inline poly16x8_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_p16 (uint32_t __a)
++vdupq_n_p16 (poly16_t __a)
+ {
+   return (poly16x8_t) {__a, __a, __a, __a, __a, __a, __a, __a};
+ }
+ 
+ __extension__ extern __inline poly64x2_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_p64 (uint64_t __a)
++vdupq_n_p64 (poly64_t __a)
+ {
+   return (poly64x2_t) {__a, __a};
+ }
+ 
+ __extension__ extern __inline int8x16_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_s8 (int32_t __a)
++vdupq_n_s8 (int8_t __a)
+ {
+   return (int8x16_t) {__a, __a, __a, __a, __a, __a, __a, __a,
+ 		      __a, __a, __a, __a, __a, __a, __a, __a};
+@@ -15699,7 +15776,7 @@ vdupq_n_s8 (int32_t __a)
+ 
+ __extension__ extern __inline int16x8_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_s16 (int32_t __a)
++vdupq_n_s16 (int16_t __a)
+ {
+   return (int16x8_t) {__a, __a, __a, __a, __a, __a, __a, __a};
+ }
+@@ -15720,7 +15797,7 @@ vdupq_n_s64 (int64_t __a)
+ 
+ __extension__ extern __inline uint8x16_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_u8 (uint32_t __a)
++vdupq_n_u8 (uint8_t __a)
+ {
+   return (uint8x16_t) {__a, __a, __a, __a, __a, __a, __a, __a,
+ 		       __a, __a, __a, __a, __a, __a, __a, __a};
+@@ -15728,7 +15805,7 @@ vdupq_n_u8 (uint32_t __a)
+ 
+ __extension__ extern __inline uint16x8_t
+ __attribute__ ((__always_inline__, __gnu_inline__, __artificial__))
+-vdupq_n_u16 (uint32_t __a)
++vdupq_n_u16 (uint16_t __a)
+ {
+   return (uint16x8_t) {__a, __a, __a, __a, __a, __a, __a, __a};
+ }
 @@ -17968,6 +18045,288 @@ vld1q_u64 (const uint64_t *a)
      __builtin_aarch64_ld1v2di ((const __builtin_aarch64_simd_di *) a);
  }
@@ -19294,10 +19357,18 @@ index 2169f8c4efd..ab703a3ff07 100644
        return build_nop_reinterpret (type, expr);
      }
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index f8268e87d4d..345edc57348 100644
+index f8268e87d4d..a5c233804fe 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,79 @@
+@@ -1,3 +1,87 @@
++2020-10-12  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2020-10-12  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	* dmd/declaration.c (AliasDeclaration::aliasSemantic): Apply storage
++	class and protection attributes.
++
 +2020-08-01  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -23001,10 +23072,23 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..a39e0bee31c 100644
+index e132f2657ef..f610b040fb0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1626 @@
+@@ -1,3 +1,1639 @@
++2020-10-12  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2020-10-12  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	* gdc.test/fail_compilation/fail21001.d: New test.
++	* gdc.test/fail_compilation/imports/fail21001b.d: New test.
++	* gdc.test/fail_compilation/imports/issue21295ast_node.d: New test.
++	* gdc.test/fail_compilation/imports/issue21295astcodegen.d: New test.
++	* gdc.test/fail_compilation/imports/issue21295dtemplate.d: New test.
++	* gdc.test/fail_compilation/imports/issue21295visitor.d: New test.
++	* gdc.test/fail_compilation/issue21295.d: New test.
++
 +2020-10-08  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -29904,6 +29988,24 @@ index d943989768d..c2e13b651e9 100644
  test_vqmovund_s64 (int64_t a)
  {
    return vqmovund_s64 (a);
+diff --git a/gcc/testsuite/gcc.target/aarch64/simd/pr97349.c b/gcc/testsuite/gcc.target/aarch64/simd/pr97349.c
+new file mode 100644
+index 00000000000..026767a7243
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/simd/pr97349.c
+@@ -0,0 +1,12 @@
++/* { dg-do compile } */
++
++#include <arm_neon.h>
++
++poly16x8_t  (*fp0)(poly16_t) = vdupq_n_p16;
++poly64x2_t  (*fp1)(poly64_t) = vdupq_n_p64;
++poly8x16_t  (*fp2)(poly8_t)  = vdupq_n_p8;
++int16x8_t   (*fp3)(int16_t)  = vdupq_n_s16;
++int8x16_t   (*fp4)(int8_t)   = vdupq_n_s8;
++uint16x8_t  (*fp5)(uint16_t) = vdupq_n_u16;
++uint8x16_t  (*fp6)(uint8_t)  = vdupq_n_u8;
++
 diff --git a/gcc/testsuite/gcc.target/aarch64/simd/trn_zip_p64_1.c b/gcc/testsuite/gcc.target/aarch64/simd/trn_zip_p64_1.c
 new file mode 100644
 index 00000000000..a47321db80b
