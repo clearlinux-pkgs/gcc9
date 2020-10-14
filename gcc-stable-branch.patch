@@ -79,7 +79,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (215):
+GCC Administrator (216):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -535,7 +536,7 @@ Kewen Lin (8):
       rs6000: Backport fixes for PR92923 and PR93136
       changelog: Fix up changelogs for commit 8c18220564
 
-Kyrylo Tkachov (30):
+Kyrylo Tkachov (31):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -566,6 +567,7 @@ Kyrylo Tkachov (30):
       PR target/97150 AArch64: 2nd parameter of unsigned Neon scalar shift intrinsics should be signed
       Implement ACLE intrinsics for FRINT[32,64][Z,X]
       PR target/97349 AArch64: Incorrect types for some Neon vdupq_n_<...> intrinsics
+      AArch64: Add Neoverse N2 tuning model
 
 Marek Polacek (4):
       c++: Fix ICE with lambda in operator function [PR93597]
@@ -5622,10 +5624,25 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..b6c31263575 100644
+index d8e53874e68..fa8f40042b4 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2150 @@
+@@ -1,3 +1,2165 @@
++2020-10-13  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	* config/aarch64/aarch64.c (neoversen2_tunings): Define.
++	* config/aarch64/aarch64-cores.def (neoverse-n2): Use it.
++
++2020-10-13  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-10-12  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/97349
++	* config/aarch64/arm_neon.h (vdupq_n_p8, vdupq_n_p16,
++	vdupq_n_p64, vdupq_n_s8, vdupq_n_s16, vdupq_n_u8, vdupq_n_u16):
++	Fix argument type.
++
 +2020-10-08  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	* config/aarch64/aarch64.md ("unspec"): Add UNSPEC_FRINT32Z,
@@ -9130,7 +9147,7 @@ index 6d5acb02fc6..73527ac960f 100644
       target between implementations that do or do not support ARMv8.2-A
       16-bit floating-point extensions.  */
 diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
-index 82d91d62519..54ef105811c 100644
+index 82d91d62519..3cd7db88b77 100644
 --- a/gcc/config/aarch64/aarch64-cores.def
 +++ b/gcc/config/aarch64/aarch64-cores.def
 @@ -104,14 +104,25 @@ AARCH64_CORE("ares",  ares, cortexa57, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_F
@@ -9154,7 +9171,7 @@ index 82d91d62519..54ef105811c 100644
  AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
  
 +/* Armv8.5-A Architecture Processors.  */
-+AARCH64_CORE("neoverse-n2", neoversen2, cortexa57, 8_5A, AARCH64_FL_FOR_ARCH8_5 | AARCH64_FL_F16 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_MEMTAG, neoversen1, 0x41, 0xd49, -1)
++AARCH64_CORE("neoverse-n2", neoversen2, cortexa57, 8_5A, AARCH64_FL_FOR_ARCH8_5 | AARCH64_FL_F16 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_MEMTAG, neoversen2, 0x41, 0xd49, -1)
 +
  /* ARMv8-A big.LITTLE implementations.  */
  
@@ -9503,7 +9520,7 @@ index 91a0ff5ea04..47852b509d3 100644
 +
  #undef AARCH64_EXTRA_TUNING_OPTION
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..ab15c24b830 100644
+index b452a53af99..a77a70e1338 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -681,6 +681,17 @@ static const cpu_prefetch_tune xgene1_prefetch_tune =
@@ -9524,7 +9541,7 @@ index b452a53af99..ab15c24b830 100644
  static const struct tune_params generic_tunings =
  {
    &cortexa57_extra_costs,
-@@ -1111,6 +1122,59 @@ static const struct tune_params neoversen1_tunings =
+@@ -1111,6 +1122,84 @@ static const struct tune_params neoversen1_tunings =
    &generic_prefetch_tune
  };
  
@@ -9554,6 +9571,31 @@ index b452a53af99..ab15c24b830 100644
 +  &generic_prefetch_tune
 +};
 +
++static const struct tune_params neoversen2_tunings =
++{
++  &cortexa57_extra_costs,
++  &generic_addrcost_table,
++  &generic_regmove_cost,
++  &cortexa57_vector_cost,
++  &generic_branch_cost,
++  &generic_approx_modes,
++  SVE_128, /* sve_width  */
++  4, /* memmov_cost  */
++  3, /* issue_rate  */
++  AARCH64_FUSE_AES_AESMC, /* fusible_ops  */
++  "32:16",      /* function_align.  */
++  "32:16",      /* jump_align.  */
++  "32:16",      /* loop_align.  */
++  2,    /* int_reassoc_width.  */
++  4,    /* fp_reassoc_width.  */
++  2,    /* vec_reassoc_width.  */
++  2,    /* min_div_recip_mul_sf.  */
++  2,    /* min_div_recip_mul_df.  */
++  0,    /* max_case_values.  */
++  tune_params::AUTOPREFETCHER_WEAK,     /* autoprefetcher_model.  */
++  (AARCH64_EXTRA_TUNE_PREFER_ADVSIMD_AUTOVEC),    /* tune_flags.  */
++  &generic_prefetch_tune
++};
 +
 +static const struct tune_params a64fx_tunings =
 +{
@@ -9584,7 +9626,7 @@ index b452a53af99..ab15c24b830 100644
  /* Support for fine-grained override of the tuning structures.  */
  struct aarch64_tuning_override_function
  {
-@@ -1879,10 +1943,33 @@ emit_set_insn (rtx x, rtx y)
+@@ -1879,10 +1968,33 @@ emit_set_insn (rtx x, rtx y)
  rtx
  aarch64_gen_compare_reg (RTX_CODE code, rtx x, rtx y)
  {
@@ -9597,11 +9639,11 @@ index b452a53af99..ab15c24b830 100644
 +  if (cmp_mode == TImode)
 +    {
 +      gcc_assert (code == NE);
- 
--  emit_set_insn (cc_reg, gen_rtx_COMPARE (mode, x, y));
++
 +      cc_mode = CCmode;
 +      cc_reg = gen_rtx_REG (cc_mode, CC_REGNUM);
-+
+ 
+-  emit_set_insn (cc_reg, gen_rtx_COMPARE (mode, x, y));
 +      rtx x_lo = operand_subword (x, 0, 0, TImode);
 +      rtx y_lo = operand_subword (y, 0, 0, TImode);
 +      emit_set_insn (cc_reg, gen_rtx_COMPARE (cc_mode, x_lo, y_lo));
@@ -9621,7 +9663,7 @@ index b452a53af99..ab15c24b830 100644
    return cc_reg;
  }
  
-@@ -1895,7 +1982,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
+@@ -1895,7 +2007,10 @@ aarch64_gen_compare_reg_maybe_ze (RTX_CODE code, rtx x, rtx y,
    if (y_mode == E_QImode || y_mode == E_HImode)
      {
        if (CONST_INT_P (y))
@@ -9633,7 +9675,7 @@ index b452a53af99..ab15c24b830 100644
        else
  	{
  	  rtx t, cc_reg;
-@@ -2818,7 +2908,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2818,7 +2933,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    gcc_assert (emit_move_imm || temp1 != NULL_RTX);
    gcc_assert (temp1 == NULL_RTX || !reg_overlap_mentioned_p (temp1, src));
  
@@ -9642,7 +9684,7 @@ index b452a53af99..ab15c24b830 100644
    rtx_insn *insn;
  
    if (!moffset)
-@@ -2862,7 +2952,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
+@@ -2862,7 +2977,8 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    if (emit_move_imm)
      {
        gcc_assert (temp1 != NULL_RTX || can_create_pseudo_p ());
@@ -9652,7 +9694,7 @@ index b452a53af99..ab15c24b830 100644
      }
    insn = emit_insn (offset < 0
  		    ? gen_sub3_insn (dest, src, temp1)
-@@ -4854,6 +4945,17 @@ aarch64_return_address_signing_enabled (void)
+@@ -4854,6 +4970,17 @@ aarch64_return_address_signing_enabled (void)
    /* This function should only be called after frame laid out.   */
    gcc_assert (cfun->machine->frame.laid_out);
  
@@ -9670,7 +9712,7 @@ index b452a53af99..ab15c24b830 100644
    /* If signing scope is AARCH64_FUNCTION_NON_LEAF, we only sign a leaf function
       if it's LR is pushed onto stack.  */
    return (aarch64_ra_sign_scope == AARCH64_FUNCTION_ALL
-@@ -7541,7 +7643,7 @@ sizetochar (int size)
+@@ -7541,7 +7668,7 @@ sizetochar (int size)
       'S/T/U/V':		Print a FP/SIMD register name for a register list.
  			The register printed is the FP/SIMD register name
  			of X + 0/1/2/3 for S/T/U/V.
@@ -9679,7 +9721,7 @@ index b452a53af99..ab15c24b830 100644
       'X':		Print bottom 16 bits of integer constant in hex.
       'w/x':		Print a general register name or the zero register
  			(32-bit or 64-bit).
-@@ -7733,12 +7835,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
+@@ -7733,12 +7860,13 @@ aarch64_print_operand (FILE *f, rtx x, int code)
        break;
  
      case 'R':
@@ -9699,7 +9741,7 @@ index b452a53af99..ab15c24b830 100644
        break;
  
      case 'X':
-@@ -8190,6 +8293,9 @@ aarch64_label_mentioned_p (rtx x)
+@@ -8190,6 +8318,9 @@ aarch64_label_mentioned_p (rtx x)
  enum reg_class
  aarch64_regno_regclass (unsigned regno)
  {
@@ -9709,7 +9751,7 @@ index b452a53af99..ab15c24b830 100644
    if (GP_REGNUM_P (regno))
      return GENERAL_REGS;
  
-@@ -8397,6 +8503,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
+@@ -8397,6 +8528,24 @@ aarch64_initial_elimination_offset (unsigned from, unsigned to)
    return cfun->machine->frame.frame_size;
  }
  
@@ -9734,7 +9776,7 @@ index b452a53af99..ab15c24b830 100644
  /* Implement RETURN_ADDR_RTX.  We do not support moving back to a
     previous frame.  */
  
-@@ -8405,15 +8529,15 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
+@@ -8405,15 +8554,15 @@ aarch64_return_addr (int count, rtx frame ATTRIBUTE_UNUSED)
  {
    if (count != 0)
      return const0_rtx;
@@ -9753,7 +9795,7 @@ index b452a53af99..ab15c24b830 100644
  
    if (aarch64_bti_enabled ())
      {
-@@ -8436,6 +8560,17 @@ aarch64_asm_trampoline_template (FILE *f)
+@@ -8436,6 +8585,17 @@ aarch64_asm_trampoline_template (FILE *f)
      }
    asm_fprintf (f, "\tbr\t%s\n", reg_names [IP1_REGNUM]);
  
@@ -9771,7 +9813,7 @@ index b452a53af99..ab15c24b830 100644
    /* The trampoline needs an extra padding instruction.  In case if BTI is
       enabled the padding instruction is replaced by the BTI instruction at
       the beginning.  */
-@@ -8450,10 +8585,14 @@ static void
+@@ -8450,10 +8610,14 @@ static void
  aarch64_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
  {
    rtx fnaddr, mem, a_tramp;
@@ -9788,7 +9830,7 @@ index b452a53af99..ab15c24b830 100644
  		   GEN_INT (tramp_code_sz), BLOCK_OP_NORMAL);
    mem = adjust_address (m_tramp, ptr_mode, tramp_code_sz);
    fnaddr = XEXP (DECL_RTL (fndecl), 0);
-@@ -8484,6 +8623,7 @@ aarch64_class_max_nregs (reg_class_t regclass, machine_mode mode)
+@@ -8484,6 +8648,7 @@ aarch64_class_max_nregs (reg_class_t regclass, machine_mode mode)
    unsigned int nregs;
    switch (regclass)
      {
@@ -9796,7 +9838,7 @@ index b452a53af99..ab15c24b830 100644
      case TAILCALL_ADDR_REGS:
      case POINTER_REGS:
      case GENERAL_REGS:
-@@ -8640,6 +8780,8 @@ aarch64_output_casesi (rtx *operands)
+@@ -8640,6 +8805,8 @@ aarch64_output_casesi (rtx *operands)
    output_asm_insn (buf, operands);
    output_asm_insn (patterns[index][1], operands);
    output_asm_insn ("br\t%3", operands);
@@ -9805,7 +9847,7 @@ index b452a53af99..ab15c24b830 100644
    assemble_label (asm_out_file, label);
    return "";
  }
-@@ -10676,10 +10818,12 @@ aarch64_register_move_cost (machine_mode mode,
+@@ -10676,10 +10843,12 @@ aarch64_register_move_cost (machine_mode mode,
      = aarch64_tune_params.regmove_cost;
  
    /* Caller save and pointer regs are equivalent to GENERAL_REGS.  */
@@ -9820,7 +9862,7 @@ index b452a53af99..ab15c24b830 100644
      from = GENERAL_REGS;
  
    /* Moving between GPR and stack cost is the same as GP2GP.  */
-@@ -11734,6 +11878,79 @@ aarch64_validate_mcpu (const char *str, const struct processor **res,
+@@ -11734,6 +11903,79 @@ aarch64_validate_mcpu (const char *str, const struct processor **res,
    return false;
  }
  
@@ -9900,7 +9942,7 @@ index b452a53af99..ab15c24b830 100644
  /* Parses CONST_STR for branch protection features specified in
     aarch64_branch_protect_types, and set any global variables required.  Returns
     the parsing result and assigns LAST_STR to the last processed token from
-@@ -11972,6 +12189,9 @@ aarch64_override_options (void)
+@@ -11972,6 +12214,9 @@ aarch64_override_options (void)
    selected_arch = NULL;
    selected_tune = NULL;
  
@@ -9910,7 +9952,7 @@ index b452a53af99..ab15c24b830 100644
    if (aarch64_branch_protection_string)
      aarch64_validate_mbranch_protection (aarch64_branch_protection_string);
  
-@@ -12517,6 +12737,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
+@@ -12517,6 +12762,8 @@ static const struct aarch64_attribute_info aarch64_attributes[] =
       aarch64_handle_attr_branch_protection, OPT_mbranch_protection_ },
    { "sign-return-address", aarch64_attr_enum, false, NULL,
       OPT_msign_return_address_ },
@@ -9919,7 +9961,7 @@ index b452a53af99..ab15c24b830 100644
    { NULL, aarch64_attr_custom, false, NULL, OPT____ }
  };
  
-@@ -14105,7 +14327,12 @@ aarch64_simd_container_mode (scalar_mode mode, poly_int64 width)
+@@ -14105,7 +14352,12 @@ aarch64_simd_container_mode (scalar_mode mode, poly_int64 width)
  static machine_mode
  aarch64_preferred_simd_mode (scalar_mode mode)
  {
@@ -9933,7 +9975,7 @@ index b452a53af99..ab15c24b830 100644
    return aarch64_simd_container_mode (mode, bits);
  }
  
-@@ -14114,7 +14341,11 @@ aarch64_preferred_simd_mode (scalar_mode mode)
+@@ -14114,7 +14366,11 @@ aarch64_preferred_simd_mode (scalar_mode mode)
  static void
  aarch64_autovectorize_vector_sizes (vector_sizes *sizes)
  {
@@ -9946,7 +9988,7 @@ index b452a53af99..ab15c24b830 100644
      sizes->safe_push (BYTES_PER_SVE_VECTOR);
    sizes->safe_push (16);
    sizes->safe_push (8);
-@@ -15426,16 +15657,26 @@ static void
+@@ -15426,16 +15682,26 @@ static void
  aarch64_emit_load_exclusive (machine_mode mode, rtx rval,
  			     rtx mem, rtx model_rtx)
  {
@@ -9976,7 +10018,7 @@ index b452a53af99..ab15c24b830 100644
  }
  
  /* Mark the previous jump instruction as unlikely.  */
-@@ -15447,6 +15688,82 @@ aarch64_emit_unlikely_jump (rtx insn)
+@@ -15447,6 +15713,82 @@ aarch64_emit_unlikely_jump (rtx insn)
    add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
  }
  
@@ -10059,7 +10101,7 @@ index b452a53af99..ab15c24b830 100644
  /* Expand a compare and swap pattern.  */
  
  void
-@@ -15493,6 +15810,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
+@@ -15493,6 +15835,17 @@ aarch64_expand_compare_and_swap (rtx operands[])
  						   newval, mod_s));
        cc_reg = aarch64_gen_compare_reg_maybe_ze (NE, rval, oldval, mode);
      }
@@ -10077,7 +10119,7 @@ index b452a53af99..ab15c24b830 100644
    else
      {
        /* The oldval predicate varies by mode.  Test it and force to reg.  */
-@@ -15538,13 +15866,11 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15538,13 +15891,11 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* Split after prolog/epilog to avoid interactions with shrinkwrapping.  */
    gcc_assert (epilogue_completed);
  
@@ -10092,7 +10134,7 @@ index b452a53af99..ab15c24b830 100644
  
    rval = operands[0];
    mem = operands[1];
-@@ -15565,7 +15891,8 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15565,7 +15916,8 @@ aarch64_split_compare_and_swap (rtx operands[])
  	CBNZ	scratch, .label1
      .label2:
  	CMP	rval, 0.  */
@@ -10102,7 +10144,7 @@ index b452a53af99..ab15c24b830 100644
  
    label1 = NULL;
    if (!is_weak)
-@@ -15578,35 +15905,20 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15578,35 +15930,20 @@ aarch64_split_compare_and_swap (rtx operands[])
    /* The initial load can be relaxed for a __sync operation since a final
       barrier will be emitted to stop code hoisting.  */
    if (is_mm_sync (model))
@@ -10145,7 +10187,7 @@ index b452a53af99..ab15c24b830 100644
  
    aarch64_emit_store_exclusive (mode, scratch, mem, newval, model_rtx);
  
-@@ -15627,22 +15939,16 @@ aarch64_split_compare_and_swap (rtx operands[])
+@@ -15627,22 +15964,16 @@ aarch64_split_compare_and_swap (rtx operands[])
        aarch64_emit_unlikely_jump (gen_rtx_SET (pc_rtx, x));
      }
    else
@@ -10172,7 +10214,7 @@ index b452a53af99..ab15c24b830 100644
    /* Emit any final barrier needed for a __sync operation.  */
    if (is_mm_sync (model))
      aarch64_emit_post_barrier (model);
-@@ -16415,7 +16721,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
+@@ -16415,7 +16746,8 @@ aarch64_evpc_rev_local (struct expand_vec_perm_d *d)
  
    if (d->vec_flags == VEC_SVE_PRED
        || !d->one_vector_p
@@ -10182,7 +10224,7 @@ index b452a53af99..ab15c24b830 100644
      return false;
  
    size = (diff + 1) * GET_MODE_UNIT_SIZE (d->vmode);
-@@ -18900,6 +19207,231 @@ aarch64_file_end_indicate_exec_stack ()
+@@ -18900,6 +19232,231 @@ aarch64_file_end_indicate_exec_stack ()
  #undef GNU_PROPERTY_AARCH64_FEATURE_1_BTI
  #undef GNU_PROPERTY_AARCH64_FEATURE_1_AND
  
@@ -10414,7 +10456,7 @@ index b452a53af99..ab15c24b830 100644
  /* Target-specific selftests.  */
  
  #if CHECKING_P
-@@ -19420,6 +19952,12 @@ aarch64_libgcc_floating_mode_supported_p
+@@ -19420,6 +19977,12 @@ aarch64_libgcc_floating_mode_supported_p
  #define TARGET_RUN_TARGET_SELFTESTS selftest::aarch64_run_selftests
  #endif /* #if CHECKING_P */
  
@@ -23072,10 +23114,18 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..f610b040fb0 100644
+index e132f2657ef..07b56140d36 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1639 @@
+@@ -1,3 +1,1647 @@
++2020-10-13  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	Backported from master:
++	2020-10-12  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/97349
++	* gcc.target/aarch64/simd/pr97349.c: New test.
++
 +2020-10-12  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
