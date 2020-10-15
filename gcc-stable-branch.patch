@@ -79,7 +79,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (216):
+GCC Administrator (217):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -597,7 +598,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (18):
+Martin Liska (19):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -616,6 +617,7 @@ Martin Liska (18):
       gcov: fix streaming corruption
       gcov: fix streaming of HIST_TYPE_IOR histogram type.
       GCOV: do not mangle .gcno files.
+      IPA: fix profile handling in IRA
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -22955,6 +22957,21 @@ index fbb108568b3..819b8473d9d 100644
        break;
      case SYMBOL_REF:
        pp_printf (pp, "`%s'", XSTR (x, 0));
+diff --git a/gcc/profile-count.c b/gcc/profile-count.c
+index 8c58f8666f0..8d3340041fc 100644
+--- a/gcc/profile-count.c
++++ b/gcc/profile-count.c
+@@ -262,8 +262,8 @@ profile_count::to_frequency (struct function *fun) const
+     return BB_FREQ_MAX;
+   if (*this == profile_count::zero ())
+     return 0;
+-  gcc_assert (REG_BR_PROB_BASE == BB_FREQ_MAX
+-	      && fun->cfg->count_max.initialized_p ());
++  STATIC_ASSERT (REG_BR_PROB_BASE == BB_FREQ_MAX);
++  gcc_assert (fun->cfg->count_max.initialized_p ());
+   profile_probability prob = probability_in (fun->cfg->count_max);
+   if (!prob.initialized_p ())
+     return REG_BR_PROB_BASE;
 diff --git a/gcc/profile.c b/gcc/profile.c
 index a1dba1ac8fb..9ac3a7e93fe 100644
 --- a/gcc/profile.c
@@ -22986,6 +23003,20 @@ index a1dba1ac8fb..9ac3a7e93fe 100644
  	    }
  
  	  if (offset)
+diff --git a/gcc/regs.h b/gcc/regs.h
+index 48b2e708160..2a19940281b 100644
+--- a/gcc/regs.h
++++ b/gcc/regs.h
+@@ -128,7 +128,8 @@ extern size_t reg_info_p_size;
+    or profile driven feedback is available and the function is never executed,
+    frequency is always equivalent.  Otherwise rescale the basic block
+    frequency.  */
+-#define REG_FREQ_FROM_BB(bb) (optimize_function_for_size_p (cfun)	      \
++#define REG_FREQ_FROM_BB(bb) ((optimize_function_for_size_p (cfun)	      \
++			       || !cfun->cfg->count_max.initialized_p ())     \
+ 			      ? REG_FREQ_MAX				      \
+ 			      : ((bb)->count.to_frequency (cfun)	      \
+ 				* REG_FREQ_MAX / BB_FREQ_MAX)		      \
 diff --git a/gcc/reorg.c b/gcc/reorg.c
 index 81349382b81..a93cf90e0ab 100644
 --- a/gcc/reorg.c
