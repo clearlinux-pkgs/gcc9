@@ -79,7 +79,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (217):
+GCC Administrator (218):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -601,7 +602,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (19):
+Martin Liska (20):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -621,6 +622,7 @@ Martin Liska (19):
       gcov: fix streaming of HIST_TYPE_IOR histogram type.
       GCOV: do not mangle .gcno files.
       IPA: fix profile handling in IRA
+      IPA: compare VRP types.
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -5629,10 +5631,21 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..fa8f40042b4 100644
+index d8e53874e68..204c204a22f 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2165 @@
+@@ -1,3 +1,2176 @@
++2020-10-15  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-10-15  Martin Liska  <mliska@suse.cz>
++
++	PR ipa/97295
++	* profile-count.c (profile_count::to_frequency): Move part of
++	gcc_assert to STATIC_ASSERT.
++	* regs.h (REG_FREQ_FROM_BB): Do not use count.to_frequency for
++	a function that does not have count_max initialized.
++
 +2020-10-13  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	* config/aarch64/aarch64.c (neoversen2_tunings): Define.
@@ -22791,6 +22804,20 @@ index 25284936bc3..38e0ac12f7e 100644
    tree chain1 = gimple_call_chain (s1);
    tree chain2 = gimple_call_chain (s2);
    if ((chain1 && !chain2)
+diff --git a/gcc/ipa-prop.c b/gcc/ipa-prop.c
+index 40edee7951c..7c8aee20a88 100644
+--- a/gcc/ipa-prop.c
++++ b/gcc/ipa-prop.c
+@@ -122,7 +122,8 @@ struct ipa_vr_ggc_hash_traits : public ggc_cache_remove <value_range_base *>
+   static bool
+   equal (const value_range_base *a, const value_range_base *b)
+     {
+-      return a->equal_p (*b);
++      return (a->equal_p (*b)
++	      && types_compatible_p (a->type (), b->type ()));
+     }
+   static void
+   mark_empty (value_range_base *&p)
 diff --git a/gcc/omp-low.c b/gcc/omp-low.c
 index 813cefd69b9..9708e2de7fb 100644
 --- a/gcc/omp-low.c
@@ -27103,6 +27130,40 @@ index 00000000000..1955e6b8bd2
 +  foo (-1ULL);
 +  if (u.j.l != 5)
 +    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr97404.c b/gcc/testsuite/gcc.c-torture/execute/pr97404.c
+new file mode 100644
+index 00000000000..7e5ce231725
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr97404.c
+@@ -0,0 +1,28 @@
++/* PR ipa/97404 */
++/* { dg-additional-options "-fno-inline" } */
++
++char a, b;
++long c;
++short d, e;
++long *f = &c;
++int g;
++char h(signed char i) { return 0; }
++static short j(short i, int k) { return i < 0 ? 0 : i >> k; }
++void l(void);
++void m(void)
++{
++  e = j(d | 9766, 11);
++    *f = e;
++}
++void l(void)
++{
++  a = 5 | g;
++    b = h(a);
++}
++int main()
++{
++  m();
++  if (c != 4)
++    __builtin_abort();
 +  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/Wunused-var-4.c b/gcc/testsuite/gcc.dg/Wunused-var-4.c
@@ -41956,10 +42017,19 @@ index c704d1b0898..367806b68fd 100644
 +# endif
  #endif
 diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
-index 569a3c91ab2..9a1f9e90723 100644
+index 569a3c91ab2..10526d55ed5 100644
 --- a/libphobos/ChangeLog
 +++ b/libphobos/ChangeLog
-@@ -1,3 +1,21 @@
+@@ -1,3 +1,30 @@
++2020-10-15  Maciej W. Rozycki  <macro@linux-mips.org>
++
++	Backported from master:
++	2020-10-12  Maciej W. Rozycki  <macro@linux-mips.org>
++
++	* libdruntime/config/mips/switchcontext.S [__mips_hard_float]:
++	Use L.D and S.D generic assembly instructions rather than LDC1
++	and SDC1 MIPS II hardware instructions.
++
 +2020-05-16  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	PR d/90719
