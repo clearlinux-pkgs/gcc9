@@ -79,7 +79,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (218):
+GCC Administrator (221):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -5631,10 +5634,19 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..204c204a22f 100644
+index d8e53874e68..8abaca10559 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2176 @@
+@@ -1,3 +1,2185 @@
++2020-10-16  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-10-16  Martin Liska  <mliska@suse.cz>
++
++	PR ipa/97404
++	* ipa-prop.c (struct ipa_vr_ggc_hash_traits):
++	Compare types of VRP as we can merge ranges of different types.
++
 +2020-10-15  Martin Liska  <mliska@suse.cz>
 +
 +	Backported from master:
@@ -23175,10 +23187,18 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..07b56140d36 100644
+index e132f2657ef..7ecad711fe5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1647 @@
+@@ -1,3 +1,1655 @@
++2020-10-16  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2020-10-16  Martin Liska  <mliska@suse.cz>
++
++	PR ipa/97404
++	* gcc.c-torture/execute/pr97404.c: New test.
++
 +2020-10-13  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	Backported from master:
