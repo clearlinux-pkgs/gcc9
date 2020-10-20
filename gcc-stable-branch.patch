@@ -79,7 +79,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (221):
+GCC Administrator (222):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -475,7 +476,7 @@ Jiufu Guo (1):
 John David Anglin (1):
       Define __BIG_ENDIAN__
 
-Jonathan Wakely (48):
+Jonathan Wakely (49):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -524,6 +525,7 @@ Jonathan Wakely (48):
       libstdc++: Use correct argument type for __use_alloc, again [PR 96803]
       libstdc++: Fix out-of-bounds string_view access in filesystem::path [PR 97167]
       libstdc++: Fix non-reserved name in header
+      libstdc++: Make std::assume_aligned a constexpr function [PR 97132]
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -42175,10 +42177,21 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..db2a243f2e2 100644
+index 45847172291..44307660a38 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,588 @@
+@@ -1,3 +1,599 @@
++2020-10-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-09-21  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/97132
++	* include/std/memory (assume_aligned): Do not use
++	__builtin_assume_aligned during constant evaluation.
++	* testsuite/20_util/assume_aligned/1.cc: Improve test.
++	* testsuite/20_util/assume_aligned/97132.cc: New test.
++
 +2020-10-08  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -49355,17 +49368,46 @@ index 8d6ac198c9a..6fb5ea8dcc4 100644
    template<typename _Tp, typename _Alloc, typename _Predicate>
      inline typename list<_Tp, _Alloc>::size_type
 diff --git a/libstdc++-v3/include/std/memory b/libstdc++-v3/include/std/memory
-index b6950c76089..cb8be4dc129 100644
+index b6950c76089..995bfa27a17 100644
 --- a/libstdc++-v3/include/std/memory
 +++ b/libstdc++-v3/include/std/memory
-@@ -157,6 +157,7 @@ inline pointer_safety
+@@ -157,14 +157,32 @@ inline pointer_safety
  get_pointer_safety() noexcept { return pointer_safety::relaxed; }
  
  #if __cplusplus > 201703L
+-  /// Inform the compiler that a pointer is aligned.
 +#define __cpp_lib_assume_aligned 201811L
-   /// Inform the compiler that a pointer is aligned.
++  /** @brief Inform the compiler that a pointer is aligned.
++   *
++   *  @tparam _Align An alignment value (i.e. a power of two)
++   *  @tparam _Tp    An object type
++   *  @param  __ptr  A pointer that is aligned to _Align
++   *
++   *  C++20 20.10.6 [ptr.align]
++   *
++   *  @ingroup memory
++   */
    template<size_t _Align, class _Tp>
      [[nodiscard,__gnu__::__always_inline__]]
+-    constexpr _Tp* assume_aligned(_Tp* __ptr)
++    constexpr _Tp*
++    assume_aligned(_Tp* __ptr) noexcept
+     {
+       static_assert(std::ispow2(_Align));
+-      _GLIBCXX_DEBUG_ASSERT((std::uintptr_t)__ptr % _Align == 0);
+-      return static_cast<_Tp*>(__builtin_assume_aligned(__ptr, _Align));
++      if (std::is_constant_evaluated())
++	return __ptr;
++      else
++	{
++	  // This function is expected to be used in hot code, where
++	  // __glibcxx_assert would add unwanted overhead.
++	  _GLIBCXX_DEBUG_ASSERT((std::uintptr_t)__ptr % _Align == 0);
++	  return static_cast<_Tp*>(__builtin_assume_aligned(__ptr, _Align));
++	}
+     }
+ #endif // C++2a
+ 
 diff --git a/libstdc++-v3/include/std/memory_resource b/libstdc++-v3/include/std/memory_resource
 index 7ff5d17afe7..5b6ec60268a 100644
 --- a/libstdc++-v3/include/std/memory_resource
@@ -50377,6 +50419,88 @@ index 00000000000..a3100a2b062
 +static_assert( ! noexcept(AT::construct(a, zp)), "" );
 +static_assert( ! noexcept(AT::construct(a, zp, 1)), "" );
 +static_assert( ! noexcept(AT::destroy(a, zp)), "" );
+diff --git a/libstdc++-v3/testsuite/20_util/assume_aligned/1.cc b/libstdc++-v3/testsuite/20_util/assume_aligned/1.cc
+index 86208bcdee3..bbd100f18f5 100644
+--- a/libstdc++-v3/testsuite/20_util/assume_aligned/1.cc
++++ b/libstdc++-v3/testsuite/20_util/assume_aligned/1.cc
+@@ -15,7 +15,7 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
+-// { dg-options "-std=gnu++2a" }
++// { dg-options "-std=gnu++2a -O2" }
+ // { dg-do run { target c++2a } }
+ 
+ #include <memory>
+@@ -29,7 +29,28 @@ test01()
+   VERIFY( p == &i );
+ }
+ 
++[[gnu::noipa,gnu::noinline]]
++int*
++create_aligned(std::size_t alignment, void* p, std::size_t n)
++{
++  return ::new(std::align(alignment, sizeof(int), p, n)) int(42);
++}
++
++extern "C" void undefined(); // call to this should be optimized away
++
++void
++test02()
++{
++  unsigned char buf[sizeof(int) * 128];
++  int* p = create_aligned(64, buf + 1, sizeof(buf) - 1);
++  int* q = std::assume_aligned<64>(p);
++  if ((std::uintptr_t)q % 64)
++    undefined();
++  VERIFY( p == q );
++}
++
+ int main()
+ {
+   test01();
++  test02();
+ }
+diff --git a/libstdc++-v3/testsuite/20_util/assume_aligned/97132.cc b/libstdc++-v3/testsuite/20_util/assume_aligned/97132.cc
+new file mode 100644
+index 00000000000..887e3470651
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/assume_aligned/97132.cc
+@@ -0,0 +1,34 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++#include <memory>
++
++// PR libstdc++/97132 - assume_aligned is not constexpr
++
++constexpr bool test01()
++{
++  struct alignas(32) S { int i; };
++  S s{42};
++  int* p = std::assume_aligned<32>(&s.i);
++  *p = 48;
++  return s.i == 48;
++}
++
++static_assert( test01() );
 diff --git a/libstdc++-v3/testsuite/20_util/from_chars/1.cc b/libstdc++-v3/testsuite/20_util/from_chars/1.cc
 index a352dc87ed4..ee9f5f773e0 100644
 --- a/libstdc++-v3/testsuite/20_util/from_chars/1.cc
