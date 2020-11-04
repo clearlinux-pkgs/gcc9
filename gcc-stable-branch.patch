@@ -80,7 +80,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (232):
+GCC Administrator (235):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -619,7 +622,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (20):
+Martin Liska (21):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -640,6 +643,7 @@ Martin Liska (20):
       GCOV: do not mangle .gcno files.
       IPA: fix profile handling in IRA
       IPA: compare VRP types.
+      Remove duplicate ChangeLog entry.
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -671,7 +675,7 @@ Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
       libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
 
-Richard Biener (10):
+Richard Biener (11):
       tree-optimization/94163 constrain alignment set by PRE
       middle-end/94206 fix memset folding to avoid types with padding
       tree-optimization/94103 avoid CSE of loads with padding
@@ -682,6 +686,7 @@ Richard Biener (10):
       middle-end/94964 - avoid EH loop entry with CP_SIMPLE_PREHEADERS
       ipa/94947 - fix test for externally visible variables for IPA PTA
       ipa/94947 - avoid using externally_visible_p ()
+      testsuite/97688 - fix check_vect () with __AVX2__
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
@@ -5650,10 +5655,10 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..c8f8252f175 100644
+index d8e53874e68..66a300dfdba 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2194 @@
+@@ -1,3 +1,2188 @@
 +2020-10-22  Andreas Krebbel  <krebbel@linux.ibm.com>
 +
 +	Backported from master:
@@ -6029,12 +6034,6 @@ index d8e53874e68..c8f8252f175 100644
 +
 +	Backported from master:
 +	2020-04-29  Richard Sandiford  <richard.sandiford@arm.com>
-+
-+	* config/arm/arm-builtins.c (arm_atomic_assign_expand_fenv): Use
-+	TARGET_EXPR instead of MODIFY_EXPR for the first assignments to
-+	fenv_var and new_fenv_var.
-+
-+2020-04-29  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	* config/arm/arm-builtins.c (arm_atomic_assign_expand_fenv): Use
 +	TARGET_EXPR instead of MODIFY_EXPR for the first assignments to
@@ -23219,10 +23218,19 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..615d4d9b257 100644
+index e132f2657ef..164cce9019b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,1669 @@
+@@ -1,3 +1,1678 @@
++2020-11-03  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2020-11-03  Richard Biener  <rguenther@suse.de>
++
++	PR testsuite/97688
++	* gcc.dg/vect/tree-vect.h (check_vect): Fix the x86 cpuid
++	check to always specify subleaf zero.
++
 +2020-10-24  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -28509,6 +28517,19 @@ index 4d4c5344402..113223ab0f9 100644
  
 -/* { dg-final { scan-tree-dump-times "vectorizing stmts using SLP" 1 "vect" { target vect_perm } } } */
 +/* { dg-final { scan-tree-dump-times "vectorizing stmts using SLP" 1 "vect" { target { vect_perm && vect_hw_misalign } } } } */
+diff --git a/gcc/testsuite/gcc.dg/vect/tree-vect.h b/gcc/testsuite/gcc.dg/vect/tree-vect.h
+index 69c93ac8092..eb890745a00 100644
+--- a/gcc/testsuite/gcc.dg/vect/tree-vect.h
++++ b/gcc/testsuite/gcc.dg/vect/tree-vect.h
+@@ -52,7 +52,7 @@ check_vect (void)
+     want_level = 1, want_d = bit_SSE2;
+ # endif
+ 
+-    if (!__get_cpuid (want_level, &a, &b, &c, &d)
++    if (!__get_cpuid_count (want_level, 0, &a, &b, &c, &d)
+ 	|| ((b & want_b) | (c & want_c) | (d & want_d)) == 0)
+       exit (0);
+   }
 diff --git a/gcc/testsuite/gcc.dg/vect/vect-over-widen-17.c b/gcc/testsuite/gcc.dg/vect/vect-over-widen-17.c
 index 04482607b04..333d74ac3e7 100644
 --- a/gcc/testsuite/gcc.dg/vect/vect-over-widen-17.c
@@ -44314,10 +44335,30 @@ index 0335a165edc..1dea2f0e5f8 100644
        p = "Unknown error code";
        break;
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 0156d5f7bc9..ea471e44b42 100644
+index 0156d5f7bc9..5f2fbc0333d 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,167 @@
+@@ -1,3 +1,187 @@
++2020-11-02  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backported from master:
++	2020-11-02  Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR target/85486
++	* testsuite/libgomp.oacc-c-c++-common/pr85486-2.c: Simplify and enhance.
++	* testsuite/libgomp.oacc-c-c++-common/pr85486-3.c: Likewise.
++	* testsuite/libgomp.oacc-c-c++-common/pr85486.c: Likewise.
++
++2020-11-02  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backported from master:
++	2020-11-02  Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR testsuite/80219
++	PR testsuite/85303
++	* testsuite/lib/libgomp.exp (libgomp_init): Set
++	'gcc_warning_prefix', 'gcc_error_prefix'.
++
 +2020-09-16  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
