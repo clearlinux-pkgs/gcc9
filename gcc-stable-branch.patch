@@ -80,7 +80,8 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (235):
+GCC Administrator (236):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -622,7 +623,7 @@ Martin Jambor (2):
       gcc-9 sra: Cap number of sub-access propagations with a param (PR 93435)
       sra-9: Fix sra_modify_expr handling of partial writes (PR 94482)
 
-Martin Liska (21):
+Martin Liska (22):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -644,6 +645,7 @@ Martin Liska (21):
       IPA: fix profile handling in IRA
       IPA: compare VRP types.
       Remove duplicate ChangeLog entry.
+      ASAN: disable -Wno-stringop-overflow for 2 tests
 
 Martin Sebor (1):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -25162,6 +25164,19 @@ index 00000000000..f2661997a33
 +void af() { v<f>(); }
 +
 +// { dg-final { scan-assembler "_Z1vI1fE1xIXplLi0EsrT_1dEEv" } }
+diff --git a/gcc/testsuite/g++.dg/asan/asan_test.C b/gcc/testsuite/g++.dg/asan/asan_test.C
+index a151979946a..549b7cf01a2 100644
+--- a/gcc/testsuite/g++.dg/asan/asan_test.C
++++ b/gcc/testsuite/g++.dg/asan/asan_test.C
+@@ -2,7 +2,7 @@
+ // { dg-skip-if "" { *-*-* } { "*" } { "-O2" } }
+ // { dg-skip-if "" { *-*-* } { "-flto" } { "" } }
+ // { dg-additional-sources "asan_globals_test-wrapper.cc" }
+-// { dg-options "-std=c++11 -fsanitize=address -fno-builtin -Wall -Werror -Wno-alloc-size-larger-than -g -DASAN_UAR=0 -DASAN_HAS_EXCEPTIONS=1 -DASAN_HAS_BLACKLIST=0 -DSANITIZER_USE_DEJAGNU_GTEST=1 -lasan -lpthread -ldl" }
++// { dg-options "-std=c++11 -fsanitize=address -fno-builtin -Wall -Werror -Wno-alloc-size-larger-than -Wno-stringop-overflow -g -DASAN_UAR=0 -DASAN_HAS_EXCEPTIONS=1 -DASAN_HAS_BLACKLIST=0 -DSANITIZER_USE_DEJAGNU_GTEST=1 -lasan -lpthread -ldl" }
+ // { dg-additional-options "-DASAN_NEEDS_SEGV=1" { target { ! arm*-*-* } } }
+ // { dg-additional-options "-DASAN_LOW_MEMORY=1 -DASAN_NEEDS_SEGV=0" { target arm*-*-* } }
+ // { dg-additional-options "-DASAN_AVOID_EXPENSIVE_TESTS=1" { target { ! run_expensive_tests } } }
 diff --git a/gcc/testsuite/g++.dg/cpp0x/dependent3.C b/gcc/testsuite/g++.dg/cpp0x/dependent3.C
 new file mode 100644
 index 00000000000..caf7e1cd4a4
@@ -27279,6 +27294,17 @@ index 00000000000..08ddcf4407e
 +  int a;				/* { dg-bogus "set but not used" } */
 +  return _Generic (0, long long : a, default: 0);
 +}
+diff --git a/gcc/testsuite/gcc.dg/asan/pr80166.c b/gcc/testsuite/gcc.dg/asan/pr80166.c
+index 629dd23a31c..5e153b274fa 100644
+--- a/gcc/testsuite/gcc.dg/asan/pr80166.c
++++ b/gcc/testsuite/gcc.dg/asan/pr80166.c
+@@ -1,5 +1,6 @@
+ /* PR sanitizer/80166 */
+ /* { dg-do run } */
++/* { dg-additional-options "-Wno-stringop-overflow" } */
+ 
+ #include <sys/types.h>
+ #include <unistd.h>
 diff --git a/gcc/testsuite/gcc.dg/dfp/pr94111.c b/gcc/testsuite/gcc.dg/dfp/pr94111.c
 new file mode 100644
 index 00000000000..ea3a132270a
