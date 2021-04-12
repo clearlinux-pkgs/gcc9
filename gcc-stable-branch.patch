@@ -109,7 +109,10 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (391):
+GCC Administrator (394):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -953,6 +956,9 @@ Peter Bergner (1):
 Piotr Kubaj (1):
       rs6000: Add support for powerpc64le-unknown-freebsd
 
+Prathamesh Kulkarni (1):
+      PR47785: Add support for handling Xassembler/Wa options with LTO.
+
 Qian Jianhua (2):
       aarch64: Add A64FX machine model
       aarch64: Add cpu cost tables for A64FX
@@ -961,7 +967,7 @@ Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
       libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
 
-Richard Biener (28):
+Richard Biener (32):
       tree-optimization/94163 constrain alignment set by PRE
       middle-end/94206 fix memset folding to avoid types with padding
       tree-optimization/94103 avoid CSE of loads with padding
@@ -990,6 +996,10 @@ Richard Biener (28):
       tree-optimization/98282 - classify V_C_E<constant> as nary
       tree-optimization/98758 - fix integer arithmetic in data-ref analysis
       tree-optimization/99856 - fix overwideing pattern creation
+      lto/96385 - avoid unused global UNDEFs in debug objects
+      lto/96591 - walk VECTOR_CST elements in walk_tree
+      c/99224 - avoid ICEing on invalid __builtin_next_arg
+      tree-optimization/99694 - fix value-numbering PHIs
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
@@ -9967,7 +9977,7 @@ index 4441922543f..ee2f03c07d7 100644
  	  /* Always check attributes on user-defined functions.
  	     Check them on built-ins only when -fchecking is set.
 diff --git a/gcc/builtins.c b/gcc/builtins.c
-index ed11f79ff0b..e8e43f53ec6 100644
+index ed11f79ff0b..39ba87a6759 100644
 --- a/gcc/builtins.c
 +++ b/gcc/builtins.c
 @@ -3112,27 +3112,25 @@ expand_builtin_strnlen (tree exp, rtx target, machine_mode target_mode)
@@ -10008,6 +10018,16 @@ index ed11f79ff0b..e8e43f53ec6 100644
  	}
  
        if (!len)
+@@ -10269,7 +10267,8 @@ fold_builtin_next_arg (tree exp, bool va_start_p)
+       arg = CALL_EXPR_ARG (exp, 0);
+     }
+ 
+-  if (TREE_CODE (arg) == SSA_NAME)
++  if (TREE_CODE (arg) == SSA_NAME
++      && SSA_NAME_VAR (arg))
+     arg = SSA_NAME_VAR (arg);
+ 
+   /* We destructively modify the call to be __builtin_va_start (ap, 0)
 diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
 index 1baceaa1bd5..a2e701e162c 100644
 --- a/gcc/c-family/ChangeLog
@@ -25144,7 +25164,7 @@ index 0d08696c207..03cea999259 100644
  
  @item --with-schedule=@var{cpu}
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..280fcc910ad 100644
+index 0ab6c9c6449..c39efa0e33e 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -25173,7 +25193,20 @@ index 0ab6c9c6449..280fcc910ad 100644
  @table @gcctabopt
  @item -Wpedantic
  @itemx -pedantic
-@@ -11792,6 +11799,11 @@ speed
+@@ -10266,6 +10273,12 @@ conflicting translation units.  Specifically
+ precedence; and for example @option{-ffp-contract=off} takes precedence
+ over @option{-ffp-contract=fast}.  You can override them at link time.
+ 
++When you need to pass options to the assembler via @option{-Wa} or
++@option{-Xassembler} make sure to either compile such translation
++units with @option{-fno-lto} or consistently use the same assembler
++options on all translation units.  You can alternatively also
++specify assembler options at LTO link time.
++
+ If LTO encounters objects with C linkage declared with incompatible
+ types in separate translation units to be linked together (undefined
+ behavior according to ISO C99 6.2.7), a non-fatal diagnostic may be
+@@ -11792,6 +11805,11 @@ speed
  (@option{sra-max-scalarization-size-Ospeed}) or size
  (@option{sra-max-scalarization-size-Osize}) respectively.
  
@@ -25185,7 +25218,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  @item tm-max-aggregate-size
  When making copies of thread-local variables in a transaction, this
  parameter specifies the size in bytes after which variables are
-@@ -15777,6 +15789,19 @@ be used by the compiler when expanding calls to
+@@ -15777,6 +15795,19 @@ be used by the compiler when expanding calls to
  @code{__builtin_speculation_safe_copy} to permit a more efficient code
  sequence to be generated.
  
@@ -25205,7 +25238,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  @item -march=@var{name}
  @opindex march
  Specify the name of the target architecture and, optionally, one or
-@@ -15826,11 +15851,13 @@ performance of the code.  Permissible values for this option are:
+@@ -15826,11 +15857,13 @@ performance of the code.  Permissible values for this option are:
  @samp{generic}, @samp{cortex-a35}, @samp{cortex-a53}, @samp{cortex-a55},
  @samp{cortex-a57}, @samp{cortex-a72}, @samp{cortex-a73}, @samp{cortex-a75},
  @samp{cortex-a76}, @samp{ares}, @samp{exynos-m1}, @samp{emag}, @samp{falkor},
@@ -25223,7 +25256,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
  @samp{cortex-a73.cortex-a35}, @samp{cortex-a73.cortex-a53},
  @samp{cortex-a75.cortex-a55}, @samp{cortex-a76.cortex-a55}
-@@ -15916,6 +15943,17 @@ argument @samp{leaf} can be used to extend the signing to include leaf
+@@ -15916,6 +15949,17 @@ argument @samp{leaf} can be used to extend the signing to include leaf
  functions.
  @samp{bti} turns on branch target identification mechanism.
  
@@ -25241,7 +25274,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  @item -msve-vector-bits=@var{bits}
  @opindex msve-vector-bits
  Specify the number of bits in an SVE vector register.  This option only has
-@@ -17532,9 +17570,9 @@ Permissible names are: @samp{arm7tdmi}, @samp{arm7tdmi-s}, @samp{arm710t},
+@@ -17532,9 +17576,9 @@ Permissible names are: @samp{arm7tdmi}, @samp{arm7tdmi-s}, @samp{arm710t},
  @samp{cortex-m4}, @samp{cortex-m7}, @samp{cortex-m23}, @samp{cortex-m33},
  @samp{cortex-m1.small-multiply}, @samp{cortex-m0.small-multiply},
  @samp{cortex-m0plus.small-multiply}, @samp{exynos-m1}, @samp{marvell-pj4},
@@ -25254,7 +25287,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  
  Additionally, this option can specify that GCC should tune the performance
  of the code for a big.LITTLE system.  Permissible names are:
-@@ -17926,7 +17964,7 @@ is only available when generating non-pic code for M-profile targets.
+@@ -17926,7 +17970,7 @@ is only available when generating non-pic code for M-profile targets.
  @opindex mcmse
  Generate secure code as per the "ARMv8-M Security Extensions: Requirements on
  Development Tools Engineering Specification", which can be found on
@@ -25263,7 +25296,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  @end table
  
  @node AVR Options
-@@ -27257,14 +27295,14 @@ BMI, BMI2 and F16C instruction set support.
+@@ -27257,14 +27301,14 @@ BMI, BMI2 and F16C instruction set support.
  
  @item broadwell
  Intel Broadwell CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3, SSSE3,
@@ -25282,7 +25315,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  
  @item bonnell
  Intel Bonnell CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3 and SSSE3
-@@ -27272,34 +27310,36 @@ instruction set support.
+@@ -27272,34 +27316,36 @@ instruction set support.
  
  @item silvermont
  Intel Silvermont CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3, SSSE3,
@@ -25330,7 +25363,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  
  @item skylake-avx512
  Intel Skylake Server CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3,
-@@ -28711,9 +28751,9 @@ Note that @option{-mcmodel=large} is incompatible with
+@@ -28711,9 +28757,9 @@ Note that @option{-mcmodel=large} is incompatible with
  @option{-mindirect-branch=thunk-extern} since the thunk function may
  not be reachable in the large code model.
  
@@ -25343,7 +25376,7 @@ index 0ab6c9c6449..280fcc910ad 100644
  
  @item -mfunction-return=@var{choice}
  @opindex mfunction-return
-@@ -28726,6 +28766,10 @@ object file.  You can control this behavior for a specific function by
+@@ -28726,6 +28772,10 @@ object file.  You can control this behavior for a specific function by
  using the function attribute @code{function_return}.
  @xref{Function Attributes}.
  
@@ -29779,6 +29812,53 @@ index f6af09fedf7..066975790a6 100644
  tree gfc_get_vptr_from_expr (tree);
  tree gfc_get_class_array_ref (tree, tree, tree, bool);
  tree gfc_copy_class_to_class (tree, tree, tree, bool);
+diff --git a/gcc/gcc.c b/gcc/gcc.c
+index 4f57765b012..410ba67a4b0 100644
+--- a/gcc/gcc.c
++++ b/gcc/gcc.c
+@@ -5240,6 +5240,34 @@ do_specs_vec (vec<char_p> vec)
+     }
+ }
+ 
++/* Add options passed via -Xassembler or -Wa to COLLECT_AS_OPTIONS.  */
++
++static void
++putenv_COLLECT_AS_OPTIONS (vec<char_p> vec)
++{
++  if (vec.is_empty ())
++     return;
++
++  obstack_init (&collect_obstack);
++  obstack_grow (&collect_obstack, "COLLECT_AS_OPTIONS=",
++		strlen ("COLLECT_AS_OPTIONS="));
++
++  char *opt;
++  unsigned ix;
++
++  FOR_EACH_VEC_ELT (vec, ix, opt)
++    {
++      obstack_1grow (&collect_obstack, '\'');
++      obstack_grow (&collect_obstack, opt, strlen (opt));
++      obstack_1grow (&collect_obstack, '\'');
++      if (ix < vec.length () - 1)
++	obstack_1grow(&collect_obstack, ' ');
++    }
++
++  obstack_1grow (&collect_obstack, '\0');
++  xputenv (XOBFINISH (&collect_obstack, char *));
++}
++
+ /* Process the sub-spec SPEC as a portion of a larger spec.
+    This is like processing a whole spec except that we do
+    not initialize at the beginning and we do not supply a
+@@ -7355,6 +7383,7 @@ driver::main (int argc, char **argv)
+   global_initializations ();
+   build_multilib_strings ();
+   set_up_specs ();
++  putenv_COLLECT_AS_OPTIONS (assembler_options);
+   putenv_COLLECT_GCC (argv[0]);
+   maybe_putenv_COLLECT_LTO_WRAPPER ();
+   maybe_putenv_OFFLOAD_TARGETS ();
 diff --git a/gcc/gcov-io.c b/gcc/gcov-io.c
 index 1f8ac375931..a906830f3c9 100644
 --- a/gcc/gcov-io.c
@@ -30224,6 +30304,176 @@ index 40edee7951c..7c8aee20a88 100644
      }
    static void
    mark_empty (value_range_base *&p)
+diff --git a/gcc/lto-opts.c b/gcc/lto-opts.c
+index 5e59e9327e7..bb0cdfae029 100644
+--- a/gcc/lto-opts.c
++++ b/gcc/lto-opts.c
+@@ -159,6 +159,12 @@ lto_write_options (void)
+ 	append_to_collect_gcc_options (&temporary_obstack, &first_p,
+ 				       option->canonical_option[j]);
+     }
++
++  const char *collect_as_options = getenv ("COLLECT_AS_OPTIONS");
++  if (collect_as_options)
++    prepend_xassembler_to_collect_as_options (collect_as_options,
++					      &temporary_obstack);
++
+   obstack_grow (&temporary_obstack, "\0", 1);
+   args = XOBFINISH (&temporary_obstack, char *);
+   lto_write_data (args, strlen (args) + 1);
+diff --git a/gcc/lto-wrapper.c b/gcc/lto-wrapper.c
+index 10bd7c9becb..d12135ade1f 100644
+--- a/gcc/lto-wrapper.c
++++ b/gcc/lto-wrapper.c
+@@ -73,6 +73,7 @@ static char *offload_objects_file_name;
+ static char *makefile;
+ static unsigned int num_deb_objs;
+ static const char **early_debug_object_names;
++static bool xassembler_options_error = false;
+ 
+ const char tool_name[] = "lto-wrapper";
+ 
+@@ -137,41 +138,14 @@ get_options_from_collect_gcc_options (const char *collect_gcc,
+ 				      unsigned int *decoded_options_count)
+ {
+   struct obstack argv_obstack;
+-  char *argv_storage;
+   const char **argv;
+-  int j, k, argc;
++  int argc;
+ 
+-  argv_storage = xstrdup (collect_gcc_options);
+   obstack_init (&argv_obstack);
+   obstack_ptr_grow (&argv_obstack, collect_gcc);
+ 
+-  for (j = 0, k = 0; argv_storage[j] != '\0'; ++j)
+-    {
+-      if (argv_storage[j] == '\'')
+-	{
+-	  obstack_ptr_grow (&argv_obstack, &argv_storage[k]);
+-	  ++j;
+-	  do
+-	    {
+-	      if (argv_storage[j] == '\0')
+-		fatal_error (input_location, "malformed COLLECT_GCC_OPTIONS");
+-	      else if (strncmp (&argv_storage[j], "'\\''", 4) == 0)
+-		{
+-		  argv_storage[k++] = '\'';
+-		  j += 4;
+-		}
+-	      else if (argv_storage[j] == '\'')
+-		break;
+-	      else
+-		argv_storage[k++] = argv_storage[j++];
+-	    }
+-	  while (1);
+-	  argv_storage[k++] = '\0';
+-	}
+-    }
+-
+-  obstack_ptr_grow (&argv_obstack, NULL);
+-  argc = obstack_object_size (&argv_obstack) / sizeof (void *) - 1;
++  parse_options_from_collect_gcc_options (collect_gcc_options,
++					  &argv_obstack, &argc);
+   argv = XOBFINISH (&argv_obstack, const char **);
+ 
+   decode_cmdline_options_to_array (argc, (const char **)argv, CL_DRIVER,
+@@ -509,6 +483,45 @@ merge_and_complain (struct cl_decoded_option **decoded_options,
+       }
+    else
+      j++;
++
++  if (!xassembler_options_error)
++    for (i = j = 0; ; i++, j++)
++      {
++	for (; i < *decoded_options_count; i++)
++	  if ((*decoded_options)[i].opt_index == OPT_Xassembler)
++	    break;
++
++	for (; j < fdecoded_options_count; j++)
++	  if (fdecoded_options[j].opt_index == OPT_Xassembler)
++	    break;
++
++	if (i == *decoded_options_count && j == fdecoded_options_count)
++	  break;
++	else if (i < *decoded_options_count && j == fdecoded_options_count)
++	  {
++	    warning (0, "Extra option to -Xassembler: %s,"
++		     " dropping all -Xassembler and -Wa options.",
++		     (*decoded_options)[i].arg);
++	    xassembler_options_error = true;
++	    break;
++	  }
++	else if (i == *decoded_options_count && j < fdecoded_options_count)
++	  {
++	    warning (0, "Extra option to -Xassembler: %s,"
++		     " dropping all -Xassembler and -Wa options.",
++		     fdecoded_options[j].arg);
++	    xassembler_options_error = true;
++	    break;
++	  }
++	else if (strcmp ((*decoded_options)[i].arg, fdecoded_options[j].arg))
++	  {
++	    warning (0, "Options to Xassembler do not match: %s, %s,"
++		     " dropping all -Xassembler and -Wa options.",
++		     (*decoded_options)[i].arg, fdecoded_options[j].arg);
++	    xassembler_options_error = true;
++	    break;
++	  }
++      }
+ }
+ 
+ /* Auxiliary function that frees elements of PTR and PTR itself.
+@@ -622,6 +635,13 @@ append_compiler_options (obstack *argv_obstack, struct cl_decoded_option *opts,
+ 	case OPT_Os:
+ 	  break;
+ 
++	case OPT_Xassembler:
++	  /* When we detected a mismatch in assembler options between
++	     the input TU's fall back to previous behavior of ignoring them.  */
++	  if (xassembler_options_error)
++	    continue;
++	  break;
++
+ 	default:
+ 	  if (!(cl_options[option->opt_index].flags & CL_TARGET))
+ 	    continue;
+@@ -1117,7 +1137,8 @@ run_gcc (unsigned argc, char *argv[])
+   const char **argv_ptr;
+   char *list_option_full = NULL;
+   const char *linker_output = NULL;
+-  const char *collect_gcc, *collect_gcc_options;
++  const char *collect_gcc;
++  char *collect_gcc_options;
+   int parallel = 0;
+   int jobserver = 0;
+   bool no_partition = false;
+@@ -1146,6 +1167,25 @@ run_gcc (unsigned argc, char *argv[])
+   if (!collect_gcc_options)
+     fatal_error (input_location,
+ 		 "environment variable COLLECT_GCC_OPTIONS must be set");
++
++  char *collect_as_options = getenv ("COLLECT_AS_OPTIONS");
++
++  /* Prepend -Xassembler to each option, and append the string
++     to collect_gcc_options.  */
++  if (collect_as_options)
++    {
++      obstack temporary_obstack;
++      obstack_init (&temporary_obstack);
++
++      prepend_xassembler_to_collect_as_options (collect_as_options,
++						&temporary_obstack);
++      obstack_1grow (&temporary_obstack, '\0');
++
++      char *xassembler_opts_string
++	= XOBFINISH (&temporary_obstack, char *);
++      strcat (collect_gcc_options, xassembler_opts_string);
++    }
++
+   get_options_from_collect_gcc_options (collect_gcc, collect_gcc_options,
+ 					&decoded_options,
+ 					&decoded_options_count);
 diff --git a/gcc/modulo-sched.c b/gcc/modulo-sched.c
 index 059b5440123..b312903a36d 100644
 --- a/gcc/modulo-sched.c
@@ -30524,6 +30774,94 @@ index 7d7efe0a4a2..0ae429cad8e 100644
  	  if (shift_code != CODE_FOR_nothing)
  	    {
  	      create_output_operand (&ops[0], target, mode);
+diff --git a/gcc/opts-common.c b/gcc/opts-common.c
+index d0b943bc819..fb48005b665 100644
+--- a/gcc/opts-common.c
++++ b/gcc/opts-common.c
+@@ -1711,3 +1711,69 @@ control_warning_option (unsigned int opt_index, int kind, const char *arg,
+ 	}
+     }
+ }
++
++/* Parse options in COLLECT_GCC_OPTIONS and push them on ARGV_OBSTACK.
++   Store number of arguments into ARGC_P.  */
++
++void
++parse_options_from_collect_gcc_options (const char *collect_gcc_options,
++					obstack *argv_obstack,
++					int *argc_p)
++{
++  char *argv_storage = xstrdup (collect_gcc_options);
++  int j, k;
++
++  for (j = 0, k = 0; argv_storage[j] != '\0'; ++j)
++    {
++      if (argv_storage[j] == '\'')
++	{
++	  obstack_ptr_grow (argv_obstack, &argv_storage[k]);
++	  ++j;
++	  do
++	    {
++	      if (argv_storage[j] == '\0')
++		fatal_error (input_location,
++			     "malformed %<COLLECT_GCC_OPTIONS%>");
++	      else if (strncmp (&argv_storage[j], "'\\''", 4) == 0)
++		{
++		  argv_storage[k++] = '\'';
++		  j += 4;
++		}
++	      else if (argv_storage[j] == '\'')
++		break;
++	      else
++		argv_storage[k++] = argv_storage[j++];
++	    }
++	  while (1);
++	  argv_storage[k++] = '\0';
++	}
++    }
++
++  obstack_ptr_grow (argv_obstack, NULL);
++  *argc_p = obstack_object_size (argv_obstack) / sizeof (void *) - 1;
++}
++
++/* Prepend -Xassembler for each option in COLLECT_AS_OPTIONS,
++   and push on O.  */
++
++void prepend_xassembler_to_collect_as_options (const char *collect_as_options,
++					       obstack *o)
++{
++  obstack opts_obstack;
++  int opts_count;
++
++  obstack_init (&opts_obstack);
++  parse_options_from_collect_gcc_options (collect_as_options,
++					  &opts_obstack, &opts_count);
++  const char **assembler_opts = XOBFINISH (&opts_obstack, const char **);
++
++  for (int i = 0; i < opts_count; i++)
++    {
++      obstack_grow (o, " '-Xassembler' ",
++		    strlen (" '-Xassembler' "));
++      const char *opt = assembler_opts[i];
++      obstack_1grow (o, '\'');
++      obstack_grow (o, opt, strlen (opt));
++      obstack_1grow (o, '\'');
++    }
++}
+diff --git a/gcc/opts.h b/gcc/opts.h
+index f14d9bcb896..c517458ddef 100644
+--- a/gcc/opts.h
++++ b/gcc/opts.h
+@@ -456,4 +456,9 @@ extern bool parse_and_check_align_values (const char *flag,
+ 					  bool report_error,
+ 					  location_t loc);
+ 
++extern void parse_options_from_collect_gcc_options (const char *, obstack *,
++						    int *);
++
++extern void prepend_xassembler_to_collect_as_options (const char *, obstack *);
++
+ #endif
 diff --git a/gcc/params.def b/gcc/params.def
 index 8e4887e50a2..e23a4530bfa 100644
 --- a/gcc/params.def
@@ -35622,6 +35960,57 @@ index 00000000000..d0394eab891
 +  e = 5;
 +  struct e j;
 +}
+diff --git a/gcc/testsuite/g++.dg/lto/pr96591_0.C b/gcc/testsuite/g++.dg/lto/pr96591_0.C
+new file mode 100644
+index 00000000000..ae2dc98efc4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/lto/pr96591_0.C
+@@ -0,0 +1,45 @@
++// { dg-lto-do assemble }
++// { dg-lto-options { { -O -flto } } }
++
++template <typename scalar_t, unsigned length>
++struct builtin_simd
++{
++  using type [[gnu::vector_size(sizeof(scalar_t) * length)]] = scalar_t;
++};
++
++struct simd_traits
++{
++  using scalar_type = int;
++
++  template <typename new_scalar_type>
++  using rebind = typename builtin_simd<new_scalar_type, 1>::type;
++};
++
++template <typename simd_t>
++constexpr simd_t fill(typename simd_traits::scalar_type const scalar)
++{
++  return simd_t{scalar};
++}
++
++class Test
++{
++    using score_type = typename builtin_simd<int, 1>::type;
++    score_type data[1]{fill<score_type>(8)};
++};
++
++struct TestFactoryBase
++{
++  virtual Test *CreateTest() = 0;
++};
++
++template <class TestClass>
++struct TestFactoryImpl : public TestFactoryBase
++{
++  Test *CreateTest() override { return new TestClass; }
++};
++
++void MakeAndRegisterTestInfo(TestFactoryBase *factory);
++
++int main() {
++  MakeAndRegisterTestInfo(new TestFactoryImpl<Test>);
++}
 diff --git a/gcc/testsuite/g++.dg/opt/pr94618.C b/gcc/testsuite/g++.dg/opt/pr94618.C
 new file mode 100644
 index 00000000000..e6a81d2c5ab
@@ -37940,6 +38329,18 @@ index 00000000000..982f8ac17a5
 +/* { dg-options "-O -fno-tree-forwprop -ffast-math -fno-tree-vrp" } */
 +
 +#include "pr96370.c"
+diff --git a/gcc/testsuite/gcc.dg/pr99224.c b/gcc/testsuite/gcc.dg/pr99224.c
+new file mode 100644
+index 00000000000..f6e9ac8eba3
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr99224.c
+@@ -0,0 +1,6 @@
++/* { dg-do compile } */
++
++void f (char *c, ...)
++{
++  __builtin_next_arg (*c); /* { dg-warning "not last named argument" } */
++}
 diff --git a/gcc/testsuite/gcc.dg/store_merging_31.c b/gcc/testsuite/gcc.dg/store_merging_31.c
 new file mode 100644
 index 00000000000..32c21eb053c
@@ -38352,6 +38753,39 @@ index 00000000000..7b9fdb2b613
 +    c = b[0];
 +    b = a;
 +  }
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr99694.c b/gcc/testsuite/gcc.dg/torture/pr99694.c
+new file mode 100644
+index 00000000000..df316961673
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr99694.c
+@@ -0,0 +1,27 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-w" } */
++
++#include <stdint.h>
++
++int a, b, c;
++void d() {
++  uint16_t e;
++  int32_t *f;
++  int32_t *g;
++  if (a) {
++    int32_t *k;
++    for (;; *k += 1) {
++      int32_t **i = &f;
++      int32_t **l = &g;
++      for (e = 6; e; e++) {
++        g = k = f;
++      j:
++        **l = 0;
++      }
++      *i = c;
++    }
++  }
++  uint16_t i = &e;
++  b = i / 0;
++  goto j;
 +}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c b/gcc/testsuite/gcc.dg/tree-ssa/pr93435.c
 new file mode 100644
@@ -41961,6 +42395,37 @@ index 00000000000..60f795a3919
 +{}
 +
 +/* { dg-final { scan-assembler "//.tune cortex-a73" } } */
+diff --git a/gcc/testsuite/gcc.target/arm/pr78353-1.c b/gcc/testsuite/gcc.target/arm/pr78353-1.c
+new file mode 100644
+index 00000000000..a107e300269
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pr78353-1.c
+@@ -0,0 +1,9 @@
++/* { dg-do link }  */
++/* { dg-require-effective-target arm_arch_v7a_multilib } */
++/* { dg-options "-march=armv7-a -mthumb -O2 -flto -Wa,-mimplicit-it=always" }  */
++
++int main(int x)
++{
++  asm("teq %0, #0; addne %0, %0, #1" : "=r" (x));
++  return x;
++}
+diff --git a/gcc/testsuite/gcc.target/arm/pr78353-2.c b/gcc/testsuite/gcc.target/arm/pr78353-2.c
+new file mode 100644
+index 00000000000..2589e6135aa
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pr78353-2.c
+@@ -0,0 +1,10 @@
++/* { dg-do link }  */
++/* { dg-require-effective-target arm_arch_v7a_multilib } */
++/* { dg-options "-march=armv7-a -mthumb -O2 -flto -Wa,-mimplicit-it=always,-mthumb" }  */
++
++int main(int x)
++{
++  asm("teq %0, #0; addne %0, %0, #1" : "=r" (x));
++  return x;
++}
++
 diff --git a/gcc/testsuite/gcc.target/arm/pr91816.c b/gcc/testsuite/gcc.target/arm/pr91816.c
 new file mode 100644
 index 00000000000..f1269141690
@@ -51359,7 +51824,7 @@ index 6794fbde29e..4bc691d5797 100644
  						   || negate_result,
  						   len != orig_len);
 diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
-index 32f45c95cdf..6f5ace1f359 100644
+index 32f45c95cdf..57e0e613a62 100644
 --- a/gcc/tree-ssa-sccvn.c
 +++ b/gcc/tree-ssa-sccvn.c
 @@ -535,7 +535,8 @@ vn_get_stmt_kind (gimple *stmt)
@@ -51458,6 +51923,15 @@ index 32f45c95cdf..6f5ace1f359 100644
        /* When building the conversion fails avoid inserting the reference
           again.  */
        if (!result)
+@@ -4293,6 +4320,8 @@ visit_phi (gimple *phi, bool *inserted, bool backedges_varying_p)
+       {
+ 	tree def = PHI_ARG_DEF_FROM_EDGE (phi, e);
+ 
++	if (def == PHI_RESULT (phi))
++	  continue;
+ 	++n_executable;
+ 	if (TREE_CODE (def) == SSA_NAME)
+ 	  {
 diff --git a/gcc/tree-ssa-structalias.c b/gcc/tree-ssa-structalias.c
 index 0ea0b461d2b..4396bcd8f20 100644
 --- a/gcc/tree-ssa-structalias.c
@@ -51858,7 +52332,7 @@ index 2140101d7d2..324673b780c 100644
  		 	     comp_code, fold_convert (TREE_TYPE (rhs1), val));
  	}
 diff --git a/gcc/tree.c b/gcc/tree.c
-index 32e94e48132..d747a0bf685 100644
+index 32e94e48132..be311754393 100644
 --- a/gcc/tree.c
 +++ b/gcc/tree.c
 @@ -11683,6 +11683,7 @@ build_call_expr_internal_loc_array (location_t loc, internal_fn ifn,
@@ -51869,7 +52343,34 @@ index 32e94e48132..d747a0bf685 100644
    return t;
  }
  
-@@ -12995,10 +12996,11 @@ lhd_gcc_personality (void)
+@@ -12188,7 +12189,6 @@ walk_tree_1 (tree *tp, walk_tree_fn func, void *data,
+     case INTEGER_CST:
+     case REAL_CST:
+     case FIXED_CST:
+-    case VECTOR_CST:
+     case STRING_CST:
+     case BLOCK:
+     case PLACEHOLDER_EXPR:
+@@ -12219,6 +12219,18 @@ walk_tree_1 (tree *tp, walk_tree_fn func, void *data,
+ 	WALK_SUBTREE_TAIL (TREE_VEC_ELT (*tp, 0));
+       }
+ 
++    case VECTOR_CST:
++      {
++	unsigned len = vector_cst_encoded_nelts (*tp);
++	if (len == 0)
++	  break;
++	/* Walk all elements but the first.  */
++	while (--len)
++	  WALK_SUBTREE (VECTOR_CST_ENCODED_ELT (*tp, len));
++	/* Now walk the first one as a tail call.  */
++	WALK_SUBTREE_TAIL (VECTOR_CST_ENCODED_ELT (*tp, 0));
++      }
++
+     case COMPLEX_CST:
+       WALK_SUBTREE (TREE_REALPART (*tp));
+       WALK_SUBTREE_TAIL (TREE_IMAGPART (*tp));
+@@ -12995,10 +13007,11 @@ lhd_gcc_personality (void)
     OBJ_TYPE_REF representing an virtual call of C++ method.
     (As opposed to OBJ_TYPE_REF representing objc calls
     through a cast where middle-end devirtualization machinery
@@ -51883,7 +52384,7 @@ index 32e94e48132..d747a0bf685 100644
  {
    if (TREE_CODE (target) != OBJ_TYPE_REF)
      return false;
-@@ -13011,7 +13013,7 @@ virtual_method_call_p (const_tree target)
+@@ -13011,7 +13024,7 @@ virtual_method_call_p (const_tree target)
    /* If we do not have BINFO associated, it means that type was built
       without devirtualization enabled.  Do not consider this a virtual
       call.  */
@@ -60974,6 +61475,22 @@ index 3bd7446571d..157e369d4e7 100644
        PRINT *, "CheCKpOInT"
  !$ACC PARALLEL
        STOP "SiGN"
+diff --git a/libiberty/simple-object-elf.c b/libiberty/simple-object-elf.c
+index 3d49f339631..a5cf6043dc3 100644
+--- a/libiberty/simple-object-elf.c
++++ b/libiberty/simple-object-elf.c
+@@ -1446,6 +1446,11 @@ simple_object_elf_copy_lto_debug_sections (simple_object_read *sobj,
+ 		       && st_shndx < shnum
+ 		       && pfnret[st_shndx - 1] == -1)
+ 		discard = 1;
++	      /* We also need to remove global UNDEFs which can
++		 cause link fails later.  */
++	      else if (st_shndx == SHN_UNDEF
++		       && ELF_ST_BIND (*st_info) == STB_GLOBAL)
++		discard = 1;
+ 
+ 	      if (discard)
+ 		{
 diff --git a/libitm/ChangeLog b/libitm/ChangeLog
 index 703db28ee23..d8203bfb37a 100644
 --- a/libitm/ChangeLog
@@ -61265,10 +61782,39 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..ae64ee108aa 100644
+index 45847172291..801ddd8403d 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,978 @@
+@@ -1,3 +1,1007 @@
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR bootstrap/99983
++	* include/bits/hashtable.h (_Hashtable): Fix noexcept-specifier
++	on definition to match the one on the declaration.
++
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/99985
++	* include/bits/hashtable.h (_Hashtable::_S_nothrow_move()): Fix
++	to be a valid constexpr function in C++11.
++	* testsuite/23_containers/unordered_set/cons/99985.cc: New test.
++
++2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/fs_fwd.h: Fix doxygen group command.
++	* include/bits/regex.h: Likewise.
++	* include/bits/streambuf_iterator.h: Likewise.
++	* include/bits/unique_lock.h: Likewise.
++	* include/std/chrono: Likewise.
++	* include/std/thread: Likewise.
++	* include/tr1/complex: Likewise.
++
 +2021-04-08  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
