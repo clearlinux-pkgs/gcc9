@@ -73,7 +73,7 @@ Douglas Rupp (1):
 Ed Schonberg (1):
       Fix PR ada/98230
 
-Eric Botcazou (25):
+Eric Botcazou (27):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
       Fix Ada bootstrap on Cygwin64
@@ -99,6 +99,8 @@ Eric Botcazou (25):
       Fix wrong result for 1.0/3.0 at -O2 -fno-omit-frame-pointer -frounding-math
       Fix ICE with pathologically large frames
       Fix build breakage with latest glibc release
+      Fix thinko in libcpp preparation patch for modules
+      Further increase the limit on the size of accepted Ada files
 
 François Dumont (3):
       libstdc++: Fix pretty printers script and tests
@@ -109,7 +111,9 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (394):
+GCC Administrator (396):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -871,7 +875,7 @@ Martin Jambor (4):
       ipa: Fix resolving speculations through cgraph_edge::set_call_stmt
       sra: Fix bug in grp_write propagation (PR 97009)
 
-Martin Liska (25):
+Martin Liska (26):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -896,6 +900,7 @@ Martin Liska (25):
       ASAN: disable -Wno-stringop-overflow for 2 tests
       Sync gcc-changelog scripts.
       changelog: fix parsing of a revert commit
+      Sync gcc-changelog scripts.
       Sync gcc-changelog scripts.
 
 Martin Sebor (1):
@@ -1406,10 +1411,10 @@ index 00000000000..935425ef813
 +exit(retval)
 diff --git a/contrib/gcc-changelog/git_commit.py b/contrib/gcc-changelog/git_commit.py
 new file mode 100755
-index 00000000000..ee1973371be
+index 00000000000..b28f7deac23
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_commit.py
-@@ -0,0 +1,723 @@
+@@ -0,0 +1,760 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -1626,6 +1631,7 @@ index 00000000000..ee1973371be
 +        self.lines = []
 +        self.files = []
 +        self.file_patterns = []
++        self.opened_parentheses = 0
 +
 +    def parse_file_names(self):
 +        # Whether the content currently processed is between a star prefix the
@@ -1635,8 +1641,14 @@ index 00000000000..ee1973371be
 +        for line in self.lines:
 +            # If this line matches the star prefix, start the location
 +            # processing on the information that follows the star.
++            # Note that we need to skip macro names that can be in form of:
++            #
++            # * config/i386/i386.md (*fix_trunc<mode>_i387_1,
++            # *add<mode>3_ne, *add<mode>3_eq_0, *add<mode>3_ne_0,
++            # *fist<mode>2_<rounding>_1, *<code><mode>3_1):
++            #
 +            m = star_prefix_regex.match(line)
-+            if m:
++            if m and len(m.group('spaces')) == 1:
 +                in_location = True
 +                line = m.group('content')
 +
@@ -1719,8 +1731,9 @@ index 00000000000..ee1973371be
 +        if self.revert_commit:
 +            self.info = self.commit_to_info_hook(self.revert_commit)
 +
++        # Allow complete deletion of ChangeLog files in a commit
 +        project_files = [f for f in self.info.modified_files
-+                         if self.is_changelog_filename(f[0])
++                         if (self.is_changelog_filename(f[0], allow_suffix=True) and f[1] != 'D')
 +                         or f[0] in misc_files]
 +        ignored_files = [f for f in self.info.modified_files
 +                         if self.in_ignored_location(f[0])]
@@ -1740,6 +1753,7 @@ index 00000000000..ee1973371be
 +            self.parse_changelog()
 +            self.parse_file_names()
 +            self.check_for_empty_description()
++            self.check_for_broken_parentheses()
 +            self.deduce_changelog_locations()
 +            self.check_file_patterns()
 +            if not self.errors:
@@ -1755,8 +1769,14 @@ index 00000000000..ee1973371be
 +        return [x[0] for x in self.info.modified_files if x[1] == 'A']
 +
 +    @classmethod
-+    def is_changelog_filename(cls, path):
-+        return path.endswith('/ChangeLog') or path == 'ChangeLog'
++    def is_changelog_filename(cls, path, allow_suffix=False):
++        basename = os.path.basename(path)
++        if basename == 'ChangeLog':
++            return True
++        elif allow_suffix and basename.startswith('ChangeLog'):
++            return True
++        else:
++            return False
 +
 +    @classmethod
 +    def find_changelog_location(cls, name):
@@ -1812,8 +1832,10 @@ index 00000000000..ee1973371be
 +            if line != line.rstrip():
 +                self.errors.append(Error('trailing whitespace', line))
 +            if len(line.replace('\t', ' ' * TAB_WIDTH)) > LINE_LIMIT:
-+                self.errors.append(Error('line exceeds %d character limit'
-+                                         % LINE_LIMIT, line))
++                # support long filenames
++                if not line.startswith('\t* ') or not line.endswith(':') or ' ' in line[3:-1]:
++                    self.errors.append(Error('line exceeds %d character limit'
++                                             % LINE_LIMIT, line))
 +            m = changelog_regex.match(line)
 +            if m:
 +                last_entry = ChangeLogEntry(m.group(1).rstrip('/'),
@@ -1902,7 +1924,8 @@ index 00000000000..ee1973371be
 +                else:
 +                    m = star_prefix_regex.match(line)
 +                    if m:
-+                        if len(m.group('spaces')) != 1:
++                        if (len(m.group('spaces')) != 1 and
++                                last_entry.opened_parentheses == 0):
 +                            msg = 'one space should follow asterisk'
 +                            self.errors.append(Error(msg, line))
 +                        else:
@@ -1914,6 +1937,7 @@ index 00000000000..ee1973371be
 +                                        msg = f'empty group "{needle}" found'
 +                                        self.errors.append(Error(msg, line))
 +                            last_entry.lines.append(line)
++                            self.process_parentheses(last_entry, line)
 +                    else:
 +                        if last_entry.is_empty:
 +                            msg = 'first line should start with a tab, ' \
@@ -1921,6 +1945,18 @@ index 00000000000..ee1973371be
 +                            self.errors.append(Error(msg, line))
 +                        else:
 +                            last_entry.lines.append(line)
++                            self.process_parentheses(last_entry, line)
++
++    def process_parentheses(self, last_entry, line):
++        for c in line:
++            if c == '(':
++                last_entry.opened_parentheses += 1
++            elif c == ')':
++                if last_entry.opened_parentheses == 0:
++                    msg = 'bad wrapping of parenthesis'
++                    self.errors.append(Error(msg, line))
++                else:
++                    last_entry.opened_parentheses -= 1
 +
 +    def parse_file_names(self):
 +        for entry in self.changelog_entries:
@@ -1943,6 +1979,12 @@ index 00000000000..ee1973371be
 +                     or item_parenthesis_regex.match(entry.lines[i+1]))):
 +                    msg = 'missing description of a change'
 +                    self.errors.append(Error(msg, line))
++
++    def check_for_broken_parentheses(self):
++        for entry in self.changelog_entries:
++            if entry.opened_parentheses != 0:
++                msg = 'bad parentheses wrapping'
++                self.errors.append(Error(msg, entry.lines[0]))
 +
 +    def get_file_changelog_location(self, changelog_file):
 +        for file in self.info.modified_files:
@@ -2135,7 +2177,7 @@ index 00000000000..ee1973371be
 +            print(error)
 diff --git a/contrib/gcc-changelog/git_email.py b/contrib/gcc-changelog/git_email.py
 new file mode 100755
-index 00000000000..00ad00458f4
+index 00000000000..b0547b363aa
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_email.py
 @@ -0,0 +1,108 @@
@@ -2207,7 +2249,7 @@ index 00000000000..00ad00458f4
 +                t = 'A'
 +            else:
 +                t = 'M'
-+            modified_files.append((target, t))
++            modified_files.append((target if t != 'D' else source, t))
 +        git_info = GitInfo(None, date, author, body, modified_files)
 +        super().__init__(git_info, strict=strict,
 +                         commit_to_info_hook=lambda x: None)
@@ -2333,10 +2375,10 @@ index 00000000000..a0e293d756d
 +    return parsed_commits
 diff --git a/contrib/gcc-changelog/git_update_version.py b/contrib/gcc-changelog/git_update_version.py
 new file mode 100755
-index 00000000000..d2cadb8811c
+index 00000000000..1e2b22b008b
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_update_version.py
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,149 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -2364,6 +2406,9 @@ index 00000000000..d2cadb8811c
 +from git_repository import parse_git_revisions
 +
 +current_timestamp = datetime.datetime.now().strftime('%Y%m%d\n')
++
++# Skip the following commits, they cannot be correctly processed
++IGNORED_COMMITS = ('c2be82058fb40f3ae891c68d185ff53e07f14f45')
 +
 +
 +def read_timestamp(path):
@@ -2437,6 +2482,7 @@ index 00000000000..d2cadb8811c
 +            head = head.parents[1]
 +        commits = parse_git_revisions(args.git_path, '%s..%s'
 +                                      % (commit.hexsha, head.hexsha))
++        commits = [c for c in commits if c.info.hexsha not in IGNORED_COMMITS]
 +        for git_commit in reversed(commits):
 +            prepend_to_changelog_files(repo, args.git_path, git_commit,
 +                                       not args.dry_mode)
@@ -2484,18 +2530,21 @@ index 00000000000..d2cadb8811c
 +            print('branch is done\n', flush=True)
 diff --git a/contrib/gcc-changelog/setup.cfg b/contrib/gcc-changelog/setup.cfg
 new file mode 100644
-index 00000000000..9e4a0f6479c
+index 00000000000..efc313f6d52
 --- /dev/null
 +++ b/contrib/gcc-changelog/setup.cfg
-@@ -0,0 +1,2 @@
+@@ -0,0 +1,5 @@
++[flake8]
++max-line-length = 120
++
 +[tool:pytest]
 +addopts = -vv --flake8
 diff --git a/contrib/gcc-changelog/test_email.py b/contrib/gcc-changelog/test_email.py
 new file mode 100755
-index 00000000000..5db56caef9e
+index 00000000000..8abf5c37487
 --- /dev/null
 +++ b/contrib/gcc-changelog/test_email.py
-@@ -0,0 +1,406 @@
+@@ -0,0 +1,426 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -2902,12 +2951,32 @@ index 00000000000..5db56caef9e
 +        email = self.from_patch_glob('0001-Add-horse2.patch')
 +        assert not email.errors
 +        assert email.changelog_entries[0].files == ['koníček.txt']
++
++    def test_modification_of_old_changelog(self):
++        email = self.from_patch_glob('0001-fix-old-ChangeLog.patch')
++        assert not email.errors
++
++    def test_multiline_parentheses(self):
++        email = self.from_patch_glob('0001-Add-macro.patch')
++        assert not email.errors
++
++    def test_multiline_bad_parentheses(self):
++        email = self.from_patch_glob('0002-Wrong-macro-changelog.patch')
++        assert email.errors[0].message == 'bad parentheses wrapping'
++
++    def test_changelog_removal(self):
++        email = self.from_patch_glob('0001-ChangeLog-removal.patch', strict=True)
++        assert not email.errors
++
++    def test_long_filenames(self):
++        email = self.from_patch_glob('0001-long-filenames')
++        assert not email.errors
 diff --git a/contrib/gcc-changelog/test_patches.txt b/contrib/gcc-changelog/test_patches.txt
 new file mode 100644
-index 00000000000..ffd13682d5c
+index 00000000000..3f9806dc076
 --- /dev/null
 +++ b/contrib/gcc-changelog/test_patches.txt
-@@ -0,0 +1,3401 @@
+@@ -0,0 +1,3548 @@
 +=== 0342-ARC-Propagate-uncached-type-attribute-to-each-member.patch ===
 +From 62a715c706d8482560dadfa9ead0766f3c20e434 Mon Sep 17 00:00:00 2001
 +From: Claudiu Zissulescu <claziss@gmail.com>
@@ -6308,7 +6377,154 @@ index 00000000000..ffd13682d5c
 +-- 
 +2.29.2
 +
++=== 0001-fix-old-ChangeLog.patch ===
++From fd498465b2801203089616be9a0e3c1f4fc065a0 Mon Sep 17 00:00:00 2001
++From: Martin Liska <mliska@suse.cz>
++Date: Wed, 13 Jan 2021 11:45:37 +0100
++Subject: [PATCH] Fix a changelog.
 +
++---
++ gcc/ChangeLog-2020 | 1 +
++ 1 file changed, 1 insertion(+)
++
++diff --git a/gcc/ChangeLog-2020 b/gcc/ChangeLog-2020
++index 6553720acad..2c170ef014a 100644
++--- a/gcc/ChangeLog-2020
+++++ b/gcc/ChangeLog-2020
++@@ -1 +1,2 @@
++ 
+++
++ 
++-- 
++2.29.2
++=== 0001-Add-macro.patch ===
++From 9b7eedc932fe594547fb060b36dfd9e4178c4f9b Mon Sep 17 00:00:00 2001
++From: Martin Liska <mliska@suse.cz>
++Date: Wed, 13 Jan 2021 16:26:45 +0100
++Subject: [PATCH 1/2] Add macro.
++
++gcc/ChangeLog:
++
++	* config/i386/i386.md (*fix_trunc<mode>_i387_1, *add<mode>3_eq,
++	*add<mode>3_ne, *add<mode>3_eq_0, *add<mode>3_ne_0, *add<mode>3_eq,
++	*fist<mode>2_<rounding>_1, *<code><mode>3_1, *<code>di3_doubleword):
++	Use ix86_pre_reload_split instead of can_create_pseudo_p in condition.
++	* config/i386/sse.md
++	(*fix_trunc<mode>_i387_1, *add<mode>3_eq,
++	*add<mode>3_ne, *add<mode>3_eq_0, *add<mode>3_ne_0, *add<mode>3_eq,
++	*fist<mode>2_<rounding>_1): This should also work.
++---
++ gcc/config/i386/i386.md | 1 +
++ gcc/config/i386/sse.md  | 1 +
++ 2 files changed, 2 insertions(+)
++
++diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
++index b60784a2908..ac63591b33f 100644
++--- a/gcc/config/i386/i386.md
+++++ b/gcc/config/i386/i386.md
++@@ -1 +1,2 @@
++ 
+++
++
++diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
++index 7f03fc491c3..0e17997db26 100644
++--- a/gcc/config/i386/sse.md
+++++ b/gcc/config/i386/sse.md
++@@ -1 +1,2 @@
++ 
+++
++
++-- 
++2.29.2
++
++=== 0002-Wrong-macro-changelog.patch ===
++From 3542802111d4c6752ac7233ef96655b7fb78aae4 Mon Sep 17 00:00:00 2001
++From: Martin Liska <mliska@suse.cz>
++Date: Wed, 13 Jan 2021 16:54:58 +0100
++Subject: [PATCH 2/2] Wrong macro changelog
++
++gcc/ChangeLog:
++
++	* config/i386/i386.md (*fix_trunc<mode>_i387_1,
++	(foo): Change it.
++---
++ gcc/config/i386/i386.md | 1 +
++ 1 file changed, 1 insertion(+)
++
++diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
++index ac63591b33f..ff4d61764e7 100644
++--- a/gcc/config/i386/i386.md
+++++ b/gcc/config/i386/i386.md
++@@ -1 +1,2 @@
++ 
+++
++-- 
++2.29.2
++
++=== 0001-ChangeLog-removal.patch ===
++From b39fadf9df1a9510afcab0a391182da7dc68de24 Mon Sep 17 00:00:00 2001
++From: Martin Liska <mliska@suse.cz>
++Date: Fri, 12 Mar 2021 09:10:55 +0100
++Subject: [PATCH] Test ChangeLog removal.
++
++gcc/ChangeLog:
++
++	* ipa-icf.c (make_pass_ipa_icf): Add line.
++---
++diff --git a/gcc/analyzer/ChangeLog b/gcc/analyzer/ChangeLog
++deleted file mode 100644
++index 94e87f6bcde..00000000000
++--- a/gcc/analyzer/ChangeLog
+++++ /dev/null
++@@ -1,1 +0,0 @@
++- foo
++diff --git a/gcc/ipa-icf.c b/gcc/ipa-icf.c
++index 5dd33a75c3a..c4ce432cb98 100644
++--- a/gcc/ipa-icf.c
+++++ b/gcc/ipa-icf.c
++@@ -3655,3 +3655,4 @@ make_pass_ipa_icf (gcc::context *ctxt)
++ {
++   return new ipa_icf::pass_ipa_icf (ctxt);
++ }
+++
++-- 
++2.30.1
++
++=== 0001-long-filenames ===
++From 0a5b3f87bdac5e61f9a626c795d30f9e93198585 Mon Sep 17 00:00:00 2001
++From: Martin Liska <mliska@suse.cz>
++Date: Mon, 12 Apr 2021 13:10:14 +0200
++Subject: [PATCH] libstdc++: Fix some tests that fail in C++20 mode
++
++The linear_congruential_engine negative tests fail with a different
++error in C++20 mode, because double is no longer an invalid type for
++NTTP. Adjust the expected errors.
++
++libstdc++-v3/ChangeLog:
++
++	* testsuite/26_numerics/random/linear_congruential_engine/requirements/non_uint_neg.cc:
++	Adjust expected error for C++20 mode.
++	* testsuite/tr1/5_numerical_facilities/random/linear_congruential/requirements/non_uint_neg.cc:
++	Likewise.
++---
++ .../linear_congruential_engine/requirements/non_uint_neg.cc   | 4 +++-
++ .../random/linear_congruential/requirements/non_uint_neg.cc   | 3 ++-
++ 2 files changed, 5 insertions(+), 2 deletions(-)
++
++diff --git a/libstdc++-v3/testsuite/26_numerics/random/linear_congruential_engine/requirements/non_uint_neg.cc b/libstdc++-v3/testsuite/26_numerics/random/linear_congruential_engine/requirements/non_uint_neg.cc
++index e04e8ca6972..a36d63c6c7b 100644
++--- a/libstdc++-v3/testsuite/26_numerics/random/linear_congruential_engine/requirements/non_uint_neg.cc
+++++ b/libstdc++-v3/testsuite/26_numerics/random/linear_congruential_engine/requirements/non_uint_neg.cc
++@@ -1 +1,2 @@
++ 
+++
++diff --git a/libstdc++-v3/testsuite/tr1/5_numerical_facilities/random/linear_congruential/requirements/non_uint_neg.cc b/libstdc++-v3/testsuite/tr1/5_numerical_facilities/random/linear_congruential/requirements/non_uint_neg.cc
++index 5ad82db1def..53b15f32516 100644
++--- a/libstdc++-v3/testsuite/tr1/5_numerical_facilities/random/linear_congruential/requirements/non_uint_neg.cc
+++++ b/libstdc++-v3/testsuite/tr1/5_numerical_facilities/random/linear_congruential/requirements/non_uint_neg.cc
++@@ -1 +1,2 @@
++ 
+++
 diff --git a/contrib/git-backport.py b/contrib/git-backport.py
 new file mode 100755
 index 00000000000..2b8e4686719
@@ -6400,10 +6616,60 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..f3680507369 100644
+index d8e53874e68..68c3feb4473 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2693 @@
+@@ -1,3 +1,2743 @@
++2021-04-12  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	Backported from master:
++	2020-02-24  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++		    Kugan Vivekandarajah  <kugan.vivekanandarajah@linaro.org>
++
++	PR driver/47785
++	* gcc.c (putenv_COLLECT_AS_OPTIONS): New function.
++	(driver::main): Call putenv_COLLECT_AS_OPTIONS.
++	* opts-common.c (parse_options_from_collect_gcc_options): New function.
++	(prepend_xassembler_to_collect_as_options): Likewise.
++	* opts.h (parse_options_from_collect_gcc_options): Declare prototype.
++	(prepend_xassembler_to_collect_as_options): Likewise.
++	* lto-opts.c (lto_write_options): Stream assembler options
++	in COLLECT_AS_OPTIONS.
++	* lto-wrapper.c (xassembler_options_error): New static variable.
++	(get_options_from_collect_gcc_options): Move parsing options code to
++	parse_options_from_collect_gcc_options and call it.
++	(merge_and_complain): Validate -Xassembler options.
++	(append_compiler_options): Handle OPT_Xassembler.
++	(run_gcc): Append command line -Xassembler options to
++	collect_gcc_options.
++	* doc/invoke.texi: Add documentation about using Xassembler
++	options with LTO.
++
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-03-22  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/99694
++	* tree-ssa-sccvn.c (visit_phi): Ignore edges with the
++	PHI result.
++
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-02-24  Richard Biener  <rguenther@suse.de>
++
++	PR c/99224
++	* builtins.c (fold_builtin_next_arg): Avoid NULL arg.
++
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-02-08  Richard Biener  <rguenther@suse.de>
++
++	PR lto/96591
++	* tree.c (walk_tree_1): Walk VECTOR_CST elements.
++
 +2021-04-08  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backported from master:
@@ -9122,10 +9388,19 @@ index abae872cd63..35d90f12d4c 100644
  # so that self-test failures are caught as early as possible.
  # Use "s-selftest-FE" to ensure that we only run the selftests if the
 diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
-index a819f57a2bf..9dd9f8f646a 100644
+index a819f57a2bf..3a5d9511524 100644
 --- a/gcc/ada/ChangeLog
 +++ b/gcc/ada/ChangeLog
-@@ -1,3 +1,100 @@
+@@ -1,3 +1,109 @@
++2021-04-13  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc-interface/misc.c (gnat_init): Set default range bits to 0.
++	* gcc-interface/trans.c (extract_encoding): Delete.
++	(decode_name): Likewise.
++	(File_Name_to_gnu): New function.
++	(gigi): Call it to translate file names.  Replace assertion on
++	1-1 mapping between files and line maps with conditional error.
++
 +2021-03-10  Mikael Pettersson  <mikpelinux@gmail.com>
 +
 +	PR bootstrap/94918
@@ -9481,11 +9756,90 @@ index 8118d119bab..de43c66b77c 100644
  	subst_pair s = { gnu_field, replacement };
  	gnu_list.safe_push (s);
        }
+diff --git a/gcc/ada/gcc-interface/misc.c b/gcc/ada/gcc-interface/misc.c
+index 5737165949e..89ec5c8bd93 100644
+--- a/gcc/ada/gcc-interface/misc.c
++++ b/gcc/ada/gcc-interface/misc.c
+@@ -368,6 +368,9 @@ gnat_init (void)
+   sbitsize_one_node = sbitsize_int (1);
+   sbitsize_unit_node = sbitsize_int (BITS_PER_UNIT);
+ 
++  /* In Ada, we do not use location ranges.  */
++  line_table->default_range_bits = 0;
++
+   /* Register our internal error function.  */
+   global_dc->internal_error = &internal_error_function;
+ 
 diff --git a/gcc/ada/gcc-interface/trans.c b/gcc/ada/gcc-interface/trans.c
-index 2581b71d6fa..32351bf0f9b 100644
+index 2581b71d6fa..d2e554a747b 100644
 --- a/gcc/ada/gcc-interface/trans.c
 +++ b/gcc/ada/gcc-interface/trans.c
-@@ -3234,38 +3234,6 @@ can_equal_max_val_p (tree val, tree type, bool reverse)
+@@ -250,17 +250,27 @@ static tree build_raise_check (int, enum exception_info_kind);
+ static tree create_init_temporary (const char *, tree, tree *, Node_Id);
+ static bool maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk);
+ 
+-/* Hooks for debug info back-ends, only supported and used in a restricted set
+-   of configurations.  */
+-static const char *extract_encoding (const char *) ATTRIBUTE_UNUSED;
+-static const char *decode_name (const char *) ATTRIBUTE_UNUSED;
+-
+ /* This makes gigi's file_info_ptr visible in this translation unit,
+    so that Sloc_to_locus can look it up when deciding whether to map
+    decls to instances.  */
+ 
+ static struct File_Info_Type *file_map;
+ 
++/* Return the string of the identifier allocated for the file name Id.  */
++
++static const char*
++File_Name_to_gnu (Name_Id Id)
++{
++  /* __gnat_to_canonical_file_spec translates file names from pragmas
++     Source_Reference that contain host style syntax not understood by GDB.  */
++  const char *name = __gnat_to_canonical_file_spec (Get_Name_String (Id));
++
++  /* Use the identifier table to make a permanent copy of the file name as
++     the name table gets reallocated after Gigi returns but before all the
++     debugging information is output.  */
++  return IDENTIFIER_POINTER (get_identifier (name));
++}
++
+ /* This is the main program of the back-end.  It sets up all the table
+    structures and then generates code.  */
+ 
+@@ -314,23 +324,18 @@ gigi (Node_Id gnat_root,
+ 
+   for (i = 0; i < number_file; i++)
+     {
+-      /* Use the identifier table to make a permanent copy of the filename as
+-	 the name table gets reallocated after Gigi returns but before all the
+-	 debugging information is output.  The __gnat_to_canonical_file_spec
+-	 call translates filenames from pragmas Source_Reference that contain
+-	 host style syntax not understood by gdb.  */
+-      const char *filename
+-	= IDENTIFIER_POINTER
+-	   (get_identifier
+-	    (__gnat_to_canonical_file_spec
+-	     (Get_Name_String (file_info_ptr[i].File_Name))));
+-
+       /* We rely on the order isomorphism between files and line maps.  */
+-      gcc_assert ((int) LINEMAPS_ORDINARY_USED (line_table) == i);
++      if ((int) LINEMAPS_ORDINARY_USED (line_table) != i)
++	{
++	  gcc_assert (i > 0);
++	  error ("%s contains too many lines",
++		 File_Name_to_gnu (file_info_ptr[i - 1].File_Name));
++	}
+ 
+       /* We create the line map for a source file at once, with a fixed number
+ 	 of columns chosen to avoid jumping over the next power of 2.  */
+-      linemap_add (line_table, LC_ENTER, 0, filename, 1);
++      linemap_add (line_table, LC_ENTER, 0,
++		   File_Name_to_gnu (file_info_ptr[i].File_Name), 1);
+       linemap_line_start (line_table, file_info_ptr[i].Num_Source_Lines, 252);
+       linemap_position_for_column (line_table, 252 - 1);
+       linemap_add (line_table, LC_LEAVE, 0, NULL, 0);
+@@ -3234,38 +3239,6 @@ can_equal_max_val_p (tree val, tree type, bool reverse)
    return can_equal_min_or_max_val_p (val, type, !reverse);
  }
  
@@ -9524,7 +9878,7 @@ index 2581b71d6fa..32351bf0f9b 100644
  /* Replace EXPR1 and EXPR2 by invariant expressions if possible.  Return
     true if both expressions have been replaced and false otherwise.  */
  
-@@ -3691,19 +3659,16 @@ Regular_Loop_to_gnu (Node_Id gnat_node, tree *gnu_cond_expr_p)
+@@ -3691,19 +3664,16 @@ Regular_Loop_to_gnu (Node_Id gnat_node, tree *gnu_cond_expr_p)
  	}
  
        /* If we use the BOTTOM_COND, we can turn the test into an inequality
@@ -9551,7 +9905,7 @@ index 2581b71d6fa..32351bf0f9b 100644
  	}
  
        /* Open a new nesting level that will surround the loop to declare the
-@@ -7636,9 +7601,8 @@ gnat_to_gnu (Node_Id gnat_node)
+@@ -7636,9 +7606,8 @@ gnat_to_gnu (Node_Id gnat_node)
  
      case N_Allocator:
        {
@@ -9563,7 +9917,7 @@ index 2581b71d6fa..32351bf0f9b 100644
  
  	gnat_temp = Expression (gnat_node);
  
-@@ -7648,15 +7612,22 @@ gnat_to_gnu (Node_Id gnat_node)
+@@ -7648,15 +7617,22 @@ gnat_to_gnu (Node_Id gnat_node)
  	   initial value for the object.  */
  	if (Nkind (gnat_temp) == N_Identifier
  	    || Nkind (gnat_temp) == N_Expanded_Name)
@@ -9589,7 +9943,7 @@ index 2581b71d6fa..32351bf0f9b 100644
  	    gnu_init = maybe_unconstrained_array (gnu_init);
  	    if (Do_Range_Check (Expression (gnat_temp)))
  	      gnu_init
-@@ -8951,15 +8922,16 @@ add_decl_expr (tree gnu_decl, Node_Id gnat_node)
+@@ -8951,15 +8927,16 @@ add_decl_expr (tree gnu_decl, Node_Id gnat_node)
  	  MARK_VISITED (DECL_SIZE_UNIT (gnu_decl));
  	  MARK_VISITED (DECL_INITIAL (gnu_decl));
  	}
@@ -9611,7 +9965,7 @@ index 2581b71d6fa..32351bf0f9b 100644
    /* If this is a variable and an initializer is attached to it, it must be
       valid for the context.  Similar to init_const in create_var_decl.  */
    if (TREE_CODE (gnu_decl) == VAR_DECL
-@@ -9830,6 +9802,11 @@ build_binary_op_trapv (enum tree_code code, tree gnu_type, tree left,
+@@ -9830,6 +9807,11 @@ build_binary_op_trapv (enum tree_code code, tree gnu_type, tree left,
    /* If no operand is a constant, we use the generic implementation.  */
    if (TREE_CODE (lhs) != INTEGER_CST && TREE_CODE (rhs) != INTEGER_CST)
      {
@@ -9623,7 +9977,36 @@ index 2581b71d6fa..32351bf0f9b 100644
        /* Never inline a 64-bit mult for a 32-bit target, it's way too long.  */
        if (code == MULT_EXPR && precision == 64 && BITS_PER_WORD < 64)
  	{
-@@ -11149,7 +11126,7 @@ make_alias_for_thunk (tree target)
+@@ -10937,28 +10919,7 @@ set_end_locus_from_node (tree gnu_node, Node_Id gnat_node)
+       return false;
+     }
+ }
+-
+-/* Return a colon-separated list of encodings contained in encoded Ada
+-   name.  */
+ 
+-static const char *
+-extract_encoding (const char *name)
+-{
+-  char *encoding = (char *) ggc_alloc_atomic (strlen (name));
+-  get_encoding (name, encoding);
+-  return encoding;
+-}
+-
+-/* Extract the Ada name from an encoded name.  */
+-
+-static const char *
+-decode_name (const char *name)
+-{
+-  char *decoded = (char *) ggc_alloc_atomic (strlen (name) * 2 + 60);
+-  __gnat_decode (name, decoded, 0);
+-  return decoded;
+-}
+-
+ /* Post an error message.  MSG is the error message, properly annotated.
+    NODE is the node at which to post the error and the node to use for the
+    '&' substitution.  */
+@@ -11149,7 +11110,7 @@ make_alias_for_thunk (tree target)
    return alias;
  }
  
@@ -9632,7 +10015,7 @@ index 2581b71d6fa..32351bf0f9b 100644
  
  static tree
  make_covariant_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
-@@ -11160,6 +11137,11 @@ make_covariant_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
+@@ -11160,6 +11121,11 @@ make_covariant_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
  		  gnu_name, TREE_TYPE (gnu_thunk));
  
    DECL_ARGUMENTS (gnu_cv_thunk) = copy_list (DECL_ARGUMENTS (gnu_thunk));
@@ -9644,7 +10027,7 @@ index 2581b71d6fa..32351bf0f9b 100644
    DECL_RESULT (gnu_cv_thunk) = copy_node (DECL_RESULT (gnu_thunk));
    DECL_CONTEXT (DECL_RESULT (gnu_cv_thunk)) = gnu_cv_thunk;
  
-@@ -11167,7 +11149,6 @@ make_covariant_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
+@@ -11167,7 +11133,6 @@ make_covariant_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
    DECL_CONTEXT (gnu_cv_thunk) = DECL_CONTEXT (gnu_thunk);
    TREE_READONLY (gnu_cv_thunk) = TREE_READONLY (gnu_thunk);
    TREE_THIS_VOLATILE (gnu_cv_thunk) = TREE_THIS_VOLATILE (gnu_thunk);
@@ -9652,7 +10035,7 @@ index 2581b71d6fa..32351bf0f9b 100644
    DECL_ARTIFICIAL (gnu_cv_thunk) = 1;
  
    return gnu_cv_thunk;
-@@ -11267,8 +11248,11 @@ maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
+@@ -11267,8 +11232,11 @@ maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
  
    tree gnu_target = gnat_to_gnu_entity (gnat_target, NULL_TREE, false);
  
@@ -9666,7 +10049,7 @@ index 2581b71d6fa..32351bf0f9b 100644
  
    /* If the target returns by invisible reference and is external, apply the
       same transformation as Subprogram_Body_to_gnu here.  */
-@@ -11293,6 +11277,12 @@ maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
+@@ -11293,6 +11261,12 @@ maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
  
    cgraph_node *target_node = cgraph_node::get_create (gnu_target);
  
@@ -9679,7 +10062,7 @@ index 2581b71d6fa..32351bf0f9b 100644
    /* If the return type of the target is a controlling type, then we need
       both an usual this thunk and a covariant thunk in this order:
  
-@@ -11305,17 +11295,11 @@ maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
+@@ -11305,17 +11279,11 @@ maybe_make_gnu_thunk (Entity_Id gnat_thunk, tree gnu_thunk)
        tree gnu_cv_thunk = make_covariant_thunk (gnat_thunk, gnu_thunk);
        target_node->create_thunk (gnu_cv_thunk, gnu_target, false,
  				 - fixed_offset, 0, 0,
@@ -31097,10 +31480,48 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..50a94e87c04 100644
+index e132f2657ef..b414892fca0 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,2327 @@
+@@ -1,3 +1,2365 @@
++2021-04-12  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	Backported from master:
++	2020-02-24  Christophe Lyon  <christophe.lyon@linaro.org>
++		    Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++		    Kugan Vivekandarajah  <kugan.vivekanandarajah@linaro.org>
++
++	PR lto/78353
++	* gcc.target/arm/pr78353-1.c: Add arm_arch_v7a_multilib effective
++	target.
++	* gcc.target/arm/pr78353-2.c: Likewise.
++	* gcc.target/arm/pr78353-1.c: New test.
++	* gcc.target/arm/pr78353-2.c: Likewise.
++
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-03-22  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/99694
++	* gcc.dg/torture/pr99694.c: New testcase.
++
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-02-24  Richard Biener  <rguenther@suse.de>
++
++	PR c/99224
++	* gcc.dg/pr99224.c: New testcase.
++
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-02-08  Richard Biener  <rguenther@suse.de>
++
++	PR lto/96591
++	* g++.dg/lto/pr96591_0.C: New testcase.
++
 +2021-04-08  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backported from master:
@@ -52576,6 +52997,67 @@ index 9b8a3bd9308..b4c7edc249e 100644
  #else
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
+index ee91cc18084..22a03959208 100644
+--- a/libcpp/ChangeLog
++++ b/libcpp/ChangeLog
+@@ -1,3 +1,9 @@
++2021-04-13  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* include/line-map.h (IS_MACRO_LOC): Delete.
++	* line-map.c (linemap_location_from_macro_expansion_p): Test
++	LINEMAPS_MACRO_LOWEST_LOCATION of the linemap.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libcpp/include/line-map.h b/libcpp/include/line-map.h
+index 6c77c288855..51db65e5247 100644
+--- a/libcpp/include/line-map.h
++++ b/libcpp/include/line-map.h
+@@ -561,7 +561,7 @@ struct GTY((tag ("2"))) line_map_macro : public line_map {
+ #define linemap_assert_fails(EXPR) (! (EXPR))
+ #endif
+ 
+-/* Get whether location LOC is an ad-hoc, ordinary or macro location.  */
++/* Get whether location LOC is an ordinary location.  */
+ 
+ inline bool
+ IS_ORDINARY_LOC (location_t loc)
+@@ -569,18 +569,14 @@ IS_ORDINARY_LOC (location_t loc)
+   return loc < LINE_MAP_MAX_LOCATION;
+ }
+ 
++/* Get whether location LOC is an ad-hoc location.  */
++
+ inline bool
+ IS_ADHOC_LOC (location_t loc)
+ {
+   return loc > MAX_LOCATION_T;
+ }
+ 
+-inline bool
+-IS_MACRO_LOC (location_t loc)
+-{
+-  return !IS_ORDINARY_LOC (loc) && !IS_ADHOC_LOC (loc);
+-}
+-
+ /* Categorize line map kinds.  */
+ 
+ inline bool
+diff --git a/libcpp/line-map.c b/libcpp/line-map.c
+index b73f5067c24..6b5c36524ee 100644
+--- a/libcpp/line-map.c
++++ b/libcpp/line-map.c
+@@ -1243,7 +1243,7 @@ linemap_location_from_macro_expansion_p (const struct line_maps *set,
+     location = set->location_adhoc_data_map.data[location
+ 						 & MAX_LOCATION_T].locus;
+ 
+-  return IS_MACRO_LOC (location);
++  return location >= LINEMAPS_MACRO_LOWEST_LOCATION (set);
+ }
+ 
+ /* Given two virtual locations *LOC0 and *LOC1, return the first
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
 index a5c30516ff8..df85a37b13a 100644
 --- a/libgcc/ChangeLog
@@ -61475,6 +61957,24 @@ index 3bd7446571d..157e369d4e7 100644
        PRINT *, "CheCKpOInT"
  !$ACC PARALLEL
        STOP "SiGN"
+diff --git a/libiberty/ChangeLog b/libiberty/ChangeLog
+index c5a095dec5d..78791709429 100644
+--- a/libiberty/ChangeLog
++++ b/libiberty/ChangeLog
+@@ -1,3 +1,13 @@
++2021-04-12  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2020-08-03  Richard Biener  <rguenther@suse.de>
++
++	PR lto/96385
++	* simple-object-elf.c
++	(simple_object_elf_copy_lto_debug_sections): Localize global
++	UNDEFs and reuse the prevailing name.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
 diff --git a/libiberty/simple-object-elf.c b/libiberty/simple-object-elf.c
 index 3d49f339631..a5cf6043dc3 100644
 --- a/libiberty/simple-object-elf.c
