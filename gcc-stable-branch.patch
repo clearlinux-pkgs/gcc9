@@ -111,7 +111,9 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (396):
+GCC Administrator (398):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -570,6 +572,9 @@ Harald Anlauf (38):
       PR libfortran/99218 - matmul on temporary array accesses invalid memory
       PR fortran/97491 - Wrong restriction for VALUE arguments of pure procedures
       PR fortran/99840 - ICE in gfc_simplify_matmul, at fortran/simplify.c:4777
+
+Hongtao Liu (1):
+      backport TIGERLAKE part to GCC9.
 
 Hongyu Wang (1):
       Add missing FSF copyright notes for x86 intrinsic headers.
@@ -1224,10 +1229,19 @@ index 9db4fd14aa2..4aab1482e34 100644
        with_gmp=/usr/local
      fi
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index fde2d2b76eb..7a9613fb4a4 100644
+index fde2d2b76eb..659147dbf33 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,87 @@
+@@ -1,3 +1,96 @@
++2021-04-14  Martin Liska  <mliska@suse.cz>
++
++	* gcc-changelog/git_commit.py: Sync with master.
++	* gcc-changelog/git_email.py: Likewise.
++	* gcc-changelog/git_update_version.py: Likewise.
++	* gcc-changelog/setup.cfg: Likewise.
++	* gcc-changelog/test_email.py: Likewise.
++	* gcc-changelog/test_patches.txt: Likewise.
++
 +2021-03-19  Matthias Klose  <doko@ubuntu.com>
 +
 +	Backported from master:
@@ -6616,10 +6630,33 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..68c3feb4473 100644
+index d8e53874e68..2c04064b598 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2743 @@
+@@ -1,3 +1,2766 @@
++2021-04-15  Lili Cui  <lili.cui@intel.com>
++
++	* common/config/i386/i386-common.c
++	(processor_names): Add tigerlake.
++	(processor_alias_table): Ditto.
++	* config.gcc (x86_64_archs): Ditto.
++	* config/i386/driver-i386.c
++	(host_detect_local_cpu): Detect tigerlake, add "has_avx" to
++	classify processor.
++	* config/i386/i386-c.c (ix86_target_macros_internal): Handle
++	PROCESSOR_TIGERLAKE.
++	* config/i386/i386.c (m_TIGERLAKE): Define.
++	(m_CORE_AVX512): Add m_TIGERLAKE.
++	(processor_cost_table): Add skylake_cost for tigerlake.
++	(processor_model): Add M_INTEL_COREI7_TIGERLAKE.
++	(arch_names_table): Add tigerlake.
++	(get_builtin_code_for_version): Handle PROCESSOR_TIGERLAKE.
++	* config/i386/i386.h (TARGET_TIGERLAKE): Define.
++	(enum processor_type): Add PROCESSOR_TIGERLAKE.
++	(PTA_TIGERLAKE): Define.
++	* doc/extend.texi (__builtin_cpu_is): Add tigerlake.
++	* doc/invoke.texi (-march=cpu-type): Ditto.
++
 +2021-04-12  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
 +
 +	Backported from master:
@@ -11312,7 +11349,7 @@ index bab3ab3fa36..bc59d646a4c 100644
        }
      }
 diff --git a/gcc/common/config/i386/i386-common.c b/gcc/common/config/i386/i386-common.c
-index 087bb1520ed..c7841939e89 100644
+index 087bb1520ed..11960300bfc 100644
 --- a/gcc/common/config/i386/i386-common.c
 +++ b/gcc/common/config/i386/i386-common.c
 @@ -182,12 +182,13 @@ along with GCC; see the file COPYING3.  If not see
@@ -11331,11 +11368,37 @@ index 087bb1520ed..c7841939e89 100644
  #define OPTION_MASK_ISA_XSAVEOPT_UNSET OPTION_MASK_ISA_XSAVEOPT
  #define OPTION_MASK_ISA_AVX2_UNSET \
    (OPTION_MASK_ISA_AVX2 | OPTION_MASK_ISA_AVX512F_UNSET)
+@@ -1508,6 +1509,7 @@ const char *const processor_names[] =
+   "icelake-client",
+   "icelake-server",
+   "cascadelake",
++  "tigerlake",
+   "intel",
+   "geode",
+   "k6",
+@@ -1590,6 +1592,7 @@ const pta processor_alias_table[] =
+     PTA_ICELAKE_SERVER},
+   {"cascadelake", PROCESSOR_CASCADELAKE, CPU_HASWELL,
+     PTA_CASCADELAKE},
++  {"tigerlake", PROCESSOR_TIGERLAKE, CPU_HASWELL, PTA_TIGERLAKE},
+   {"bonnell", PROCESSOR_BONNELL, CPU_ATOM, PTA_BONNELL},
+   {"atom", PROCESSOR_BONNELL, CPU_ATOM, PTA_BONNELL},
+   {"silvermont", PROCESSOR_SILVERMONT, CPU_SLM, PTA_SILVERMONT},
 diff --git a/gcc/config.gcc b/gcc/config.gcc
-index b2282ecdf0b..82f80d4c748 100644
+index b2282ecdf0b..94885c7d758 100644
 --- a/gcc/config.gcc
 +++ b/gcc/config.gcc
-@@ -2617,6 +2617,10 @@ powerpc*-*-freebsd*)
+@@ -667,7 +667,8 @@ bdver3 bdver4 znver1 znver2 btver1 btver2 k8 k8-sse3 opteron \
+ opteron-sse3 nocona core2 corei7 corei7-avx core-avx-i core-avx2 atom \
+ slm nehalem westmere sandybridge ivybridge haswell broadwell bonnell \
+ silvermont knl knm skylake-avx512 cannonlake icelake-client icelake-server \
+-skylake goldmont goldmont-plus tremont cascadelake x86-64 native"
++skylake goldmont goldmont-plus tremont cascadelake tigerlake x86-64 \
++native"
+ 
+ # Additional x86 processors supported by --with-cpu=.  Each processor
+ # MUST be separated by exactly one space.
+@@ -2617,6 +2618,10 @@ powerpc*-*-freebsd*)
  	tm_file="${tm_file} dbxelf.h elfos.h gnu-user.h ${fbsd_tm_file} rs6000/sysv4.h"
  	extra_options="${extra_options} rs6000/sysv4.opt"
  	tmake_file="rs6000/t-fprules rs6000/t-ppcos ${tmake_file} rs6000/t-ppccomm"
@@ -11346,7 +11409,7 @@ index b2282ecdf0b..82f80d4c748 100644
  	case ${target} in
  	     powerpc64*)
  	    	tm_file="${tm_file} rs6000/default64.h rs6000/freebsd64.h"
-@@ -3279,7 +3283,9 @@ esac
+@@ -3279,7 +3284,9 @@ esac
  case ${target} in
  *-*-linux*android*|*-*-linux*uclibc*|*-*-linux*musl*)
          ;;
@@ -11357,7 +11420,7 @@ index b2282ecdf0b..82f80d4c748 100644
  	case ${target} in
  	aarch64*-* | arm*-* | i[34567]86-* | powerpc*-* | s390*-* | sparc*-* | x86_64-*)
  		default_gnu_indirect_function=yes
-@@ -3806,9 +3812,17 @@ fi
+@@ -3806,9 +3813,17 @@ fi
  supported_defaults=
  case "${target}" in
  	aarch64*-*-*)
@@ -11378,7 +11441,7 @@ index b2282ecdf0b..82f80d4c748 100644
  			eval "val=\$with_$which"
  			base_val=`echo $val | sed -e 's/\+.*//'`
  			ext_val=`echo $val | sed -e 's/[a-z0-9.-]\+//'`
-@@ -3847,6 +3861,12 @@ case "${target}" in
+@@ -3847,6 +3862,12 @@ case "${target}" in
  				  sed -e 's/,.*$//'`
  			  fi
  
@@ -11391,7 +11454,7 @@ index b2282ecdf0b..82f80d4c748 100644
  			  while [ x"$ext_val" != x ]
  			  do
  				ext_val=`echo $ext_val | sed -e 's/\+//'`
-@@ -3896,8 +3916,13 @@ case "${target}" in
+@@ -3896,8 +3917,13 @@ case "${target}" in
  			  fi
  			  true
  			else
@@ -18020,7 +18083,7 @@ index bdb36f00959..c099a6238d8 100644
  #undef FUNCTION_PROFILER
  #define FUNCTION_PROFILER(FILE, LABELNO)				\
 diff --git a/gcc/config/i386/driver-i386.c b/gcc/config/i386/driver-i386.c
-index 75f70269517..db8b4fa8aab 100644
+index 75f70269517..26c1ec1fda9 100644
 --- a/gcc/config/i386/driver-i386.c
 +++ b/gcc/config/i386/driver-i386.c
 @@ -420,6 +420,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
@@ -18099,7 +18162,78 @@ index 75f70269517..db8b4fa8aab 100644
  	case 0x57:
  	  /* Knights Landing.  */
  	  cpu = "knl";
-@@ -1138,6 +1168,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+@@ -855,36 +885,42 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+ 	  if (arch)
+ 	    {
+ 	      /* This is unknown family 0x6 CPU.  */
+-	      /* Assume Ice Lake Server.  */
+-	      if (has_wbnoinvd)
+-		cpu = "icelake-server";
+-	      /* Assume Ice Lake.  */
+-	      else if (has_gfni)
+-		cpu = "icelake-client";
+-	      /* Assume Cannon Lake.  */
+-	      else if (has_avx512vbmi)
+-		cpu = "cannonlake";
+-	      /* Assume Knights Mill.  */
+-	      else if (has_avx5124vnniw)
+-		cpu = "knm";
+-	      /* Assume Knights Landing.  */
+-	      else if (has_avx512er)
+-		cpu = "knl";
+-	      /* Assume Skylake with AVX-512.  */
+-	      else if (has_avx512f)
+-		cpu = "skylake-avx512";
+-	      /* Assume Skylake.  */
+-	      else if (has_clflushopt)
+-		cpu = "skylake";
+-	      /* Assume Broadwell.  */
+-	      else if (has_adx)
+-		cpu = "broadwell";
+-	      else if (has_avx2)
++	      if (has_avx)
++	      {
++		/* Assume Ice Lake Server.  */
++		if (has_wbnoinvd)
++		  cpu = "icelake-server";
++		/* Assume Ice Lake.  */
++		else if (has_avx512bitalg)
++		  cpu = "icelake-client";
++		/* Assume Tiger Lake */
++		else if (has_movdiri)
++		  cpu = "tigerlake";
++		/* Assume Cannon Lake.  */
++		else if (has_avx512vbmi)
++		  cpu = "cannonlake";
++		/* Assume Knights Mill.  */
++		else if (has_avx5124vnniw)
++		  cpu = "knm";
++		/* Assume Knights Landing.  */
++		else if (has_avx512er)
++		  cpu = "knl";
++		/* Assume Skylake with AVX-512.  */
++		else if (has_avx512f)
++		  cpu = "skylake-avx512";
++		/* Assume Skylake.  */
++		else if (has_clflushopt)
++		  cpu = "skylake";
++		/* Assume Broadwell.  */
++		else if (has_adx)
++		  cpu = "broadwell";
++		else if (has_avx2)
+ 		/* Assume Haswell.  */
+-		cpu = "haswell";
+-	      else if (has_avx)
++		  cpu = "haswell";
++		else
+ 		/* Assume Sandy Bridge.  */
+-		cpu = "sandybridge";
++		  cpu = "sandybridge";	      
++	      }
+ 	      else if (has_sse4_2)
+ 		{
+ 		  if (has_gfni)
+@@ -1138,6 +1174,7 @@ const char *host_detect_local_cpu (int argc, const char **argv)
        const char *vaes = has_vaes ? " -mvaes" : " -mno-vaes";
        const char *vpclmulqdq = has_vpclmulqdq ? " -mvpclmulqdq" : " -mno-vpclmulqdq";
        const char *avx512bitalg = has_avx512bitalg ? " -mavx512bitalg" : " -mno-avx512bitalg";
@@ -18107,7 +18241,7 @@ index 75f70269517..db8b4fa8aab 100644
        const char *movdiri = has_movdiri ? " -mmovdiri" : " -mno-movdiri";
        const char *movdir64b = has_movdir64b ? " -mmovdir64b" : " -mno-movdir64b";
        const char *waitpkg = has_waitpkg ? " -mwaitpkg" : " -mno-waitpkg";
-@@ -1156,9 +1187,8 @@ const char *host_detect_local_cpu (int argc, const char **argv)
+@@ -1156,9 +1193,8 @@ const char *host_detect_local_cpu (int argc, const char **argv)
  			avx512ifma, avx512vbmi, avx5124fmaps, avx5124vnniw,
  			clwb, mwaitx, clzero, pku, rdpid, gfni, shstk,
  			avx512vbmi2, avx512vnni, vaes, vpclmulqdq,
@@ -18150,10 +18284,31 @@ index 5dedeb2d18b..2f57d19bea2 100644
  /* SSE2 MMX */
  BDESC (OPTION_MASK_ISA_SSE2 | OPTION_MASK_ISA_MMX, 0, CODE_FOR_mmx_addv1di3, "__builtin_ia32_paddq", IX86_BUILTIN_PADDQ, UNKNOWN, (int) V1DI_FTYPE_V1DI_V1DI)
 diff --git a/gcc/config/i386/i386-c.c b/gcc/config/i386/i386-c.c
-index 5e7e46fcebe..f06fea1a8a5 100644
+index 5e7e46fcebe..ee74f2954cc 100644
 --- a/gcc/config/i386/i386-c.c
 +++ b/gcc/config/i386/i386-c.c
-@@ -675,6 +675,8 @@ ix86_target_macros (void)
+@@ -222,6 +222,10 @@ ix86_target_macros_internal (HOST_WIDE_INT isa_flag,
+       def_or_undef (parse_in, "__cascadelake");
+       def_or_undef (parse_in, "__cascadelake__");
+       break;
++    case PROCESSOR_TIGERLAKE:
++      def_or_undef (parse_in, "__tigerlake");
++      def_or_undef (parse_in, "__tigerlake__");
++      break;
+     /* use PROCESSOR_max to not set/unset the arch macro.  */
+     case PROCESSOR_max:
+       break;
+@@ -370,6 +374,9 @@ ix86_target_macros_internal (HOST_WIDE_INT isa_flag,
+     case PROCESSOR_CASCADELAKE:
+       def_or_undef (parse_in, "__tune_cascadelake__");
+       break;
++    case PROCESSOR_TIGERLAKE:
++      def_or_undef (parse_in, "__tune_tigerlake__");
++      break;
+     case PROCESSOR_INTEL:
+     case PROCESSOR_GENERIC:
+       break;
+@@ -675,6 +682,8 @@ ix86_target_macros (void)
        cpp_assert (parse_in, "cpu=i386");
        cpp_assert (parse_in, "machine=i386");
        builtin_define_std ("i386");
@@ -18163,10 +18318,30 @@ index 5e7e46fcebe..f06fea1a8a5 100644
  
    if (!TARGET_80387)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..592455ef6d4 100644
+index 1bca5a7eea6..b0c90c28088 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
-@@ -2535,7 +2535,12 @@ rest_of_insert_endbranch (void)
+@@ -149,8 +149,10 @@ const struct processor_costs *ix86_cost = NULL;
+ #define m_ICELAKE_CLIENT (HOST_WIDE_INT_1U<<PROCESSOR_ICELAKE_CLIENT)
+ #define m_ICELAKE_SERVER (HOST_WIDE_INT_1U<<PROCESSOR_ICELAKE_SERVER)
+ #define m_CASCADELAKE (HOST_WIDE_INT_1U<<PROCESSOR_CASCADELAKE)
++#define m_TIGERLAKE (HOST_WIDE_INT_1U<<PROCESSOR_TIGERLAKE)
+ #define m_CORE_AVX512 (m_SKYLAKE_AVX512 | m_CANNONLAKE \
+-		       | m_ICELAKE_CLIENT | m_ICELAKE_SERVER | m_CASCADELAKE)
++		       | m_ICELAKE_CLIENT | m_ICELAKE_SERVER \
++		       | m_CASCADELAKE | m_TIGERLAKE)
+ #define m_CORE_AVX2 (m_HASWELL | m_SKYLAKE | m_CORE_AVX512)
+ #define m_CORE_ALL (m_CORE2 | m_NEHALEM  | m_SANDYBRIDGE | m_CORE_AVX2)
+ #define m_GOLDMONT (HOST_WIDE_INT_1U<<PROCESSOR_GOLDMONT)
+@@ -900,6 +902,7 @@ static const struct processor_costs *processor_cost_table[] =
+   &skylake_cost,
+   &skylake_cost,
+   &skylake_cost,
++  &skylake_cost,
+   &intel_cost,
+   &geode_cost,
+   &k6_cost,
+@@ -2535,7 +2538,12 @@ rest_of_insert_endbranch (void)
        && (!flag_manual_endbr
  	  || lookup_attribute ("cf_check",
  			       DECL_ATTRIBUTES (cfun->decl)))
@@ -18180,7 +18355,7 @@ index 1bca5a7eea6..592455ef6d4 100644
      {
        /* Queue ENDBR insertion to x86_function_profiler.  */
        if (crtl->profile && flag_fentry)
-@@ -4053,6 +4058,15 @@ ix86_option_override_internal (bool main_args_p,
+@@ -4053,6 +4061,15 @@ ix86_option_override_internal (bool main_args_p,
  	if (((processor_alias_table[i].flags & PTA_PTWRITE) != 0)
  	    && !(opts->x_ix86_isa_flags2_explicit & OPTION_MASK_ISA_PTWRITE))
  	  opts->x_ix86_isa_flags2 |= OPTION_MASK_ISA_PTWRITE;
@@ -18196,7 +18371,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  
  	if ((processor_alias_table[i].flags
  	   & (PTA_PREFETCH_SSE | PTA_SSE)) != 0)
-@@ -5802,6 +5816,8 @@ ix86_set_indirect_branch_type (tree fndecl)
+@@ -5802,6 +5819,8 @@ ix86_set_indirect_branch_type (tree fndecl)
  		? "thunk-extern" : "thunk"));
  
        if (cfun->machine->indirect_branch_type != indirect_branch_keep
@@ -18205,7 +18380,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	  && (flag_cf_protection & CF_RETURN))
  	error ("%<-mindirect-branch%> and %<-fcf-protection%> are not "
  	       "compatible");
-@@ -5845,6 +5861,8 @@ ix86_set_indirect_branch_type (tree fndecl)
+@@ -5845,6 +5864,8 @@ ix86_set_indirect_branch_type (tree fndecl)
  		? "thunk-extern" : "thunk"));
  
        if (cfun->machine->function_return_type != indirect_branch_keep
@@ -18214,7 +18389,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	  && (flag_cf_protection & CF_RETURN))
  	error ("%<-mfunction-return%> and %<-fcf-protection%> are not "
  	       "compatible");
-@@ -11474,11 +11492,6 @@ ix86_compute_frame_layout (void)
+@@ -11474,11 +11495,6 @@ ix86_compute_frame_layout (void)
    offset += frame->nregs * UNITS_PER_WORD;
    frame->reg_save_offset = offset;
  
@@ -18226,7 +18401,7 @@ index 1bca5a7eea6..592455ef6d4 100644
    /* Calculate the size of the va-arg area (not including padding, if any).  */
    frame->va_arg_size = ix86_varargs_gpr_size + ix86_varargs_fpr_size;
  
-@@ -11641,14 +11654,22 @@ ix86_compute_frame_layout (void)
+@@ -11641,14 +11657,22 @@ ix86_compute_frame_layout (void)
       the unwind data structure.  */
    if (TARGET_SEH)
      {
@@ -18256,7 +18431,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	{
  	  /* Ideally we'd determine what portion of the local stack frame
  	     (within the constraint of the lowest 240) is most heavily used.
-@@ -11657,6 +11678,8 @@ ix86_compute_frame_layout (void)
+@@ -11657,6 +11681,8 @@ ix86_compute_frame_layout (void)
  	     frame that is addressable with 8-bit offsets.  */
  	  frame->hard_frame_pointer_offset = frame->stack_pointer_offset - 128;
  	}
@@ -18265,7 +18440,7 @@ index 1bca5a7eea6..592455ef6d4 100644
      }
  }
  
-@@ -12274,10 +12297,12 @@ ix86_update_stack_boundary (void)
+@@ -12274,10 +12300,12 @@ ix86_update_stack_boundary (void)
  static rtx
  ix86_get_drap_rtx (void)
  {
@@ -18280,7 +18455,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	  && !ACCUMULATE_OUTGOING_ARGS))
      crtl->need_drap = true;
  
-@@ -13459,17 +13484,6 @@ ix86_expand_prologue (void)
+@@ -13459,17 +13487,6 @@ ix86_expand_prologue (void)
        insn = emit_insn (gen_push (hard_frame_pointer_rtx));
        RTX_FRAME_RELATED_P (insn) = 1;
  
@@ -18298,7 +18473,7 @@ index 1bca5a7eea6..592455ef6d4 100644
        if (m->fs.sp_offset == frame.hard_frame_pointer_offset)
  	{
  	  insn = emit_move_insn (hard_frame_pointer_rtx, stack_pointer_rtx);
-@@ -14347,8 +14361,13 @@ ix86_expand_epilogue (int style)
+@@ -14347,8 +14364,13 @@ ix86_expand_epilogue (int style)
  	      t = plus_constant (Pmode, t, m->fs.fp_offset - UNITS_PER_WORD);
  	      emit_insn (gen_rtx_SET (sa, t));
  
@@ -18314,7 +18489,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  
  	      /* Note that we use SA as a temporary CFA, as the return
  		 address is at the proper place relative to it.  We
-@@ -14363,7 +14382,7 @@ ix86_expand_epilogue (int style)
+@@ -14363,7 +14385,7 @@ ix86_expand_epilogue (int style)
  	      add_reg_note (insn, REG_CFA_DEF_CFA,
  			    plus_constant (Pmode, sa, UNITS_PER_WORD));
  	      ix86_add_queued_cfa_restore_notes (insn);
@@ -18323,7 +18498,35 @@ index 1bca5a7eea6..592455ef6d4 100644
  	      RTX_FRAME_RELATED_P (insn) = 1;
  
  	      m->fs.cfa_reg = sa;
-@@ -44150,43 +44169,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+@@ -31993,7 +32015,8 @@ enum processor_model
+   M_INTEL_COREI7_ICELAKE_CLIENT,
+   M_INTEL_COREI7_ICELAKE_SERVER,
+   M_AMDFAM17H_ZNVER2,
+-  M_INTEL_COREI7_CASCADELAKE
++  M_INTEL_COREI7_CASCADELAKE,
++  M_INTEL_COREI7_TIGERLAKE,
+ };
+ 
+ struct _arch_names_table
+@@ -32022,6 +32045,7 @@ static const _arch_names_table arch_names_table[] =
+   {"icelake-client", M_INTEL_COREI7_ICELAKE_CLIENT},
+   {"icelake-server", M_INTEL_COREI7_ICELAKE_SERVER},
+   {"cascadelake", M_INTEL_COREI7_CASCADELAKE},
++  {"tigerlake", M_INTEL_COREI7_TIGERLAKE},
+   {"bonnell", M_INTEL_BONNELL},
+   {"silvermont", M_INTEL_SILVERMONT},
+   {"goldmont", M_INTEL_GOLDMONT},
+@@ -32212,6 +32236,9 @@ get_builtin_code_for_version (tree decl, tree *predicate_list)
+ 	      arg_str = "cascadelake";
+ 	      priority = P_PROC_AVX512F;
+ 	      break;
++	    case PROCESSOR_TIGERLAKE:
++	      arg_str = "tigerlake";
++	      priority = P_PROC_AVX512F;
+ 	    case PROCESSOR_BONNELL:
+ 	      arg_str = "bonnell";
+ 	      priority = P_PROC_SSSE3;
+@@ -44150,43 +44177,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
        break;
      case E_V64QImode:
      case E_V32HImode:
@@ -18404,7 +18607,7 @@ index 1bca5a7eea6..592455ef6d4 100644
        break;
      default:
        gcc_unreachable ();
-@@ -44391,40 +44418,18 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
+@@ -44391,40 +44426,18 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
  	  continue;
  	}
  
@@ -18453,7 +18656,7 @@ index 1bca5a7eea6..592455ef6d4 100644
    rtx_insn *seq = get_insns ();
    end_sequence ();
  
-@@ -45457,7 +45462,7 @@ ix86_expand_rint (rtx operand0, rtx operand1)
+@@ -45457,7 +45470,7 @@ ix86_expand_rint (rtx operand0, rtx operand1)
          return copysign (xa, operand1);
     */
    machine_mode mode = GET_MODE (operand0);
@@ -18462,7 +18665,7 @@ index 1bca5a7eea6..592455ef6d4 100644
    rtx_code_label *label;
  
    res = gen_reg_rtx (mode);
-@@ -45470,16 +45475,18 @@ ix86_expand_rint (rtx operand0, rtx operand1)
+@@ -45470,16 +45483,18 @@ ix86_expand_rint (rtx operand0, rtx operand1)
    TWO52 = ix86_gen_TWO52 (mode);
    label = ix86_expand_sse_compare_and_jump (UNLE, TWO52, xa, false);
  
@@ -18486,7 +18689,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  
    ix86_sse_copysign_to_positive (res, xa, res, mask);
  
-@@ -45500,12 +45507,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
+@@ -45500,12 +45515,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
            return x;
          xa = xa + TWO52 - TWO52;
          x2 = copysign (xa, x);
@@ -18501,7 +18704,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	if (HONOR_SIGNED_ZEROS (mode))
  	  x2 = copysign (x2, x);
  	return x2;
-@@ -45542,8 +45551,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
+@@ -45542,8 +45559,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
    emit_insn (gen_rtx_SET (tmp, gen_rtx_AND (mode, one, tmp)));
    tmp = expand_simple_binop (mode, do_floor ? MINUS : PLUS,
  			     xa, tmp, NULL_RTX, 0, OPTAB_DIRECT);
@@ -18518,7 +18721,7 @@ index 1bca5a7eea6..592455ef6d4 100644
    emit_move_insn (res, tmp);
  
    emit_label (label);
-@@ -45562,12 +45577,14 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
+@@ -45562,12 +45585,14 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
          if (!isless (xa, TWO52))
            return x;
  	x2 = (double)(long)x;
@@ -18533,7 +18736,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	if (HONOR_SIGNED_ZEROS (mode))
  	  return copysign (x2, x);
  	return x2;
-@@ -45602,10 +45619,15 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
+@@ -45602,10 +45627,15 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
    emit_insn (gen_rtx_SET (tmp, gen_rtx_AND (mode, one, tmp)));
    tmp = expand_simple_binop (mode, do_floor ? MINUS : PLUS,
  			     xa, tmp, NULL_RTX, 0, OPTAB_DIRECT);
@@ -18552,7 +18755,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  
    emit_label (label);
    LABEL_NUSES (label) = 1;
-@@ -45736,7 +45758,7 @@ void
+@@ -45736,7 +45766,7 @@ void
  ix86_expand_truncdf_32 (rtx operand0, rtx operand1)
  {
    machine_mode mode = GET_MODE (operand0);
@@ -18561,7 +18764,7 @@ index 1bca5a7eea6..592455ef6d4 100644
    rtx_code_label *label;
  
    /* C code for SSE variant we expand below.
-@@ -45759,28 +45781,29 @@ ix86_expand_truncdf_32 (rtx operand0, rtx operand1)
+@@ -45759,28 +45789,29 @@ ix86_expand_truncdf_32 (rtx operand0, rtx operand1)
    emit_move_insn (res, operand1);
  
    /* xa = abs (operand1) */
@@ -18603,7 +18806,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  
    emit_label (label);
    LABEL_NUSES (label) = 1;
-@@ -46667,7 +46690,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
+@@ -46667,7 +46698,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
  	      /* vpshufb only works intra lanes, it is not
  		 possible to shuffle bytes in between the lanes.  */
  	      for (i = 0; i < nelt; ++i)
@@ -18612,7 +18815,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  		  return false;
  	    }
  	}
-@@ -50265,7 +50288,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
+@@ -50265,7 +50296,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
    if ((TARGET_AVX512F && vector_size == 64)
        || (TARGET_AVX512VL && (vector_size == 32 || vector_size == 16)))
      {
@@ -18623,7 +18826,7 @@ index 1bca5a7eea6..592455ef6d4 100644
  	return smallest_int_mode_for_size (nunits);
      }
  
-@@ -50919,11 +50944,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50919,11 +50952,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        *clear = build_call_expr (fnclex, 0);
        tree sw_var = create_tmp_var_raw (short_unsigned_type_node);
        tree fnstsw_call = build_call_expr (fnstsw, 0);
@@ -18640,7 +18843,7 @@ index 1bca5a7eea6..592455ef6d4 100644
        *update = build2 (COMPOUND_EXPR, integer_type_node,
  			sw_mod, update_mod);
        tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
-@@ -50936,15 +50962,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50936,15 +50970,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        tree stmxcsr = ix86_builtins[IX86_BUILTIN_STMXCSR];
        tree ldmxcsr = ix86_builtins[IX86_BUILTIN_LDMXCSR];
        tree stmxcsr_hold_call = build_call_expr (stmxcsr, 0);
@@ -18662,7 +18865,7 @@ index 1bca5a7eea6..592455ef6d4 100644
        tree ldmxcsr_hold_call = build_call_expr (ldmxcsr, 1, mxcsr_mod_var);
        tree hold_all = build2 (COMPOUND_EXPR, unsigned_type_node,
  			      hold_assign_orig, hold_assign_mod);
-@@ -50973,8 +51001,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50973,8 +51009,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  			    exceptions_assign);
  	}
        else
@@ -18674,10 +18877,18 @@ index 1bca5a7eea6..592455ef6d4 100644
        *update = build2 (COMPOUND_EXPR, void_type_node, *update,
  			ldmxcsr_update_call);
 diff --git a/gcc/config/i386/i386.h b/gcc/config/i386/i386.h
-index 14e5a392f62..d138dfac05c 100644
+index 14e5a392f62..74199deae71 100644
 --- a/gcc/config/i386/i386.h
 +++ b/gcc/config/i386/i386.h
-@@ -2232,11 +2232,10 @@ extern int const svr4_dbx_register_map[FIRST_PSEUDO_REGISTER];
+@@ -408,6 +408,7 @@ extern const struct processor_costs ix86_size_cost;
+ #define TARGET_ICELAKE_CLIENT (ix86_tune == PROCESSOR_ICELAKE_CLIENT)
+ #define TARGET_ICELAKE_SERVER (ix86_tune == PROCESSOR_ICELAKE_SERVER)
+ #define TARGET_CASCADELAKE (ix86_tune == PROCESSOR_CASCADELAKE)
++#define TARGET_TIGERLAKE (ix86_tune == PROCESSOR_TIGERLAKE)
+ #define TARGET_INTEL (ix86_tune == PROCESSOR_INTEL)
+ #define TARGET_GENERIC (ix86_tune == PROCESSOR_GENERIC)
+ #define TARGET_AMDFAM10 (ix86_tune == PROCESSOR_AMDFAM10)
+@@ -2232,11 +2233,10 @@ extern int const svr4_dbx_register_map[FIRST_PSEUDO_REGISTER];
  
  /* Under some conditions we need jump tables in the text section,
     because the assembler cannot handle label differences between
@@ -18691,7 +18902,15 @@ index 14e5a392f62..d138dfac05c 100644
  
  /* Switch to init or fini section via SECTION_OP, emit a call to FUNC,
     and switch back.  For x86 we do this only to save a few bytes that
-@@ -2380,6 +2379,9 @@ const wide_int_bitmask PTA_PCONFIG (0, HOST_WIDE_INT_1U << 7);
+@@ -2283,6 +2283,7 @@ enum processor_type
+   PROCESSOR_ICELAKE_CLIENT,
+   PROCESSOR_ICELAKE_SERVER,
+   PROCESSOR_CASCADELAKE,
++  PROCESSOR_TIGERLAKE,
+   PROCESSOR_INTEL,
+   PROCESSOR_GEODE,
+   PROCESSOR_K6,
+@@ -2380,6 +2381,9 @@ const wide_int_bitmask PTA_PCONFIG (0, HOST_WIDE_INT_1U << 7);
  const wide_int_bitmask PTA_WBNOINVD (0, HOST_WIDE_INT_1U << 8);
  const wide_int_bitmask PTA_WAITPKG (0, HOST_WIDE_INT_1U << 9);
  const wide_int_bitmask PTA_PTWRITE (0, HOST_WIDE_INT_1U << 10);
@@ -18701,7 +18920,7 @@ index 14e5a392f62..d138dfac05c 100644
  
  const wide_int_bitmask PTA_CORE2 = PTA_64BIT | PTA_MMX | PTA_SSE | PTA_SSE2
    | PTA_SSE3 | PTA_SSSE3 | PTA_CX16 | PTA_FXSR;
-@@ -2392,8 +2394,8 @@ const wide_int_bitmask PTA_IVYBRIDGE = PTA_SANDYBRIDGE | PTA_FSGSBASE
+@@ -2392,8 +2396,8 @@ const wide_int_bitmask PTA_IVYBRIDGE = PTA_SANDYBRIDGE | PTA_FSGSBASE
    | PTA_RDRND | PTA_F16C;
  const wide_int_bitmask PTA_HASWELL = PTA_IVYBRIDGE | PTA_AVX2 | PTA_BMI
    | PTA_BMI2 | PTA_LZCNT | PTA_FMA | PTA_MOVBE | PTA_HLE;
@@ -18712,7 +18931,7 @@ index 14e5a392f62..d138dfac05c 100644
  const wide_int_bitmask PTA_SKYLAKE = PTA_BROADWELL | PTA_AES | PTA_CLFLUSHOPT
    | PTA_XSAVEC | PTA_XSAVES | PTA_SGX;
  const wide_int_bitmask PTA_SKYLAKE_AVX512 = PTA_SKYLAKE | PTA_AVX512F
-@@ -2405,20 +2407,21 @@ const wide_int_bitmask PTA_CANNONLAKE = PTA_SKYLAKE | PTA_AVX512F
+@@ -2405,20 +2409,23 @@ const wide_int_bitmask PTA_CANNONLAKE = PTA_SKYLAKE | PTA_AVX512F
    | PTA_AVX512VBMI | PTA_AVX512IFMA | PTA_SHA;
  const wide_int_bitmask PTA_ICELAKE_CLIENT = PTA_CANNONLAKE | PTA_AVX512VNNI
    | PTA_GFNI | PTA_VAES | PTA_AVX512VBMI2 | PTA_VPCLMULQDQ | PTA_AVX512BITALG
@@ -18721,6 +18940,8 @@ index 14e5a392f62..d138dfac05c 100644
  const wide_int_bitmask PTA_ICELAKE_SERVER = PTA_ICELAKE_CLIENT | PTA_PCONFIG
 -  | PTA_WBNOINVD;
 +  | PTA_WBNOINVD | PTA_CLWB;
++const wide_int_bitmask PTA_TIGERLAKE = PTA_ICELAKE_CLIENT | PTA_MOVDIRI
++  | PTA_MOVDIR64B | PTA_CLWB;
  const wide_int_bitmask PTA_KNL = PTA_BROADWELL | PTA_AVX512PF | PTA_AVX512ER
 -  | PTA_AVX512F | PTA_AVX512CD;
 +  | PTA_AVX512F | PTA_AVX512CD | PTA_PREFETCHWT1;
@@ -25426,7 +25647,7 @@ index e271f5180d8..520b61fb5bc 100644
  
  @node Predefined Macros
 diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
-index f5becf988d2..3ab83a1cf94 100644
+index f5becf988d2..16ecd15273b 100644
 --- a/gcc/doc/extend.texi
 +++ b/gcc/doc/extend.texi
 @@ -2760,7 +2760,7 @@ the same type as the target function.  As a result of the @code{copy}
@@ -25533,6 +25754,16 @@ index f5becf988d2..3ab83a1cf94 100644
  
  The @code{scalar_insert_exp}
  functions require a 64-bit environment supporting ISA 3.0 or later.
+@@ -21468,6 +21497,9 @@ Intel Core i7 Ice Lake Server CPU.
+ @item cascadelake
+ Intel Core i7 Cascadelake CPU.
+ 
++@item tigerlake
++Intel Core i7 Tigerlake CPU.
++
+ @item bonnell
+ Intel Atom Bonnell CPU.
+ 
 diff --git a/gcc/doc/install.texi b/gcc/doc/install.texi
 index 0d08696c207..03cea999259 100644
 --- a/gcc/doc/install.texi
@@ -25547,7 +25778,7 @@ index 0d08696c207..03cea999259 100644
  
  @item --with-schedule=@var{cpu}
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 0ab6c9c6449..c39efa0e33e 100644
+index 0ab6c9c6449..7b5f6e03d9f 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -634,10 +634,12 @@ Objective-C and Objective-C++ Dialects}.
@@ -25746,7 +25977,22 @@ index 0ab6c9c6449..c39efa0e33e 100644
  
  @item skylake-avx512
  Intel Skylake Server CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3,
-@@ -28711,9 +28757,9 @@ Note that @option{-mcmodel=large} is incompatible with
+@@ -27337,6 +27383,14 @@ SSE4.1, SSE4.2, POPCNT, PKU, AVX, AVX2, AES, PCLMUL, FSGSBASE, RDRND, FMA, BMI,
+ BMI2, F16C, RDSEED, ADCX, PREFETCHW, CLFLUSHOPT, XSAVEC, XSAVES, AVX512F, CLWB,
+ AVX512VL, AVX512BW, AVX512DQ, AVX512CD and AVX512VNNI instruction set support.
+ 
++@item tigerlake
++Intel Tigerlake CPU with 64-bit extensions, MOVBE, MMX, SSE, SSE2, SSE3, SSSE3,
++SSE4.1, SSE4.2, POPCNT, PKU, AVX, AVX2, AES, PCLMUL, FSGSBASE, RDRND, FMA, BMI,
++BMI2, F16C, RDSEED, ADCX, PREFETCHW, CLFLUSHOPT, XSAVEC, XSAVES, AVX512F,
++AVX512VL, AVX512BW, AVX512DQ, AVX512CD, AVX512VBMI, AVX512IFMA, SHA, CLWB, UMIP,
++RDPID, GFNI, AVX512VBMI2, AVX512VPOPCNTDQ, AVX512BITALG, AVX512VNNI, VPCLMULQDQ,
++VAES, PCONFIG, WBNOINVD, MOVDIRI, MOVDIR64B and CLWB instruction set support.
++
+ @item k6
+ AMD K6 CPU with MMX instruction set support.
+ 
+@@ -28711,9 +28765,9 @@ Note that @option{-mcmodel=large} is incompatible with
  @option{-mindirect-branch=thunk-extern} since the thunk function may
  not be reachable in the large code model.
  
@@ -25759,7 +26005,7 @@ index 0ab6c9c6449..c39efa0e33e 100644
  
  @item -mfunction-return=@var{choice}
  @opindex mfunction-return
-@@ -28726,6 +28772,10 @@ object file.  You can control this behavior for a specific function by
+@@ -28726,6 +28780,10 @@ object file.  You can control this behavior for a specific function by
  using the function attribute @code{function_return}.
  @xref{Function Attributes}.
  
@@ -31480,10 +31726,15 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..b414892fca0 100644
+index e132f2657ef..08ac460d86e 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,2365 @@
+@@ -1,3 +1,2370 @@
++2021-04-15  Lili Cui  <lili.cui@intel.com>
++
++	* gcc.target/i386/funcspec-56.inc: Handle new march.
++	* g++.target/i386/mv16.C: Handle new march.
++
 +2021-04-12  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
 +
 +	Backported from master:
@@ -37496,6 +37747,30 @@ index 00000000000..1689159e47c
 +template<typename T> struct foo { virtual void f() = 0; };
 +extern foo<__Int8x8_t> &x;
 +void f() { x.f(); }
+diff --git a/gcc/testsuite/g++.target/i386/mv16.C b/gcc/testsuite/g++.target/i386/mv16.C
+index 81e15115f27..0b5a8c3e4a1 100644
+--- a/gcc/testsuite/g++.target/i386/mv16.C
++++ b/gcc/testsuite/g++.target/i386/mv16.C
+@@ -72,6 +72,10 @@ int __attribute__ ((target("arch=cascadelake"))) foo () {
+   return 19;
+ }
+ 
++int __attribute__ ((target("arch=tigerlake"))) foo () {
++  return 20;
++}
++
+ int main ()
+ {
+   int val = foo ();
+@@ -100,6 +104,8 @@ int main ()
+     assert (val == 18);
+   else if (__builtin_cpu_is ("cascadelake"))
+     assert (val == 19);
++  else if (__builtin_cpu_is ("tigerlake"))
++    assert (val == 20);
+   else
+     assert (val == 0);
+ 
 diff --git a/gcc/testsuite/g++.target/riscv/pr97682.C b/gcc/testsuite/g++.target/riscv/pr97682.C
 new file mode 100644
 index 00000000000..03c7a447de5
@@ -43320,6 +43595,18 @@ index 00000000000..a0c52e426c8
 +  V v = 0 <= (0 >= w);
 +  bar (v);
 +}
+diff --git a/gcc/testsuite/gcc.target/i386/funcspec-56.inc b/gcc/testsuite/gcc.target/i386/funcspec-56.inc
+index 0eb83a7fd30..898190b30e9 100644
+--- a/gcc/testsuite/gcc.target/i386/funcspec-56.inc
++++ b/gcc/testsuite/gcc.target/i386/funcspec-56.inc
+@@ -151,6 +151,7 @@ extern void test_arch_cannonlake (void)		__attribute__((__target__("arch=cannonl
+ extern void test_arch_icelake_client (void)	__attribute__((__target__("arch=icelake-client")));
+ extern void test_arch_icelake_server (void)	__attribute__((__target__("arch=icelake-server")));
+ extern void test_arch_cascadelake (void)	__attribute__((__target__("arch=cascadelake")));
++extern void test_arch_tigerlake (void)          __attribute__((__target__("arch=tigerlake")));
+ extern void test_arch_k8 (void)			__attribute__((__target__("arch=k8")));
+ extern void test_arch_k8_sse3 (void)		__attribute__((__target__("arch=k8-sse3")));
+ extern void test_arch_opteron (void)		__attribute__((__target__("arch=opteron")));
 diff --git a/gcc/testsuite/gcc.target/i386/movdir64b.c b/gcc/testsuite/gcc.target/i386/movdir64b.c
 new file mode 100644
 index 00000000000..01451a8eb9b
@@ -53059,10 +53346,16 @@ index b73f5067c24..6b5c36524ee 100644
  
  /* Given two virtual locations *LOC0 and *LOC1, return the first
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
-index a5c30516ff8..df85a37b13a 100644
+index a5c30516ff8..33d702405e1 100644
 --- a/libgcc/ChangeLog
 +++ b/libgcc/ChangeLog
-@@ -1,3 +1,156 @@
+@@ -1,3 +1,162 @@
++2021-04-15  Lili Cui  <lili.cui@intel.com>
++
++	* config/i386/cpuinfo.h (enum processor_subtypes): Add
++	INTEL_COREI7_TIGERLAKE.
++	From-SVN: r274693
++
 +2021-01-13  Samuel Thibault  <samuel.thibault@gnu.org>
 +
 +	Backported from master:
@@ -53819,6 +54112,18 @@ index d6cb2de6265..6a33d2e0d52 100644
  	  if (ecx & bit_AVX512VNNI)
  	    set_feature (FEATURE_AVX512VNNI);
  	  if (ecx & bit_AVX512BITALG)
+diff --git a/libgcc/config/i386/cpuinfo.h b/libgcc/config/i386/cpuinfo.h
+index b4492eb7eb4..4ba67932847 100644
+--- a/libgcc/config/i386/cpuinfo.h
++++ b/libgcc/config/i386/cpuinfo.h
+@@ -77,6 +77,7 @@ enum processor_subtypes
+   INTEL_COREI7_ICELAKE_SERVER,
+   AMDFAM17H_ZNVER2,
+   INTEL_COREI7_CASCADELAKE,
++  INTEL_COREI7_TIGERLAKE,
+   CPU_SUBTYPE_MAX
+ };
+ 
 diff --git a/libgcc/config/i386/gnu-unwind.h b/libgcc/config/i386/gnu-unwind.h
 new file mode 100644
 index 00000000000..f83411e3de4
