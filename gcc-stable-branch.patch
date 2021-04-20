@@ -73,7 +73,7 @@ Douglas Rupp (1):
 Ed Schonberg (1):
       Fix PR ada/98230
 
-Eric Botcazou (27):
+Eric Botcazou (28):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
       Fix Ada bootstrap on Cygwin64
@@ -101,6 +101,7 @@ Eric Botcazou (27):
       Fix build breakage with latest glibc release
       Fix thinko in libcpp preparation patch for modules
       Further increase the limit on the size of accepted Ada files
+      Fix another -freorder-blocks-and-partition glitch with Windows SEH
 
 François Dumont (3):
       libstdc++: Fix pretty printers script and tests
@@ -111,7 +112,11 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (398):
+GCC Administrator (402):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -579,7 +584,7 @@ Hongtao Liu (1):
 Hongyu Wang (1):
       Add missing FSF copyright notes for x86 intrinsic headers.
 
-Iain Buclaw (16):
+Iain Buclaw (17):
       d: Fix ICE in add_symbol_to_partition_1, at lto/lto-partition.c:215
       libphobos: Fix struct layout of stat32_t on sparc-*-solaris*
       libphobos: Fix struct layout of addrinfo on sparc-*-solaris*
@@ -596,6 +601,7 @@ Iain Buclaw (16):
       d: Fix junk in generated symbol on powerpc64-*-* [PR98921]
       d: Fix heap-buffer-overflow in checkModFileAlias [PR 99337]
       Fix ICE: in function_and_variable_visibility, at ipa-visibility.c:795 [PR99466]
+      d: Fix ICE in when formating a string with '%' or '`' characters (PR98457)
 
 Iain Sandoe (3):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
@@ -719,7 +725,7 @@ John David Anglin (2):
       Define __BIG_ENDIAN__
       Add mi_thunk support for vcalls on hppa.
 
-Jonathan Wakely (69):
+Jonathan Wakely (96):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -789,6 +795,33 @@ Jonathan Wakely (69):
       libstdc++: Fix even more doxygen markup for group close commands
       libstdc++: Fix invalid constexpr function in C++11 mode [PR 99985]
       libstdc++: Fix bootstrap error due to inconsistent noexcept-specifier [PR 99983]
+      libstdc++: Document when C++11/14/17 support became stable [PR 99058]
+      libstdc++: Fix bootstrap with -fno-rtti [PR 99077]
+      libstdc++: Fix errors from Library Fundamentals TS headers in C++11 [PR 98319]
+      libstdc++: Fix declarations of memalign etc. for freestanding [PR 97570]
+      libstdc++: Replace use of reserved name that clashes [PR 97362]
+      libstdc++: Fix filesystem::path construction from COW string [PR 99805]
+      libstdc++: Bodge tests that fail with COW strings
+      libstdc++: Add noexcept to std::begin etc as per LWG 2280 and 3537
+      libstdc++: Fix test failure on AIX
+      libstdc++: Fix incorrect test for std::error_code comparisons
+      libstdc++: Add assertions for preconditions in sampling distributions [PR 82584]
+      libstdc++: Fix documentation for return values of copy algos
+      libstdc++: Fix errors in <experimental/internet>
+      libstdc++: Include scope ID in net::internet::address_v6::to_string()
+      libstdc++: Initialize std::normal_distribution::_M_saved [PR 99536]
+      libstdc++: Handle EPERM for filesystem access errors on MacOS [PR 99537]
+      libstdc++: Use correct error category for Windows error codes
+      libstdc++: Fix spelling of __MINGW32__ macros
+      maintainer-scripts: Disable multilib when generating libstdc++ docs
+      libstdc++: Add noexcept to declaration of path::_List members
+      libstdc++: Fix directory_iterator exception specification
+      libstdc++: Fix failing tests for AIX
+      libstdc++: Fix net::system_context stop condition
+      libstdc++: Fix outdated comment about std::string instantiations (PR 94854)
+      Improve tests for std::vector<bool> printer
+      libstdc++: Implement LWG 561 for std::inserter
+      libstdc++: Make std::copy_n work with negative sizes
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -928,6 +961,9 @@ Michael Meissner (2):
       Backport PR target/93932 (variable vec_extract) to GCC 9
       Fix target/94557 PowerPC regression on GCC 9 (variable vec_extract)
 
+Michael Weghorn (1):
+      Have std::vector printer's iterator return bool for vector<bool>
+
 Mikael Pettersson (1):
       Fix Ada bootstrap on Cygwin64
 
@@ -938,6 +974,9 @@ Nathan Sidwell (3):
       c++: Fix ICE popping local scope [pr84733]
       c++: QT overload regression with attribute [PR94946]
       c++: Fix template parm ICE [PR 98297]
+
+Nuno Lopes (1):
+      libstdc++: Fix doxygen comment for std::any_of
 
 Patrick Palka (3):
       c++: zero_init_expr_p of dependent expression [PR95678]
@@ -6630,10 +6669,15 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..2c04064b598 100644
+index d8e53874e68..920a28a31ce 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,2766 @@
+@@ -1,3 +1,2771 @@
++2021-04-19  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* config/i386/winnt.c (i386_pe_seh_cold_init): Properly deal with
++	frames larger than the SEH maximum frame size.
++
 +2021-04-15  Lili Cui  <lili.cui@intel.com>
 +
 +	* common/config/i386/i386-common.c
@@ -19243,7 +19287,7 @@ index 5393698c6bb..94e58e9ce43 100644
  #error "Never use <wbnoinvdintrin.h> directly; include <immintrin.h> instead."
  #endif
 diff --git a/gcc/config/i386/winnt.c b/gcc/config/i386/winnt.c
-index 1b439552f9c..9374c73e1d0 100644
+index 1b439552f9c..e4e86ac3bc5 100644
 --- a/gcc/config/i386/winnt.c
 +++ b/gcc/config/i386/winnt.c
 @@ -830,9 +830,20 @@ i386_pe_asm_lto_end (void)
@@ -19270,7 +19314,40 @@ index 1b439552f9c..9374c73e1d0 100644
    HOST_WIDE_INT sp_offset;
  
    /* The CFA is located at CFA_REG + CFA_OFFSET.  */
-@@ -1231,6 +1242,10 @@ i386_pe_seh_unwind_emit (FILE *asm_out_file, rtx_insn *insn)
+@@ -910,15 +921,17 @@ i386_pe_seh_cold_init (FILE *f, const char *name)
+ 
+   /* In the normal case, the frame pointer is near the bottom of the frame
+      so we can do the full stack allocation and set it afterwards.  There
+-     is an exception when the function accesses prior frames so, in this
+-     case, we need to pre-allocate a small chunk before setting it.  */
+-  if (crtl->accesses_prior_frames)
+-    alloc_offset = seh->cfa_offset;
+-  else
++     is an exception if the function overflows the SEH maximum frame size
++     or accesses prior frames so, in this case, we need to pre-allocate a
++     small chunk of stack before setting it.  */
++  offset = seh->sp_offset - INCOMING_FRAME_SP_OFFSET;
++  if (offset < SEH_MAX_FRAME_SIZE && !crtl->accesses_prior_frames)
+     alloc_offset = seh->sp_offset;
++  else
++    alloc_offset = MIN (seh->cfa_offset + 240, seh->sp_offset);
+ 
+   offset = alloc_offset - INCOMING_FRAME_SP_OFFSET;
+-  if (offset > 0 && offset < SEH_MAX_FRAME_SIZE)
++  if (offset > 0)
+     fprintf (f, "\t.seh_stackalloc\t" HOST_WIDE_INT_PRINT_DEC "\n", offset);
+ 
+   for (int regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
+@@ -947,7 +960,7 @@ i386_pe_seh_cold_init (FILE *f, const char *name)
+       fprintf (f, ", " HOST_WIDE_INT_PRINT_DEC "\n", offset);
+     }
+ 
+-  if (crtl->accesses_prior_frames)
++  if (alloc_offset != seh->sp_offset)
+     {
+       offset = seh->sp_offset - alloc_offset;
+       if (offset > 0 && offset < SEH_MAX_FRAME_SIZE)
+@@ -1231,6 +1244,10 @@ i386_pe_seh_unwind_emit (FILE *asm_out_file, rtx_insn *insn)
    seh = cfun->machine->seh;
    if (NOTE_P (insn) && NOTE_KIND (insn) == NOTE_INSN_SWITCH_TEXT_SECTIONS)
      {
@@ -24725,10 +24802,21 @@ index 2169f8c4efd..ab703a3ff07 100644
        return build_nop_reinterpret (type, expr);
      }
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index f8268e87d4d..ada783d4025 100644
+index f8268e87d4d..a29cf967a4a 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,124 @@
+@@ -1,3 +1,135 @@
++2021-04-19  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-04-19  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/98457
++	* d-diagnostic.cc (expand_d_format): Handle escaped backticks.
++	(escape_d_format): New funtion.
++	(verror): Call escape_d_format on prefixing strings.
++	(vdeprecation): Likewise.
++
 +2021-03-03  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -24993,6 +25081,111 @@ index e9aa457d852..761ab3c5435 100644
  
        return d_array_value (build_ctype (exp->type->arrayOf ()),
  			    size_int (1), build_address (expr));
+diff --git a/gcc/d/d-diagnostic.cc b/gcc/d/d-diagnostic.cc
+index 95a008d1b6f..47c7323aa0b 100644
+--- a/gcc/d/d-diagnostic.cc
++++ b/gcc/d/d-diagnostic.cc
+@@ -48,7 +48,7 @@ expand_d_format (const char *format)
+ 
+   for (const char *p = format; *p;)
+     {
+-      while (*p != '\0' && *p != '%' && *p != '`')
++      while (*p != '\0' && *p != '\\' && *p != '%' && *p != '`')
+ 	{
+ 	  buf.writeByte (*p);
+ 	  p++;
+@@ -57,6 +57,21 @@ expand_d_format (const char *format)
+       if (*p == '\0')
+ 	break;
+ 
++      if (*p == '\\')
++	{
++	  if (p[1] == '`')
++	    {
++	      /* Escaped backtick, don't expand it as a quoted string.  */
++	      buf.writeByte ('`');
++	      p++;;
++	    }
++	  else
++	    buf.writeByte (*p);
++
++	  p++;
++	  continue;
++	}
++
+       if (*p == '`')
+ 	{
+ 	  /* Text enclosed by `...` are translated as a quoted string.  */
+@@ -113,6 +128,43 @@ expand_d_format (const char *format)
+   return buf.extractString ();
+ }
+ 
++/* Rewrite the format string FORMAT to deal with any characters that require
++   escaping before expand_d_format expands it.  */
++
++static char *
++escape_d_format (const char *format)
++{
++  obstack buf;
++
++  gcc_obstack_init (&buf);
++
++  for (const char *p = format; *p; p++)
++    {
++      switch (*p)
++	{
++	case '%':
++	  /* Escape `%' characters so that pp_format does not confuse them
++	     for actual format specifiers.  */
++	  obstack_1grow (&buf, '%');
++	  break;
++
++	case '`':
++	  /* Escape '`' characters so that expand_d_format does not confuse them
++	     for a quoted string.  */
++	  obstack_1grow (&buf, '\\');
++	  break;
++
++	default:
++	  break;
++	}
++
++      obstack_1grow (&buf, *p);
++    }
++
++  obstack_1grow (&buf, '\0');
++  return (char *) obstack_finish (&buf);
++}
++
+ /* Helper routine for all error routines.  Reports a diagnostic specified by
+    KIND at the explicit location LOC.  The message FORMAT comes from the dmd
+    front-end, which does not get translated by the gcc diagnostic routines.  */
+@@ -177,9 +229,10 @@ verror (const Loc& loc, const char *format, va_list ap,
+ 
+       /* Build string and emit.  */
+       if (prefix2 != NULL)
+-	xformat = xasprintf ("%s %s %s", prefix1, prefix2, format);
++	xformat = xasprintf ("%s %s %s", escape_d_format (prefix1),
++			     escape_d_format (prefix2), format);
+       else if (prefix1 != NULL)
+-	xformat = xasprintf ("%s %s", prefix1, format);
++	xformat = xasprintf ("%s %s", escape_d_format (prefix1), format);
+       else
+ 	xformat = xasprintf ("%s", format);
+ 
+@@ -287,9 +340,10 @@ vdeprecation (const Loc& loc, const char *format, va_list ap,
+ 
+       /* Build string and emit.  */
+       if (prefix2 != NULL)
+-	xformat = xasprintf ("%s %s %s", prefix1, prefix2, format);
++	xformat = xasprintf ("%s %s %s", escape_d_format (prefix1),
++			     escape_d_format (prefix2), format);
+       else if (prefix1 != NULL)
+-	xformat = xasprintf ("%s %s", prefix1, format);
++	xformat = xasprintf ("%s %s", escape_d_format (prefix1), format);
+       else
+ 	xformat = xasprintf ("%s", format);
+ 
 diff --git a/gcc/d/d-tree.h b/gcc/d/d-tree.h
 index a514bc3902f..7a54dfbc59e 100644
 --- a/gcc/d/d-tree.h
@@ -31726,10 +31919,22 @@ index 5d6f2e0166c..125fc66b5ce 100644
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..08ac460d86e 100644
+index e132f2657ef..2119ca7c6e5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,2370 @@
+@@ -1,3 +1,2382 @@
++2021-04-19  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-04-19  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/98457
++	* gdc.dg/pr98457.d: New test.
++
++2021-04-19  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gnat.dg/opt92.adb: New test.
++
 +2021-04-15  Lili Cui  <lili.cui@intel.com>
 +
 +	* gcc.target/i386/funcspec-56.inc: Handle new march.
@@ -47360,6 +47565,21 @@ index 00000000000..d3b859fcbda
 +{
 +    return side == Side.left ? left : right;
 +}
+diff --git a/gcc/testsuite/gdc.dg/pr98457.d b/gcc/testsuite/gdc.dg/pr98457.d
+new file mode 100644
+index 00000000000..bc0d8af5d4a
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr98457.d
+@@ -0,0 +1,9 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=98457
++// { dg-do compile }
++
++void main()
++{
++    writef!"%s";    // { dg-error "template instance writef!\"%s\" template .writef. is not defined" }
++    writef!"`%s";   // { dg-error "template instance writef!\"`%s\" template .writef. is not defined" }
++    writef!"%%s`";  // { dg-error "template instance writef!\"%%s`\" template .writef. is not defined" }
++}
 diff --git a/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d b/gcc/testsuite/gdc.test/compilable/imports/pr9471a.d
 new file mode 100644
 index 00000000000..79b78e1e52a
@@ -51180,6 +51400,50 @@ index 00000000000..37520086616
 +
 +begin
 +  null;
++end;
+diff --git a/gcc/testsuite/gnat.dg/opt92.adb b/gcc/testsuite/gnat.dg/opt92.adb
+new file mode 100644
+index 00000000000..f6eb6a034ec
+--- /dev/null
++++ b/gcc/testsuite/gnat.dg/opt92.adb
+@@ -0,0 +1,38 @@
++-- { dg-do compile { target { lp64 || llp64 } } }
++-- { dg-options "-O2 -gnatws" }
++
++procedure Main is
++
++   subtype Int64 is Long_Long_Integer;
++
++   type Arr is array (Int64 range <>) of Boolean;
++
++   Pow : constant := 10;
++
++   procedure Compute (B : in out Arr) is
++      Factor : Int64 := 3;
++      Num    : Int64;
++   begin
++      while Factor <= 10 ** (Pow / 2) loop
++         Num := Factor;
++         while Num < 10 ** Pow loop
++            if B (Num) then
++               Factor := Num;
++               exit;
++            end if;
++            Num := Num + 2;
++         end loop;
++         Num := Factor * Factor;
++         while Num < 10 ** Pow loop
++            B (Num) := False;
++            Num        := Num + Factor * 2;
++         end loop;
++         Factor := Factor + 2;
++      end loop;
++   end;
++
++   B : Arr (1 .. 10 ** Pow) := (others => True);
++
++begin
++   Compute (B);   
 +end;
 diff --git a/gcc/testsuite/gnat.dg/specs/discr7.ads b/gcc/testsuite/gnat.dg/specs/discr7.ads
 new file mode 100644
@@ -62587,10 +62851,87 @@ index dc1e9849679..b798de7a820 100644
  #elif defined(__powerpc__) || defined(__powerpc64__)
    ucontext_t *ucontext = (ucontext_t*)context;
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..801ddd8403d 100644
+index 45847172291..4be5f5e8329 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,1007 @@
+@@ -1,3 +1,1084 @@
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/27_io/filesystem/path/generic/94242.cc: Do not test
++	with minimal allocator when using COW strings.
++	* testsuite/experimental/filesystem/path/generic/generic_string.cc:
++	Likewise.
++
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-07  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/99805
++	* src/c++17/fs_path.cc (path::_M_split_cmpts): Do not call
++	non-const member on _M_pathname, to avoid copy-on-write.
++	* testsuite/27_io/filesystem/path/decompose/parent_path.cc:
++	Check construction from strings that might be shared.
++
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-10-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/97362
++	* doc/html/manual/source_code_style.html: Regenerate.
++	* doc/xml/manual/appendix_contributing.xml: Add __deref to
++	BADNAMES.
++	* include/debug/functions.h (_Irreflexive_checker::__deref):
++	Rename to __ref.
++
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-10-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/97570
++	* libsupc++/new_opa.cc: Declare size_t in global namespace.
++	Remove unused header.
++
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-12-16  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/98319
++	* include/experimental/memory_resource: Add system_header pragma
++	and only define contents for C++14 and later.
++	* include/experimental/random: Only define contents for C++14
++	and later.
++	* include/experimental/source_location: Likewise.
++	* include/experimental/utility: Likewise.
++	* testsuite/experimental/feat-lib-fund.cc: Include all LFTS
++	headers that are present. Allow test to run for all modes.
++
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-02-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/99077
++	* src/c++11/cxx11-ios_failure.cc (__ios_failure(const char*, int)):
++	Change int parameter to error_code, to match std::ios_failure.
++	(__throw_ios_failure(const char*, int)): Construct error_code
++	from int parameter.
++
++2021-04-19  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-02-11  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/99058
++	* doc/xml/manual/status_cxx2011.xml: Document when support
++	became stable.
++	* doc/xml/manual/status_cxx2014.xml: Likewise.
++	* doc/xml/manual/status_cxx2017.xml: Likewise.
++	* doc/html/manual/status.html: Regenerate.
++
 +2021-04-09  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	PR bootstrap/99983
@@ -66593,8 +66934,20 @@ index e3321d52ebc..001c793047c 100644
  	is also specified, and applies to the debug builds only. With
  	this option, you can pass a specific string of flags to the
  	compiler to use when building the debug versions of libstdc++.
+diff --git a/libstdc++-v3/doc/html/manual/source_code_style.html b/libstdc++-v3/doc/html/manual/source_code_style.html
+index 19224b7ec13..d1a5804338b 100644
+--- a/libstdc++-v3/doc/html/manual/source_code_style.html
++++ b/libstdc++-v3/doc/html/manual/source_code_style.html
+@@ -32,6 +32,7 @@
+ <br />
+       MS adds:<br />
+       _T<br />
++			__deref<br />
+ <br />
+       BSD adds:<br />
+       __used<br />
 diff --git a/libstdc++-v3/doc/html/manual/status.html b/libstdc++-v3/doc/html/manual/status.html
-index 440b8671e0c..26793d9fa83 100644
+index 440b8671e0c..e303f570e87 100644
 --- a/libstdc++-v3/doc/html/manual/status.html
 +++ b/libstdc++-v3/doc/html/manual/status.html
 @@ -5,7 +5,7 @@
@@ -66606,9 +66959,13 @@ index 440b8671e0c..26793d9fa83 100644
  </p><div class="table"><a id="table.cxx98_status"></a><p class="title"><strong>Table 1.1. C++ 1998/2003 Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ 1998/2003 Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Section</th><th align="left">Description</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr><td align="left">
  	<span class="emphasis"><em>18</em></span>
        </td><td colspan="3" align="left">
-@@ -154,29 +154,29 @@ options. The pre-defined symbol
+@@ -153,30 +153,33 @@ features. See <a class="link" href="using.html#manual.intro.using.flags" title="
+ options. The pre-defined symbol
  <code class="constant">__cplusplus</code> is used to check for the
  presence of the required flag.
++GCC 5.1 was the first release with non-experimental C++11 support,
++so the API and ABI of features added in C++11 is only stable
++since that release.
  </p><p>
 -This page describes the C++11 support in the GCC 9 series.
 +This status table is based on the table of contents of ISO/IEC 14882:2011.
@@ -66644,7 +67001,7 @@ index 440b8671e0c..26793d9fa83 100644
        	<span class="emphasis"><em>22</em></span>
        </td><td colspan="3" align="left">
  	<span class="emphasis"><em>Localization</em></span>
-@@ -196,7 +196,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -196,7 +199,7 @@ This page describes the C++11 support in the GCC 9 series.
        <span class="emphasis"><em>26</em></span>
        </td><td colspan="3" align="left">
  	<span class="emphasis"><em>Numerics</em></span>
@@ -66653,7 +67010,7 @@ index 440b8671e0c..26793d9fa83 100644
  	<span class="emphasis"><em>27</em></span>
        </td><td colspan="3" align="left">
  	<span class="emphasis"><em>Input/output library</em></span>
-@@ -208,15 +208,17 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -208,15 +211,17 @@ This page describes the C++11 support in the GCC 9 series.
  	<span class="emphasis"><em>29</em></span>
        </td><td colspan="3" align="left">
  	<span class="emphasis"><em>Atomic operations</em></span>
@@ -66674,9 +67031,13 @@ index 440b8671e0c..26793d9fa83 100644
        see <a class="link" href="status.html#iso.1998.specific" title="Implementation Specific Behavior">C++ 1998/2003 Implementation
        Specific Behavior</a>. This section only documents behaviour which
        is new in the 2011 standard.
-@@ -386,80 +388,73 @@ options. The pre-defined symbol
+@@ -385,81 +390,77 @@ features. See <a class="link" href="using.html#manual.intro.using.flags" title="
+ options. The pre-defined symbol
  <code class="constant">__cplusplus</code> is used to check for the
  presence of the required flag.
++GCC 6.1 was the first release with non-experimental C++14 support,
++so the API and ABI of features added in C++14 is only stable
++since that release.
  </p><p>
 -This page describes the C++14 and library TS support in the GCC 9 series.
 -</p><div class="table"><a id="table.cxx14_status"></a><p class="title"><strong>Table 1.3. C++ 2014 Implementation Status</strong></p><div class="table-contents"><table class="table" summary="C++ 2014 Implementation Status" border="1"><colgroup><col align="left" class="c1" /><col align="left" class="c2" /><col align="left" class="c3" /><col align="left" class="c4" /></colgroup><thead><tr><th align="left">Paper</th><th align="left">Title</th><th align="left">Status</th><th align="left">Comments</th></tr></thead><tbody><tr><td align="left">
@@ -66822,7 +67183,17 @@ index 440b8671e0c..26793d9fa83 100644
  	<a class="link" href="http://www.open-std.org/JTC1/sc22/WG21/docs/papers/2013/n3662.html" target="_top">
  	  N3662
  	</a>
-@@ -693,7 +688,7 @@ Feature-testing recommendations for C++</a>.
+@@ -519,6 +520,9 @@ features. See <a class="link" href="using.html#manual.intro.using.flags" title="
+ options. The pre-defined symbol
+ <code class="constant">__cplusplus</code> is used to check for the
+ presence of the required flag.
++GCC 9.1 was the first release with non-experimental C++17 support,
++so the API and ABI of features added in C++17 is only stable
++since that release.
+ </p><p>
+ This section describes the C++17 and library TS support in the GCC 9 series.
+ </p><p>
+@@ -693,7 +697,7 @@ Feature-testing recommendations for C++</a>.
  	<a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0077r2.html" target="_top">
  	P0077R2
  	</a>
@@ -67291,6 +67662,30 @@ index 969edd7c834..7aec810d45f 100644
      </itemizedlist>
      </listitem>
  
+diff --git a/libstdc++-v3/doc/xml/manual/appendix_contributing.xml b/libstdc++-v3/doc/xml/manual/appendix_contributing.xml
+index eb011cbd4bc..f69ad1f9175 100644
+--- a/libstdc++-v3/doc/xml/manual/appendix_contributing.xml
++++ b/libstdc++-v3/doc/xml/manual/appendix_contributing.xml
+@@ -414,8 +414,9 @@ indicate a place that may require attention for multi-thread safety.
+   
+   <para>
+   </para>
+-  <section xml:id="coding_style.bad_identifiers"><info><title>Bad Identifiers</title></info>
+-    
++
++  <section xml:id="coding_style.bad_identifiers"><info><title>Bad Identifiers</title></info> <!-- BADNAMES -->
++
+     <para>
+       Identifiers that conflict and should be avoided.
+     </para>
+@@ -447,6 +448,7 @@ indicate a place that may require attention for multi-thread safety.
+ 
+       MS adds:
+       _T
++			__deref
+ 
+       BSD adds:
+       __used
 diff --git a/libstdc++-v3/doc/xml/manual/configure.xml b/libstdc++-v3/doc/xml/manual/configure.xml
 index d296c8d8a49..3370bc883b7 100644
 --- a/libstdc++-v3/doc/xml/manual/configure.xml
@@ -67319,10 +67714,16 @@ index 44a042c2724..df3b2c80d20 100644
  
  <!-- Status is Yes or No, Broken/Partial-->
 diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2011.xml b/libstdc++-v3/doc/xml/manual/status_cxx2011.xml
-index 568102823b0..431eb02bb6b 100644
+index 568102823b0..e737232d48d 100644
 --- a/libstdc++-v3/doc/xml/manual/status_cxx2011.xml
 +++ b/libstdc++-v3/doc/xml/manual/status_cxx2011.xml
-@@ -27,7 +27,11 @@ presence of the required flag.
+@@ -24,10 +24,17 @@ features. See <link linkend="manual.intro.using.flags">dialect</link>
+ options. The pre-defined symbol
+ <constant>__cplusplus</constant> is used to check for the
+ presence of the required flag.
++GCC 5.1 was the first release with non-experimental C++11 support,
++so the API and ABI of features added in C++11 is only stable
++since that release.
  </para>
  
  <para>
@@ -67335,7 +67736,7 @@ index 568102823b0..431eb02bb6b 100644
  </para>
  
  <!-- Status is Yes or No, Broken/Partial-->
-@@ -70,7 +74,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -70,7 +77,7 @@ This page describes the C++11 support in the GCC 9 series.
      <row>
        <entry>18.1</entry>
        <entry>General</entry>
@@ -67344,7 +67745,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry/>
      </row>
      <row>
-@@ -264,7 +268,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -264,7 +271,7 @@ This page describes the C++11 support in the GCC 9 series.
      <row>
        <entry>19.1</entry>
        <entry>General</entry>
@@ -67353,7 +67754,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry/>
      </row>
      <row>
-@@ -349,13 +353,13 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -349,13 +356,13 @@ This page describes the C++11 support in the GCC 9 series.
      </row>
      <row>
        <entry>20.2.2</entry>
@@ -67369,7 +67770,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry>Y</entry>
        <entry/>
      </row>
-@@ -626,7 +630,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -626,7 +633,7 @@ This page describes the C++11 support in the GCC 9 series.
      <row>
        <entry>20.7.2</entry>
        <entry>Shared-ownership pointers</entry>
@@ -67378,7 +67779,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry/>
      </row>
      <row>
-@@ -652,7 +656,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -652,7 +659,7 @@ This page describes the C++11 support in the GCC 9 series.
      </row>
      <row>
        <entry>20.7.2.4</entry>
@@ -67387,7 +67788,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry>Y</entry>
        <entry/>
      </row>
-@@ -1114,9 +1118,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -1114,9 +1121,7 @@ This page describes the C++11 support in the GCC 9 series.
        <entry>21.7</entry>
        <entry>Null-terminated sequence utilities</entry>
        <entry>Partial</entry>
@@ -67398,7 +67799,7 @@ index 568102823b0..431eb02bb6b 100644
      </row>
      <row>
        <entry>
-@@ -1635,7 +1637,7 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -1635,7 +1640,7 @@ This page describes the C++11 support in the GCC 9 series.
      <row>
        <entry>26.1</entry>
        <entry>General</entry>
@@ -67407,7 +67808,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry/>
      </row>
      <row>
-@@ -1988,31 +1990,31 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -1988,31 +1993,31 @@ This page describes the C++11 support in the GCC 9 series.
      </row>
      <row>
        <entry>26.7.2</entry>
@@ -67444,7 +67845,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry>Y</entry>
        <entry/>
      </row>
-@@ -2230,10 +2232,9 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -2230,10 +2235,9 @@ This page describes the C++11 support in the GCC 9 series.
        <entry/>
      </row>
      <row>
@@ -67456,7 +67857,7 @@ index 568102823b0..431eb02bb6b 100644
        <entry/>
      </row>
      <row>
-@@ -2396,10 +2397,14 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -2396,10 +2400,14 @@ This page describes the C++11 support in the GCC 9 series.
        <entry/>
      </row>
      <row>
@@ -67473,7 +67874,7 @@ index 568102823b0..431eb02bb6b 100644
      </row>
      <row>
        <entry>30.5</entry>
-@@ -2514,43 +2519,43 @@ This page describes the C++11 support in the GCC 9 series.
+@@ -2514,43 +2522,43 @@ This page describes the C++11 support in the GCC 9 series.
      <row>
        <entry>D.5</entry>
        <entry>C standard library headers</entry>
@@ -67525,7 +67926,7 @@ index 568102823b0..431eb02bb6b 100644
      </row>
  
 diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2014.xml b/libstdc++-v3/doc/xml/manual/status_cxx2014.xml
-index 7b604307c8e..f0872f6f8d0 100644
+index 7b604307c8e..156e0120250 100644
 --- a/libstdc++-v3/doc/xml/manual/status_cxx2014.xml
 +++ b/libstdc++-v3/doc/xml/manual/status_cxx2014.xml
 @@ -1,4 +1,4 @@
@@ -67534,7 +67935,13 @@ index 7b604307c8e..f0872f6f8d0 100644
  	 xml:id="status.iso.2014" xreflabel="Status C++ 2014">
  <?dbhtml filename="status_iso_cxx2014.html"?>
  
-@@ -20,9 +20,24 @@ presence of the required flag.
+@@ -17,12 +17,30 @@ features. See <link linkend="manual.intro.using.flags">dialect</link>
+ options. The pre-defined symbol
+ <constant>__cplusplus</constant> is used to check for the
+ presence of the required flag.
++GCC 6.1 was the first release with non-experimental C++14 support,
++so the API and ABI of features added in C++14 is only stable
++since that release.
  </para>
  
  <para>
@@ -67560,7 +67967,7 @@ index 7b604307c8e..f0872f6f8d0 100644
  <table frame="all" xml:id="table.cxx14_status">
  <title>C++ 2014 Implementation Status</title>
  
-@@ -31,10 +46,10 @@ This page describes the C++14 and library TS support in the GCC 9 series.
+@@ -31,10 +49,10 @@ This page describes the C++14 and library TS support in the GCC 9 series.
  <colspec colname="c2"/>
  <colspec colname="c3"/>
  <colspec colname="c4"/>
@@ -67574,7 +67981,7 @@ index 7b604307c8e..f0872f6f8d0 100644
        <entry>Status</entry>
        <entry>Comments</entry>
      </row>
-@@ -44,210 +59,1501 @@ This page describes the C++14 and library TS support in the GCC 9 series.
+@@ -44,210 +62,1501 @@ This page describes the C++14 and library TS support in the GCC 9 series.
  
      <row>
        <entry>
@@ -69204,10 +69611,20 @@ index 7b604307c8e..f0872f6f8d0 100644
  <table frame="all" xml:id="table.ts_status">
  <title>C++ Technical Specifications Implementation Status</title>
 diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2017.xml b/libstdc++-v3/doc/xml/manual/status_cxx2017.xml
-index e1513142415..898b029e66b 100644
+index e1513142415..2910021a899 100644
 --- a/libstdc++-v3/doc/xml/manual/status_cxx2017.xml
 +++ b/libstdc++-v3/doc/xml/manual/status_cxx2017.xml
-@@ -468,7 +468,7 @@ Feature-testing recommendations for C++</link>.
+@@ -17,6 +17,9 @@ features. See <link linkend="manual.intro.using.flags">dialect</link>
+ options. The pre-defined symbol
+ <constant>__cplusplus</constant> is used to check for the
+ presence of the required flag.
++GCC 9.1 was the first release with non-experimental C++17 support,
++so the API and ABI of features added in C++17 is only stable
++since that release.
+ </para>
+ 
+ <para>
+@@ -468,7 +471,7 @@ Feature-testing recommendations for C++</link>.
  	</link>
        </entry>
        <entry align="center"> 7.1 </entry>
@@ -69361,6 +69778,27 @@ index 40ef8758a51..cacc31a9aa9 100644
         *  @param __n    The number of characters to insert.
         *  @return  Reference to this string.
        */
+diff --git a/libstdc++-v3/include/bits/basic_string.tcc b/libstdc++-v3/include/bits/basic_string.tcc
+index 314b8fe207f..4c39f9107cf 100644
+--- a/libstdc++-v3/include/bits/basic_string.tcc
++++ b/libstdc++-v3/include/bits/basic_string.tcc
+@@ -1599,11 +1599,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   // Inhibit implicit instantiations for required instantiations,
+   // which are defined via explicit instantiations elsewhere.
+ #if _GLIBCXX_EXTERN_TEMPLATE
+-  // The explicit instantiations definitions in src/c++11/string-inst.cc
+-  // are compiled as C++14, so the new C++17 members aren't instantiated.
+-  // Until those definitions are compiled as C++17 suppress the declaration,
+-  // so C++17 code will implicitly instantiate std::string and std::wstring
+-  // as needed.
++  // The explicit instantiation definitions in src/c++11/string-inst.cc and
++  // src/c++17/string-inst.cc only instantiate the members required for C++17
++  // and earlier standards (so not C++20's starts_with and ends_with).
++  // Suppress the explicit instantiation declarations for C++20, so C++20
++  // code will implicitly instantiate std::string and std::wstring as needed.
+ # if __cplusplus <= 201703L && _GLIBCXX_EXTERN_TEMPLATE > 0
+   extern template class basic_string<char>;
+ # elif ! _GLIBCXX_USE_CXX11_ABI
 diff --git a/libstdc++-v3/include/bits/c++config b/libstdc++-v3/include/bits/c++config
 index 7e0962edd19..d2c2efe1c06 100644
 --- a/libstdc++-v3/include/bits/c++config
@@ -69451,7 +69889,7 @@ index ee16499a9f9..d1bf3dce361 100644
  
  _GLIBCXX_END_NAMESPACE_VERSION
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
-index 5dc624dbb1e..f674d6aec45 100644
+index 5dc624dbb1e..13eb18c0652 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
 +++ b/libstdc++-v3/include/bits/fs_path.h
 @@ -545,7 +545,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
@@ -69463,6 +69901,21 @@ index 5dc624dbb1e..f674d6aec45 100644
  
      void _M_split_cmpts();
  
+@@ -583,10 +583,10 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+       // All the member functions below here have a precondition !empty()
+       // (and they should only be called from within the library).
+ 
+-      iterator begin();
+-      iterator end();
+-      const_iterator begin() const;
+-      const_iterator end() const;
++      iterator begin() noexcept;
++      iterator end() noexcept;
++      const_iterator begin() const noexcept;
++      const_iterator end() const noexcept;
+ 
+       value_type& front() noexcept;
+       value_type& back() noexcept;
 @@ -953,7 +953,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
  
    template<typename _CharT, typename _Traits, typename _Allocator>
@@ -70046,7 +70499,7 @@ index c90a35080f1..80ecf5b420d 100644
    /**
     * @brief Obtain address referenced by a pointer to an object
 diff --git a/libstdc++-v3/include/bits/random.h b/libstdc++-v3/include/bits/random.h
-index 14f680f50c4..b36781ed290 100644
+index 14f680f50c4..3385345d273 100644
 --- a/libstdc++-v3/include/bits/random.h
 +++ b/libstdc++-v3/include/bits/random.h
 @@ -1667,7 +1667,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
@@ -70067,6 +70520,32 @@ index 14f680f50c4..b36781ed290 100644
  
    /**
     * @addtogroup random_distributions_normal Normal Distributions
+@@ -2016,12 +2016,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       explicit
+       normal_distribution(result_type __mean,
+ 			  result_type __stddev = result_type(1))
+-      : _M_param(__mean, __stddev), _M_saved_available(false)
++      : _M_param(__mean, __stddev)
+       { }
+ 
+       explicit
+       normal_distribution(const param_type& __p)
+-      : _M_param(__p), _M_saved_available(false)
++      : _M_param(__p)
+       { }
+ 
+       /**
+@@ -2158,8 +2158,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 			const param_type& __p);
+ 
+       param_type  _M_param;
+-      result_type _M_saved;
+-      bool        _M_saved_available;
++      result_type _M_saved = 0;
++      bool        _M_saved_available = false;
+     };
+ 
+   /**
 @@ -3498,7 +3498,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
      { return !(__d1 == __d2); }
  
@@ -70118,6 +70597,92 @@ index 14f680f50c4..b36781ed290 100644
  
  _GLIBCXX_END_NAMESPACE_VERSION
  } // namespace std
+diff --git a/libstdc++-v3/include/bits/random.tcc b/libstdc++-v3/include/bits/random.tcc
+index 9e0f1322f33..0a299baedc5 100644
+--- a/libstdc++-v3/include/bits/random.tcc
++++ b/libstdc++-v3/include/bits/random.tcc
+@@ -2661,6 +2661,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 
+       const double __sum = std::accumulate(_M_prob.begin(),
+ 					   _M_prob.end(), 0.0);
++      __glibcxx_assert(__sum > 0);
+       // Now normalize the probabilites.
+       __detail::__normalize(_M_prob.begin(), _M_prob.end(), _M_prob.begin(),
+ 			    __sum);
+@@ -2827,6 +2828,7 @@ namespace __detail
+ 
+       const double __sum = std::accumulate(_M_den.begin(),
+ 					   _M_den.end(), 0.0);
++      __glibcxx_assert(__sum > 0);
+ 
+       __detail::__normalize(_M_den.begin(), _M_den.end(), _M_den.begin(),
+ 			    __sum);
+@@ -3051,6 +3053,7 @@ namespace __detail
+ 	  _M_cp.push_back(__sum);
+ 	  _M_m.push_back((_M_den[__k + 1] - _M_den[__k]) / __delta);
+ 	}
++      __glibcxx_assert(__sum > 0);
+ 
+       //  Now normalize the densities...
+       __detail::__normalize(_M_den.begin(), _M_den.end(), _M_den.begin(),
+diff --git a/libstdc++-v3/include/bits/range_access.h b/libstdc++-v3/include/bits/range_access.h
+index dfdcd8e7207..3d99ea92027 100644
+--- a/libstdc++-v3/include/bits/range_access.h
++++ b/libstdc++-v3/include/bits/range_access.h
+@@ -84,7 +84,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    */
+   template<typename _Tp, size_t _Nm>
+     inline _GLIBCXX14_CONSTEXPR _Tp*
+-    begin(_Tp (&__arr)[_Nm])
++    begin(_Tp (&__arr)[_Nm]) noexcept
+     { return __arr; }
+ 
+   /**
+@@ -94,7 +94,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    */
+   template<typename _Tp, size_t _Nm>
+     inline _GLIBCXX14_CONSTEXPR _Tp*
+-    end(_Tp (&__arr)[_Nm])
++    end(_Tp (&__arr)[_Nm]) noexcept
+     { return __arr + _Nm; }
+ 
+ #if __cplusplus >= 201402L
+@@ -175,7 +175,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    */
+   template<typename _Tp, size_t _Nm>
+     inline _GLIBCXX17_CONSTEXPR reverse_iterator<_Tp*>
+-    rbegin(_Tp (&__arr)[_Nm])
++    rbegin(_Tp (&__arr)[_Nm]) noexcept
+     { return reverse_iterator<_Tp*>(__arr + _Nm); }
+ 
+   /**
+@@ -185,7 +185,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    */
+   template<typename _Tp, size_t _Nm>
+     inline _GLIBCXX17_CONSTEXPR reverse_iterator<_Tp*>
+-    rend(_Tp (&__arr)[_Nm])
++    rend(_Tp (&__arr)[_Nm]) noexcept
+     { return reverse_iterator<_Tp*>(__arr); }
+ 
+   /**
+@@ -195,7 +195,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    */
+   template<typename _Tp>
+     inline _GLIBCXX17_CONSTEXPR reverse_iterator<const _Tp*>
+-    rbegin(initializer_list<_Tp> __il)
++    rbegin(initializer_list<_Tp> __il) noexcept
+     { return reverse_iterator<const _Tp*>(__il.end()); }
+ 
+   /**
+@@ -205,7 +205,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    */
+   template<typename _Tp>
+     inline _GLIBCXX17_CONSTEXPR reverse_iterator<const _Tp*>
+-    rend(initializer_list<_Tp> __il)
++    rend(initializer_list<_Tp> __il) noexcept
+     { return reverse_iterator<const _Tp*>(__il.begin()); }
+ 
+   /**
 diff --git a/libstdc++-v3/include/bits/refwrap.h b/libstdc++-v3/include/bits/refwrap.h
 index d95f7c57172..82136011b7a 100644
 --- a/libstdc++-v3/include/bits/refwrap.h
@@ -70607,10 +71172,32 @@ index c5036acfe74..65676138506 100644
  } // namespace
  #endif // C++11
 diff --git a/libstdc++-v3/include/bits/stl_algo.h b/libstdc++-v3/include/bits/stl_algo.h
-index 61319d1fd15..48fde9d2627 100644
+index 61319d1fd15..b20f4566ab5 100644
 --- a/libstdc++-v3/include/bits/stl_algo.h
 +++ b/libstdc++-v3/include/bits/stl_algo.h
-@@ -5787,6 +5787,9 @@ _GLIBCXX_BEGIN_NAMESPACE_ALGO
+@@ -526,7 +526,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     { return __last == _GLIBCXX_STD_A::find_if(__first, __last, __pred); }
+ 
+   /**
+-   *  @brief  Checks that a predicate is false for at least an element
++   *  @brief  Checks that a predicate is true for at least one element
+    *          of a sequence.
+    *  @ingroup non_mutating_algorithms
+    *  @param  __first   An input iterator.
+@@ -803,6 +803,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       __glibcxx_function_requires(_OutputIteratorConcept<_OutputIterator,
+ 	    typename iterator_traits<_InputIterator>::value_type>)
+ 
++      if (__n <= 0)
++	return __result;
++
++      __glibcxx_requires_can_increment(__first, __n);
++      __glibcxx_requires_can_increment(__result, __n);
++
+       return std::__copy_n(__first, __n, __result,
+ 			   std::__iterator_category(__first));
+     }
+@@ -5787,6 +5793,9 @@ _GLIBCXX_BEGIN_NAMESPACE_ALGO
        using _Gen = remove_reference_t<_UniformRandomBitGenerator>;
        using __uc_type = common_type_t<typename _Gen::result_type, _USize>;
  
@@ -70620,6 +71207,46 @@ index 61319d1fd15..48fde9d2627 100644
        __distrib_type __d{};
        _Size __unsampled_sz = std::distance(__first, __last);
        __n = std::min(__n, __unsampled_sz);
+diff --git a/libstdc++-v3/include/bits/stl_algobase.h b/libstdc++-v3/include/bits/stl_algobase.h
+index 6e9316a24cd..47423a8bcfa 100644
+--- a/libstdc++-v3/include/bits/stl_algobase.h
++++ b/libstdc++-v3/include/bits/stl_algobase.h
+@@ -449,7 +449,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  @param  __first  An input iterator.
+    *  @param  __last   An input iterator.
+    *  @param  __result An output iterator.
+-   *  @return   result + (first - last)
++   *  @return   result + (last - first)
+    *
+    *  This inline function will boil down to a call to @c memmove whenever
+    *  possible.  Failing that, if random access iterators are passed, then the
+@@ -481,7 +481,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  @param  __first  An input iterator.
+    *  @param  __last   An input iterator.
+    *  @param  __result An output iterator.
+-   *  @return   result + (first - last)
++   *  @return   result + (last - first)
+    *
+    *  This inline function will boil down to a call to @c memmove whenever
+    *  possible.  Failing that, if random access iterators are passed, then the
+@@ -624,7 +624,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  @param  __first  A bidirectional iterator.
+    *  @param  __last   A bidirectional iterator.
+    *  @param  __result A bidirectional iterator.
+-   *  @return   result - (first - last)
++   *  @return   result - (last - first)
+    *
+    *  The function has the same effect as copy, but starts at the end of the
+    *  range and works its way to the start, returning the start of the result.
+@@ -659,7 +659,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  @param  __first  A bidirectional iterator.
+    *  @param  __last   A bidirectional iterator.
+    *  @param  __result A bidirectional iterator.
+-   *  @return   result - (first - last)
++   *  @return   result - (last - first)
+    *
+    *  The function has the same effect as move, but starts at the end of the
+    *  range and works its way to the start, returning the start of the result.
 diff --git a/libstdc++-v3/include/bits/stl_deque.h b/libstdc++-v3/include/bits/stl_deque.h
 index 5a95399162f..f2daf2ed936 100644
 --- a/libstdc++-v3/include/bits/stl_deque.h
@@ -70692,7 +71319,7 @@ index 5a95399162f..f2daf2ed936 100644
  #if __cplusplus >= 201103L
        // Constant-time, nothrow move assignment when source object's memory
 diff --git a/libstdc++-v3/include/bits/stl_iterator.h b/libstdc++-v3/include/bits/stl_iterator.h
-index e9d90fa01f4..c743215c83e 100644
+index e9d90fa01f4..ee04a4e35c8 100644
 --- a/libstdc++-v3/include/bits/stl_iterator.h
 +++ b/libstdc++-v3/include/bits/stl_iterator.h
 @@ -69,8 +69,8 @@
@@ -70724,16 +71351,27 @@ index e9d90fa01f4..c743215c83e 100644
  
  #if __cplusplus < 201103L
    template<typename _Iterator>
-@@ -765,7 +765,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
- 					 typename _Container::iterator(__i));
-     }
+@@ -757,15 +757,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  template parameter deduction, making the compiler match the correct
+    *  types for you.
+   */
+-  template<typename _Container, typename _Iterator>
++  template<typename _Container>
+     inline insert_iterator<_Container>
+-    inserter(_Container& __x, _Iterator __i)
+-    {
+-      return insert_iterator<_Container>(__x,
+-					 typename _Container::iterator(__i));
+-    }
++    inserter(_Container& __x, typename _Container::iterator __i)
++    { return insert_iterator<_Container>(__x, __i); }
  
 -  // @} group iterators
 +  /// @} group iterators
  
  _GLIBCXX_END_NAMESPACE_VERSION
  } // namespace
-@@ -1242,7 +1242,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+@@ -1242,7 +1239,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
      __make_move_if_noexcept_iterator(_Tp* __i)
      { return _ReturnType(__i); }
  
@@ -72238,6 +72876,32 @@ index 8ebcaf40263..515592f2079 100644
  
        // hash policy.
  
+diff --git a/libstdc++-v3/include/debug/functions.h b/libstdc++-v3/include/debug/functions.h
+index f87838692c6..558c71849d0 100644
+--- a/libstdc++-v3/include/debug/functions.h
++++ b/libstdc++-v3/include/debug/functions.h
+@@ -431,10 +431,10 @@ namespace __gnu_debug
+   {
+     template<typename _It>
+       static typename std::iterator_traits<_It>::reference
+-      __deref();
++      __ref();
+ 
+     template<typename _It,
+-	     typename = decltype(__deref<_It>() < __deref<_It>())>
++	     typename = decltype(__ref<_It>() < __ref<_It>())>
+       static bool
+       _S_is_valid(_It __it)
+       { return !(*__it < *__it); }
+@@ -446,7 +446,7 @@ namespace __gnu_debug
+       { return true; }
+ 
+     template<typename _It, typename _Pred, typename
+-	= decltype(std::declval<_Pred>()(__deref<_It>(), __deref<_It>()))>
++	= decltype(std::declval<_Pred>()(__ref<_It>(), __ref<_It>()))>
+       static bool
+       _S_is_valid_pred(_It __it, _Pred __pred)
+       { return !__pred(*__it, *__it); }
 diff --git a/libstdc++-v3/include/debug/unordered_map b/libstdc++-v3/include/debug/unordered_map
 index d844ee9fa0e..b4531a3b1e9 100644
 --- a/libstdc++-v3/include/debug/unordered_map
@@ -72684,7 +73348,7 @@ index 23b7b65c631..063caa62959 100644
  #endif
    /// @}
 diff --git a/libstdc++-v3/include/experimental/executor b/libstdc++-v3/include/experimental/executor
-index 266a2487899..7e2a97fd8ec 100644
+index 266a2487899..7cccd022134 100644
 --- a/libstdc++-v3/include/experimental/executor
 +++ b/libstdc++-v3/include/experimental/executor
 @@ -127,7 +127,13 @@ inline namespace v1
@@ -72748,7 +73412,26 @@ index 266a2487899..7e2a97fd8ec 100644
      system_context(const system_context&) = delete;
      system_context& operator=(const system_context&) = delete;
  
-@@ -992,12 +994,13 @@ inline namespace v1
+@@ -876,7 +878,8 @@ inline namespace v1
+ 
+     void join()
+     {
+-      _M_thread.join();
++      if (_M_thread.joinable())
++	_M_thread.join();
+     }
+ 
+   private:
+@@ -900,7 +903,7 @@ inline namespace v1
+ 	  {
+ 	    unique_lock<mutex> __lock(_M_mtx);
+ 	    _M_cv.wait(__lock,
+-		       [this]{ return !_M_stopped && !_M_tasks.empty(); });
++		       [this]{ return _M_stopped || !_M_tasks.empty(); });
+ 	    if (_M_stopped)
+ 	      return;
+ 	    __f = std::move(_M_tasks.front());
+@@ -992,12 +995,13 @@ inline namespace v1
  
      template<typename _Executor>
        executor(_Executor __e)
@@ -72764,7 +73447,7 @@ index 266a2487899..7e2a97fd8ec 100644
        { }
  
      executor& operator=(const executor&) noexcept = default;
-@@ -1094,28 +1097,46 @@ inline namespace v1
+@@ -1094,28 +1098,46 @@ inline namespace v1
  #if __cpp_rtti
      const type_info&
      target_type() const noexcept
@@ -72819,7 +73502,7 @@ index 266a2487899..7e2a97fd8ec 100644
  
    private:
      struct _Tgt
-@@ -1126,85 +1147,134 @@ inline namespace v1
+@@ -1126,85 +1148,134 @@ inline namespace v1
        virtual void dispatch(std::function<void()>) const = 0;
        virtual void post(std::function<void()>) const = 0;
        virtual void defer(std::function<void()>) const = 0;
@@ -73003,7 +73686,7 @@ index 266a2487899..7e2a97fd8ec 100644
      }
  
      shared_ptr<_Tgt> _M_target;
-@@ -1217,6 +1287,22 @@ inline namespace v1
+@@ -1217,6 +1288,22 @@ inline namespace v1
    operator==(const executor& __e, nullptr_t) noexcept
    { return !__e; }
  
@@ -73027,7 +73710,7 @@ index 266a2487899..7e2a97fd8ec 100644
    inline void swap(executor& __a, executor& __b) noexcept { __a.swap(__b); }
  
 diff --git a/libstdc++-v3/include/experimental/internet b/libstdc++-v3/include/experimental/internet
-index 3b397737bb6..adb17c79f1a 100644
+index 3b397737bb6..6eeb27b74e5 100644
 --- a/libstdc++-v3/include/experimental/internet
 +++ b/libstdc++-v3/include/experimental/internet
 @@ -126,7 +126,7 @@ namespace ip
@@ -73039,7 +73722,58 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// An IPv4 address.
    class address_v4
-@@ -530,7 +530,7 @@ namespace ip
+@@ -344,9 +344,23 @@ namespace ip
+       to_string(const _Allocator& __a = _Allocator()) const
+       {
+ 	__string_with<_Allocator> __str(__a);
+-	__str.resize(INET6_ADDRSTRLEN);
+-	if (inet_ntop(AF_INET6, &_M_bytes, &__str.front(), __str.size()))
+-	  __str.erase(__str.find('\0'));
++	__str.resize(INET6_ADDRSTRLEN + (_M_scope_id ? 11 : 0));
++	char* const __p = &__str.front();
++	if (inet_ntop(AF_INET6, &_M_bytes, __p, __str.size()))
++	  {
++	    auto __end = __str.find('\0');
++	    if (unsigned long __scope = _M_scope_id)
++	      {
++		__end +=
++#if _GLIBCXX_USE_C99_STDIO
++		  __builtin_snprintf(__p + __end, __str.size() - __end,
++				     "%%%lu", __scope);
++#else
++		  __builtin_sprintf(__p + __end, "%%%lu", __scope);
++#endif
++	      }
++	    __str.erase(__end);
++	  }
+ 	else
+ 	  __str.resize(0);
+ 	return __str;
+@@ -354,20 +368,17 @@ namespace ip
+ #endif
+ 
+     // static members:
++
+     static constexpr address_v6
+     any() noexcept
+     {
+-      address_v6 __addr;
+-      __builtin_memcpy(&__addr._M_bytes, in6addr_any.s6_addr, 16);
+-      return __addr;
++      return {};
+     }
+ 
+     static constexpr address_v6
+     loopback() noexcept
+     {
+-      address_v6 __addr;
+-      __builtin_memcpy(&__addr._M_bytes, in6addr_loopback.s6_addr, 16);
+-      return __addr;
++      return {bytes_type{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1}};
+     }
+ 
+   private:
+@@ -530,7 +541,7 @@ namespace ip
    operator>=(const address_v4& __a, const address_v4& __b) noexcept
    { return !(__a < __b); }
  
@@ -73048,7 +73782,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::address_v6 comparisons
     * @{
-@@ -574,7 +574,7 @@ namespace ip
+@@ -574,7 +585,7 @@ namespace ip
    operator>=(const address_v6& __a, const address_v6& __b) noexcept
    { return !(__a < __b); }
  
@@ -73057,7 +73791,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::address comparisons
     * @{
-@@ -612,7 +612,7 @@ namespace ip
+@@ -612,7 +623,7 @@ namespace ip
    operator>=(const address& __a, const address& __b) noexcept
    { return !(__a < __b); }
  
@@ -73066,7 +73800,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::address_v4 creation
     * @{
-@@ -684,7 +684,7 @@ namespace ip
+@@ -684,7 +695,7 @@ namespace ip
    make_address_v4(string_view __str)
    { return make_address_v4(__str, __throw_on_error{"make_address_v4"}); }
  
@@ -73075,7 +73809,43 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::address_v6 creation
     * @{
-@@ -847,7 +847,7 @@ namespace ip
+@@ -755,7 +766,10 @@ namespace ip
+ 	__str++;
+       }
+     if (__out == std::end(__buf))
+-      __ec = std::make_error_code(std::errc::invalid_argument);
++      {
++	__ec = std::make_error_code(std::errc::invalid_argument);
++	return {};
++      }
+     else
+       {
+ 	*__out = '\0';
+@@ -790,7 +804,10 @@ namespace ip
+ 	__n++;
+       }
+     if (__out == std::end(__buf))
+-      __ec = std::make_error_code(std::errc::invalid_argument);
++      {
++	__ec = std::make_error_code(std::errc::invalid_argument);
++	return {};
++      }
+     else
+       {
+ 	*__out = '\0';
+@@ -835,7 +852,10 @@ namespace ip
+ 	__n++;
+       }
+     if (__out == std::end(__buf))
+-      __ec = std::make_error_code(std::errc::invalid_argument);
++      {
++	__ec = std::make_error_code(std::errc::invalid_argument);
++	return {};
++      }
+     else
+       {
+ 	*__out = '\0';
+@@ -847,7 +867,7 @@ namespace ip
    make_address_v6(string_view __str)
    { return make_address_v6(__str, __throw_on_error{"make_address_v6"}); }
  
@@ -73084,7 +73854,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::address creation
     * @{
-@@ -892,7 +892,7 @@ namespace ip
+@@ -892,7 +912,7 @@ namespace ip
    make_address(string_view __str)
    { return make_address(__str, __throw_on_error{"make_address"}); }
  
@@ -73093,7 +73863,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// ip::address I/O
    template<typename _CharT, typename _Traits>
-@@ -1073,7 +1073,7 @@ namespace ip
+@@ -1073,7 +1093,7 @@ namespace ip
  
    typedef basic_address_range<address_v4> address_v4_range;
  
@@ -73102,7 +73872,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** An IPv6 address range.
     * @{
-@@ -1120,7 +1120,7 @@ namespace ip
+@@ -1120,7 +1140,7 @@ namespace ip
    bool
    operator==(const network_v6& __a, const network_v6& __b) noexcept;
  
@@ -73111,7 +73881,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// An IPv4 network address.
    class network_v4
-@@ -1286,7 +1286,7 @@ namespace ip
+@@ -1286,7 +1306,7 @@ namespace ip
    operator!=(const network_v4& __a, const network_v4& __b) noexcept
    { return !(__a == __b); }
  
@@ -73120,7 +73890,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::network_v6 comparisons
     * @{
-@@ -1303,7 +1303,7 @@ namespace ip
+@@ -1303,7 +1323,7 @@ namespace ip
    operator!=(const network_v6& __a, const network_v6& __b) noexcept
    { return !(__a == __b); }
  
@@ -73129,7 +73899,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::network_v4 creation
     * @{
-@@ -1335,7 +1335,7 @@ namespace ip
+@@ -1335,7 +1355,7 @@ namespace ip
    make_network_v4(string_view __str)
    { return make_network_v4(__str, __throw_on_error{"make_network_v4"}); }
  
@@ -73138,7 +73908,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** ip::network_v6 creation
     * @{
-@@ -1363,7 +1363,7 @@ namespace ip
+@@ -1363,7 +1383,7 @@ namespace ip
    make_network_v6(string_view __str)
    { return make_network_v6(__str, __throw_on_error{"make_network_v6"}); }
  
@@ -73147,7 +73917,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// ip::network_v4 I/O
    template<typename _CharT, typename _Traits>
-@@ -1545,7 +1545,7 @@ namespace ip
+@@ -1545,7 +1565,7 @@ namespace ip
  	       const basic_endpoint<_InternetProtocol>& __b)
      { return !(__a < __b); }
  
@@ -73156,7 +73926,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// basic_endpoint I/O
    template<typename _CharT, typename _Traits, typename _InternetProtocol>
-@@ -1619,7 +1619,7 @@ namespace ip
+@@ -1619,7 +1639,7 @@ namespace ip
  	       const basic_resolver_entry<_InternetProtocol>& __b)
      { return !(__a == __b); }
  
@@ -73165,7 +73935,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** Base class defining flags for name/address resolution.
     * @{
-@@ -1685,7 +1685,7 @@ namespace ip
+@@ -1685,7 +1705,7 @@ namespace ip
  
    // TODO define resolver_base::flags static constants for C++14 mode
  
@@ -73174,7 +73944,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /** Container for results of name/address resolution.
     * @{
-@@ -1765,7 +1765,7 @@ namespace ip
+@@ -1765,7 +1785,7 @@ namespace ip
  	       const basic_resolver_results<_InternetProtocol>& __b)
      { return !(__a == __b); }
  
@@ -73183,7 +73953,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// Perform name/address resolution.
    template<typename _InternetProtocol>
-@@ -2048,7 +2048,7 @@ namespace ip
+@@ -2048,7 +2068,7 @@ namespace ip
    host_name()
    { return host_name(std::allocator<char>{}, __throw_on_error{"host_name"}); }
  
@@ -73192,7 +73962,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// The TCP byte-stream protocol.
    class tcp
-@@ -2103,7 +2103,7 @@ namespace ip
+@@ -2103,7 +2123,7 @@ namespace ip
    operator!=(const tcp& __a, const tcp& __b)
    { return !(__a == __b); }
  
@@ -73201,7 +73971,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// The UDP datagram protocol.
    class udp
-@@ -2142,7 +2142,7 @@ namespace ip
+@@ -2142,7 +2162,7 @@ namespace ip
    operator!=(const udp& __a, const udp& __b)
    { return !(__a == __b); }
  
@@ -73210,7 +73980,7 @@ index 3b397737bb6..adb17c79f1a 100644
  
    /// Restrict a socket created for an IPv6 protocol to IPv6 only.
    struct v6_only : __sockopt_crtp<v6_only, bool>
-@@ -2372,7 +2372,7 @@ namespace ip
+@@ -2372,7 +2392,7 @@ namespace ip
  
    } // namespace multicast
  
@@ -73219,6 +73989,48 @@ index 3b397737bb6..adb17c79f1a 100644
  
  } // namespace ip
  } // namespace v1
+diff --git a/libstdc++-v3/include/experimental/io_context b/libstdc++-v3/include/experimental/io_context
+index 9ffba222bc0..70d43359a84 100644
+--- a/libstdc++-v3/include/experimental/io_context
++++ b/libstdc++-v3/include/experimental/io_context
+@@ -667,10 +667,12 @@ inline namespace v1
+ 	    continue;
+ 
+ 	  if (__res == __reactor::_S_timeout)
+-	    if (__timerq == nullptr)
+-	      return false;
+-	    else
+-	      continue;  // timed out, so restart loop and process the timer
++	    {
++	      if (__timerq == nullptr)
++		return false;
++	      else
++		continue;  // timed out, so restart loop and process the timer
++	    }
+ 
+ 	  __timerq = nullptr;
+ 
+diff --git a/libstdc++-v3/include/experimental/memory_resource b/libstdc++-v3/include/experimental/memory_resource
+index e9fece55cd0..17dfe87be4c 100644
+--- a/libstdc++-v3/include/experimental/memory_resource
++++ b/libstdc++-v3/include/experimental/memory_resource
+@@ -29,6 +29,10 @@
+ #ifndef _GLIBCXX_EXPERIMENTAL_MEMORY_RESOURCE
+ #define _GLIBCXX_EXPERIMENTAL_MEMORY_RESOURCE 1
+ 
++#pragma GCC system_header
++
++#if __cplusplus >= 201402L
++
+ #include <memory>			// align, uses_allocator, __uses_alloc
+ #include <experimental/utility>		// pair, experimental::erased_type
+ #include <atomic>			// atomic
+@@ -528,4 +532,5 @@ namespace pmr {
+ 
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace std
++#endif // C++14
+ #endif // _GLIBCXX_EXPERIMENTAL_MEMORY_RESOURCE
 diff --git a/libstdc++-v3/include/experimental/numeric b/libstdc++-v3/include/experimental/numeric
 index e5123a993d4..5621ca6e0ae 100644
 --- a/libstdc++-v3/include/experimental/numeric
@@ -73302,6 +74114,25 @@ index a28bed78746..f5cdb34cc23 100644
  } // namespace fundamentals_v2
  } // namespace experimental
  
+diff --git a/libstdc++-v3/include/experimental/random b/libstdc++-v3/include/experimental/random
+index 7176c80f7ea..c5bcd0804d6 100644
+--- a/libstdc++-v3/include/experimental/random
++++ b/libstdc++-v3/include/experimental/random
+@@ -29,6 +29,7 @@
+ #ifndef _GLIBCXX_EXPERIMENTAL_RANDOM
+ #define _GLIBCXX_EXPERIMENTAL_RANDOM 1
+ 
++#if __cplusplus >= 201402L
+ #include <random>
+ #include <experimental/bits/lfts_config.h>
+ 
+@@ -77,4 +78,5 @@ inline namespace fundamentals_v2 {
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace std
+ 
+-#endif
++#endif // C++14
++#endif // _GLIBCXX_EXPERIMENTAL_RANDOM
 diff --git a/libstdc++-v3/include/experimental/socket b/libstdc++-v3/include/experimental/socket
 index e80626528ce..51a3a725e1b 100644
 --- a/libstdc++-v3/include/experimental/socket
@@ -73377,6 +74208,25 @@ index e80626528ce..51a3a725e1b 100644
  _GLIBCXX_END_NAMESPACE_VERSION
  } // namespace std
  
+diff --git a/libstdc++-v3/include/experimental/source_location b/libstdc++-v3/include/experimental/source_location
+index 9fa3c4bb9a7..74d4d319766 100644
+--- a/libstdc++-v3/include/experimental/source_location
++++ b/libstdc++-v3/include/experimental/source_location
+@@ -29,6 +29,7 @@
+ #ifndef _GLIBCXX_EXPERIMENTAL_SRCLOC
+ #define _GLIBCXX_EXPERIMENTAL_SRCLOC 1
+ 
++#if __cplusplus >= 201402L
+ #include <cstdint>
+ 
+ namespace std {
+@@ -83,4 +84,5 @@ inline namespace fundamentals_v2 {
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace std
+ 
+-#endif
++#endif // C++14
++#endif // _GLIBCXX_EXPERIMENTAL_SRCLOC
 diff --git a/libstdc++-v3/include/experimental/string_view b/libstdc++-v3/include/experimental/string_view
 index 9e810dec844..78c4d332b27 100644
 --- a/libstdc++-v3/include/experimental/string_view
@@ -73410,6 +74260,25 @@ index 9e810dec844..78c4d332b27 100644
  	return *(this->_M_str + this->_M_len - 1);
        }
  
+diff --git a/libstdc++-v3/include/experimental/utility b/libstdc++-v3/include/experimental/utility
+index fff7bdbb892..6d86563c2fe 100644
+--- a/libstdc++-v3/include/experimental/utility
++++ b/libstdc++-v3/include/experimental/utility
+@@ -29,6 +29,7 @@
+ #ifndef _GLIBCXX_EXPERIMENTAL_UTILITY
+ #define _GLIBCXX_EXPERIMENTAL_UTILITY 1
+ 
++#if __cplusplus >= 201402L
+ #include <utility>
+ #include <bits/uses_allocator.h>
+ #include <experimental/bits/lfts_config.h>
+@@ -46,4 +47,5 @@ inline namespace fundamentals_v2 {
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace std
+ 
+-#endif
++#endif // C++14
++#endif // _GLIBCXX_EXPERIMENTAL_UTILITY
 diff --git a/libstdc++-v3/include/ext/malloc_allocator.h b/libstdc++-v3/include/ext/malloc_allocator.h
 index e225923b20f..c8fce2c861c 100644
 --- a/libstdc++-v3/include/ext/malloc_allocator.h
@@ -75977,8 +76846,28 @@ index 52d3ea8b336..fee203a720a 100644
  } // namespace std
  
  } // extern "C++"
+diff --git a/libstdc++-v3/libsupc++/new_opa.cc b/libstdc++-v3/libsupc++/new_opa.cc
+index 9c7f53d7073..d556af45b79 100644
+--- a/libstdc++-v3/libsupc++/new_opa.cc
++++ b/libstdc++-v3/libsupc++/new_opa.cc
+@@ -26,7 +26,6 @@
+ #include <bits/c++config.h>
+ #include <stdlib.h>
+ #include <stdint.h>
+-#include <bits/exception_defines.h>
+ #include <bit>
+ #include "new"
+ 
+@@ -44,6 +43,7 @@ using std::new_handler;
+ using std::bad_alloc;
+ 
+ #if ! _GLIBCXX_HOSTED
++using std::size_t;
+ extern "C"
+ {
+ # if _GLIBCXX_HAVE_ALIGNED_ALLOC
 diff --git a/libstdc++-v3/python/libstdcxx/v6/printers.py b/libstdc++-v3/python/libstdcxx/v6/printers.py
-index 8f16b53c953..3082b0e4d8c 100644
+index 8f16b53c953..32b8210414a 100644
 --- a/libstdc++-v3/python/libstdcxx/v6/printers.py
 +++ b/libstdc++-v3/python/libstdcxx/v6/printers.py
 @@ -94,13 +94,77 @@ def find_type(orig, name):
@@ -76074,8 +76963,7 @@ index 8f16b53c953..3082b0e4d8c 100644
          elif is_specialization_of(impl_type, 'tuple'):
 -            self.pointer = val['_M_t']['_M_head_impl']
 +            tuple_member = val['_M_t']
-         else:
--            raise ValueError("Unsupported implementation for unique_ptr: %s" % impl_type)
++        else:
 +            raise ValueError("Unsupported implementation for unique_ptr: %s" % str(impl_type))
 +        tuple_impl_type = tuple_member.type.fields()[0].type # _Tuple_impl
 +        tuple_head_type = tuple_impl_type.fields()[1].type   # _Head_base
@@ -76084,7 +76972,8 @@ index 8f16b53c953..3082b0e4d8c 100644
 +            self.pointer = tuple_member['_M_head_impl']
 +        elif head_field.is_base_class:
 +            self.pointer = tuple_member.cast(head_field.type)
-+        else:
+         else:
+-            raise ValueError("Unsupported implementation for unique_ptr: %s" % impl_type)
 +            raise ValueError("Unsupported implementation for tuple in unique_ptr: %s" % str(impl_type))
  
      def children (self):
@@ -76161,7 +77050,44 @@ index 8f16b53c953..3082b0e4d8c 100644
          return str(self.val['_M_node'].cast(nodetype).dereference()['_M_data'])
  
  class StdVectorPrinter:
-@@ -574,12 +645,8 @@ class StdRbtreeIteratorPrinter:
+@@ -351,16 +422,12 @@ class StdVectorPrinter:
+             if self.bitvec:
+                 if self.item == self.finish and self.so >= self.fo:
+                     raise StopIteration
+-                elt = self.item.dereference()
+-                if elt & (1 << self.so):
+-                    obit = 1
+-                else:
+-                    obit = 0
++                elt = bool(self.item.dereference() & (1 << self.so))
+                 self.so = self.so + 1
+                 if self.so >= self.isize:
+                     self.item = self.item + 1
+                     self.so = 0
+-                return ('[%d]' % count, obit)
++                return ('[%d]' % count, elt)
+             else:
+                 if self.item == self.finish:
+                     raise StopIteration
+@@ -371,7 +438,7 @@ class StdVectorPrinter:
+     def __init__(self, typename, val):
+         self.typename = strip_versioned_namespace(typename)
+         self.val = val
+-        self.is_bool = val.type.template_argument(0).code  == gdb.TYPE_CODE_BOOL
++        self.is_bool = val.type.template_argument(0).code == gdb.TYPE_CODE_BOOL
+ 
+     def children(self):
+         return self._iterator(self.val['_M_impl']['_M_start'],
+@@ -411,6 +478,8 @@ class StdVectorIteratorPrinter:
+             return 'non-dereferenceable iterator for std::vector'
+         return str(self.val['_M_current'].dereference())
+ 
++# TODO add printer for vector<bool>'s _Bit_iterator and _Bit_const_iterator
++
+ class StdTuplePrinter:
+     "Print a std::tuple"
+ 
+@@ -574,12 +643,8 @@ class StdRbtreeIteratorPrinter:
  
      def __init__ (self, typename, val):
          self.val = val
@@ -76176,7 +77102,7 @@ index 8f16b53c953..3082b0e4d8c 100644
  
      def to_string (self):
          if not self.val['_M_node']:
-@@ -644,9 +711,7 @@ class StdMapPrinter:
+@@ -644,9 +709,7 @@ class StdMapPrinter:
                                 num_elements(len(RbtreeIterator (self.val))))
  
      def children (self):
@@ -76187,7 +77113,7 @@ index 8f16b53c953..3082b0e4d8c 100644
          return self._iter (RbtreeIterator (self.val), node)
  
      def display_hint (self):
-@@ -684,9 +749,7 @@ class StdSetPrinter:
+@@ -684,9 +747,7 @@ class StdSetPrinter:
                                 num_elements(len(RbtreeIterator (self.val))))
  
      def children (self):
@@ -76198,7 +77124,7 @@ index 8f16b53c953..3082b0e4d8c 100644
          return self._iter (RbtreeIterator (self.val), node)
  
  class StdBitsetPrinter:
-@@ -844,11 +907,11 @@ class StdStringPrinter:
+@@ -844,11 +905,11 @@ class StdStringPrinter:
          return 'string'
  
  class Tr1HashtableIterator(Iterator):
@@ -76214,7 +77140,7 @@ index 8f16b53c953..3082b0e4d8c 100644
          self.node = 0
          while self.bucket != self.bucket_count:
              self.node = self.buckets[self.bucket]
-@@ -875,9 +938,13 @@ class Tr1HashtableIterator(Iterator):
+@@ -875,9 +936,13 @@ class Tr1HashtableIterator(Iterator):
          return result
  
  class StdHashtableIterator(Iterator):
@@ -76231,7 +77157,7 @@ index 8f16b53c953..3082b0e4d8c 100644
  
      def __iter__(self):
          return self
-@@ -892,7 +959,7 @@ class StdHashtableIterator(Iterator):
+@@ -892,7 +957,7 @@ class StdHashtableIterator(Iterator):
          return valptr.dereference()
  
  class Tr1UnorderedSetPrinter:
@@ -76240,7 +77166,7 @@ index 8f16b53c953..3082b0e4d8c 100644
  
      def __init__ (self, typename, val):
          self.typename = strip_versioned_namespace(typename)
-@@ -918,7 +985,7 @@ class Tr1UnorderedSetPrinter:
+@@ -918,7 +983,7 @@ class Tr1UnorderedSetPrinter:
          return izip (counter, StdHashtableIterator (self.hashtable()))
  
  class Tr1UnorderedMapPrinter:
@@ -76249,7 +77175,7 @@ index 8f16b53c953..3082b0e4d8c 100644
  
      def __init__ (self, typename, val):
          self.typename = strip_versioned_namespace(typename)
-@@ -989,8 +1056,7 @@ class StdForwardListPrinter:
+@@ -989,8 +1054,7 @@ class StdForwardListPrinter:
          self.typename = strip_versioned_namespace(typename)
  
      def children(self):
@@ -76259,7 +77185,7 @@ index 8f16b53c953..3082b0e4d8c 100644
          return self._iterator(nodetype, self.val['_M_impl']['_M_head'])
  
      def to_string(self):
-@@ -1041,6 +1107,29 @@ class SingleObjContainerPrinter(object):
+@@ -1041,6 +1105,29 @@ class SingleObjContainerPrinter(object):
              return self.visualizer.display_hint ()
          return self.hint
  
@@ -76289,7 +77215,7 @@ index 8f16b53c953..3082b0e4d8c 100644
  class StdExpAnyPrinter(SingleObjContainerPrinter):
      "Print a std::any or std::experimental::any"
  
-@@ -1053,11 +1142,11 @@ class StdExpAnyPrinter(SingleObjContainerPrinter):
+@@ -1053,11 +1140,11 @@ class StdExpAnyPrinter(SingleObjContainerPrinter):
          visualizer = None
          mgr = self.val['_M_manager']
          if mgr != 0:
@@ -76304,7 +77230,7 @@ index 8f16b53c953..3082b0e4d8c 100644
              if not m:
                  raise ValueError("Unknown manager function in %s" % self.typename)
  
-@@ -1209,6 +1298,7 @@ class StdExpPathPrinter:
+@@ -1209,6 +1296,7 @@ class StdExpPathPrinter:
  
      def __init__ (self, typename, val):
          self.val = val
@@ -76312,7 +77238,7 @@ index 8f16b53c953..3082b0e4d8c 100644
          start = self.val['_M_cmpts']['_M_impl']['_M_start']
          finish = self.val['_M_cmpts']['_M_impl']['_M_finish']
          self.num_cmpts = int (finish - start)
-@@ -1227,10 +1317,11 @@ class StdExpPathPrinter:
+@@ -1227,10 +1315,11 @@ class StdExpPathPrinter:
              t = self._path_type()
              if t:
                  path = '%s [%s]' % (path, t)
@@ -76326,7 +77252,7 @@ index 8f16b53c953..3082b0e4d8c 100644
              self.item = cmpts['_M_impl']['_M_start']
              self.finish = cmpts['_M_impl']['_M_finish']
              self.count = 0
-@@ -1246,13 +1337,13 @@ class StdExpPathPrinter:
+@@ -1246,13 +1335,13 @@ class StdExpPathPrinter:
              self.count = self.count + 1
              self.item = self.item + 1
              path = item['_M_pathname']
@@ -76342,7 +77268,7 @@ index 8f16b53c953..3082b0e4d8c 100644
  
  class StdPathPrinter:
      "Print a std::filesystem::path"
-@@ -1285,6 +1376,7 @@ class StdPathPrinter:
+@@ -1285,6 +1374,7 @@ class StdPathPrinter:
  
      class _iterator(Iterator):
          def __init__(self, impl, pathtype):
@@ -76350,7 +77276,7 @@ index 8f16b53c953..3082b0e4d8c 100644
              if impl:
                  # We can't access _Impl::_M_size because _Impl is incomplete
                  # so cast to int* to access the _M_size member at offset zero,
-@@ -1317,7 +1409,7 @@ class StdPathPrinter:
+@@ -1317,7 +1407,7 @@ class StdPathPrinter:
              self.count = self.count + 1
              self.item = self.item + 1
              path = item['_M_pathname']
@@ -76359,10 +77285,97 @@ index 8f16b53c953..3082b0e4d8c 100644
              if not t:
                  t = count
              return ('[%s]' % t, path)
+diff --git a/libstdc++-v3/src/c++11/cxx11-ios_failure.cc b/libstdc++-v3/src/c++11/cxx11-ios_failure.cc
+index 2010b661741..1ef9d3a8c29 100644
+--- a/libstdc++-v3/src/c++11/cxx11-ios_failure.cc
++++ b/libstdc++-v3/src/c++11/cxx11-ios_failure.cc
+@@ -114,7 +114,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     __ios_failure(const char* s) : failure(s)
+     { __construct_ios_failure(buf, runtime_error::what()); }
+ 
+-    __ios_failure(const char* s, int e) : failure(s, to_error_code(e))
++    __ios_failure(const char* s, const error_code& e) : failure(s, e)
+     { __construct_ios_failure(buf, runtime_error::what()); }
+ 
+     ~__ios_failure()
+@@ -125,10 +125,6 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     // There are assertions in src/c++98/ios_failure.cc to ensure the size
+     // and alignment assumptions are valid.
+     alignas(runtime_error) unsigned char buf[sizeof(runtime_error)];
+-
+-    static error_code
+-    to_error_code(int e)
+-    { return e ? error_code(e, system_category()) : io_errc::stream; }
+   };
+ 
+   // Custom type info for __ios_failure.
+@@ -171,7 +167,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   void
+   __throw_ios_failure(const char* str __attribute__((unused)),
+ 		      int err __attribute__((unused)))
+-  { _GLIBCXX_THROW_OR_ABORT(__ios_failure(_(str), err)); }
++  {
++    _GLIBCXX_THROW_OR_ABORT(__ios_failure(_(str),
++	  err ? error_code(err, generic_category()) : io_errc::stream));
++  }
+ 
+ _GLIBCXX_END_NAMESPACE_VERSION
+ } // namespace
+diff --git a/libstdc++-v3/src/c++17/fs_dir.cc b/libstdc++-v3/src/c++17/fs_dir.cc
+index bcbcd7ba6b3..74e7c5685bd 100644
+--- a/libstdc++-v3/src/c++17/fs_dir.cc
++++ b/libstdc++-v3/src/c++17/fs_dir.cc
+@@ -148,12 +148,8 @@ directory_iterator(const path& p, directory_options options, error_code* ecptr)
+ }
+ 
+ const fs::directory_entry&
+-fs::directory_iterator::operator*() const
++fs::directory_iterator::operator*() const noexcept
+ {
+-  if (!_M_dir)
+-    _GLIBCXX_THROW_OR_ABORT(filesystem_error(
+-	  "non-dereferenceable directory iterator",
+-	  std::make_error_code(errc::invalid_argument)));
+   return _M_dir->entry;
+ }
+ 
+@@ -211,7 +207,7 @@ recursive_directory_iterator(const path& p, directory_options options,
+   else
+     {
+       const int err = errno;
+-      if (err == EACCES
++      if (fs::is_permission_denied_error(err)
+ 	  && is_set(options, fs::directory_options::skip_permission_denied))
+ 	{
+ 	  if (ecptr)
 diff --git a/libstdc++-v3/src/c++17/fs_ops.cc b/libstdc++-v3/src/c++17/fs_ops.cc
-index 5f1f47b9fb7..402ed02143d 100644
+index 5f1f47b9fb7..f744d2f7b56 100644
 --- a/libstdc++-v3/src/c++17/fs_ops.cc
 +++ b/libstdc++-v3/src/c++17/fs_ops.cc
+@@ -690,7 +690,7 @@ fs::create_hard_link(const path& to, const path& new_hard_link,
+   if (CreateHardLinkW(new_hard_link.c_str(), to.c_str(), NULL))
+     ec.clear();
+   else
+-    ec.assign((int)GetLastError(), generic_category());
++    ec.assign((int)GetLastError(), system_category());
+ #else
+   ec = std::make_error_code(std::errc::not_supported);
+ #endif
+@@ -882,12 +882,12 @@ fs::equivalent(const path& p1, const path& p2, error_code& ec) noexcept
+       if (!h1 || !h2)
+ 	{
+ 	  if (!h1 && !h2)
+-	    ec.assign((int)GetLastError(), generic_category());
++	    ec.assign((int)GetLastError(), system_category());
+ 	  return false;
+ 	}
+       if (!h1.get_info() || !h2.get_info())
+ 	{
+-	  ec.assign((int)GetLastError(), generic_category());
++	  ec.assign((int)GetLastError(), system_category());
+ 	  return false;
+ 	}
+       return h1.info.dwVolumeSerialNumber == h2.info.dwVolumeSerialNumber
 @@ -1175,11 +1175,17 @@ fs::path fs::read_symlink(const path& p, error_code& ec)
    path result;
  #if defined(_GLIBCXX_HAVE_READLINK) && defined(_GLIBCXX_HAVE_SYS_STAT_H)
@@ -76382,8 +77395,17 @@ index 5f1f47b9fb7..402ed02143d 100644
    std::string buf(st.st_size ? st.st_size + 1 : 128, '\0');
    do
      {
+@@ -1257,7 +1263,7 @@ fs::remove(const path& p, error_code& ec) noexcept
+ 	  return true;
+ 	}
+       else if (!ec)
+-	ec.assign((int)GetLastError(), generic_category());
++	ec.assign((int)GetLastError(), system_category());
+     }
+   else if (status_known(st))
+     ec.clear();
 diff --git a/libstdc++-v3/src/c++17/fs_path.cc b/libstdc++-v3/src/c++17/fs_path.cc
-index 54bef75efd8..b44fae03da0 100644
+index 54bef75efd8..ceb070436af 100644
 --- a/libstdc++-v3/src/c++17/fs_path.cc
 +++ b/libstdc++-v3/src/c++17/fs_path.cc
 @@ -74,7 +74,7 @@ struct path::_Parser
@@ -76449,6 +77471,31 @@ index 54bef75efd8..b44fae03da0 100644
    const auto orig_pathlen = _M_pathname.length();
    const auto orig_type = _M_type();
    const auto orig_size = _M_cmpts.size();
+@@ -1847,10 +1887,9 @@ path::_M_split_cmpts()
+ 	  _M_cmpts.type(_Type::_Multi);
+ 	  _M_cmpts.reserve(_M_cmpts.size() + buf.size());
+ 	  auto output = _M_cmpts._M_impl->end();
+-	  for (auto& c : buf)
++	  for (const auto& c : buf)
+ 	    {
+-	      auto pos = c.str.data() - _M_pathname.data();
+-	      ::new(output++) _Cmpt(c.str, c.type, pos);
++	      ::new(output++) _Cmpt(c.str, c.type, parser.offset(c));
+ 	      ++_M_cmpts._M_impl->_M_size;
+ 	    }
+ 	  next = buf.begin();
+@@ -1870,9 +1909,8 @@ path::_M_split_cmpts()
+       auto output = _M_cmpts._M_impl->end();
+       for (int i = 0; i < n; ++i)
+ 	{
+-	  auto c = buf[i];
+-	  auto pos = c.str.data() - _M_pathname.data();
+-	  ::new(output++) _Cmpt(c.str, c.type, pos);
++	  const auto& c = buf[i];
++	  ::new(output++) _Cmpt(c.str, c.type, parser.offset(c));
+ 	  ++_M_cmpts._M_impl->_M_size;
+ 	}
+     }
 diff --git a/libstdc++-v3/src/c++17/memory_resource.cc b/libstdc++-v3/src/c++17/memory_resource.cc
 index e28526d1bfe..f8c7fcbcaa5 100644
 --- a/libstdc++-v3/src/c++17/memory_resource.cc
@@ -76720,11 +77767,34 @@ index e28526d1bfe..f8c7fcbcaa5 100644
      // dump_list(_M_tpools);
      polymorphic_allocator<_TPools> a(upstream_resource());
      _TPools* p = a.allocate(1);
+diff --git a/libstdc++-v3/src/filesystem/dir-common.h b/libstdc++-v3/src/filesystem/dir-common.h
+index 6ec798c9aa0..97ad70f834e 100644
+--- a/libstdc++-v3/src/filesystem/dir-common.h
++++ b/libstdc++-v3/src/filesystem/dir-common.h
+@@ -141,6 +141,18 @@ struct _Dir_base
+   posix::DIR*	dirp;
+ };
+ 
++inline bool
++is_permission_denied_error(int e)
++{
++  if (e == EACCES)
++    return true;
++#ifdef __APPLE__
++  if (e == EPERM) // See PR 99533
++    return true;
++#endif
++  return false;
++}
++
+ } // namespace filesystem
+ 
+ // BEGIN/END macros must be defined before including this file.
 diff --git a/libstdc++-v3/src/filesystem/dir.cc b/libstdc++-v3/src/filesystem/dir.cc
-index ac3bd3aafb3..d7d8eb74066 100644
+index ac3bd3aafb3..b3978f82b51 100644
 --- a/libstdc++-v3/src/filesystem/dir.cc
 +++ b/libstdc++-v3/src/filesystem/dir.cc
-@@ -187,16 +187,16 @@ struct fs::recursive_directory_iterator::_Dir_stack : std::stack<_Dir>
+@@ -187,31 +187,35 @@ struct fs::recursive_directory_iterator::_Dir_stack : std::stack<_Dir>
  
  fs::recursive_directory_iterator::
  recursive_directory_iterator(const path& p, directory_options options,
@@ -76745,9 +77815,10 @@ index ac3bd3aafb3..d7d8eb74066 100644
  	_M_dirs.swap(sp);
      }
    else
-@@ -204,14 +204,18 @@ recursive_directory_iterator(const path& p, directory_options options,
+     {
        const int err = errno;
-       if (err == EACCES
+-      if (err == EACCES
++      if (std::filesystem::is_permission_denied_error(err)
  	  && is_set(options, fs::directory_options::skip_permission_denied))
 -	return;
 +	{
@@ -76790,9 +77861,18 @@ index 21d0bbabb43..5c907fbca1e 100644
    }
  
 diff --git a/libstdc++-v3/src/filesystem/ops.cc b/libstdc++-v3/src/filesystem/ops.cc
-index 5c5d6b9ef26..0115cff1907 100644
+index 5c5d6b9ef26..4859b6e7fa6 100644
 --- a/libstdc++-v3/src/filesystem/ops.cc
 +++ b/libstdc++-v3/src/filesystem/ops.cc
+@@ -590,7 +590,7 @@ fs::create_hard_link(const path& to, const path& new_hard_link,
+   if (CreateHardLinkW(new_hard_link.c_str(), to.c_str(), NULL))
+     ec.clear();
+   else
+-    ec.assign((int)GetLastError(), generic_category());
++    ec.assign((int)GetLastError(), system_category());
+ #else
+   ec = std::make_error_code(std::errc::not_supported);
+ #endif
 @@ -993,11 +993,17 @@ fs::path fs::read_symlink(const path& p [[gnu::unused]], error_code& ec)
    path result;
  #if defined(_GLIBCXX_HAVE_READLINK) && defined(_GLIBCXX_HAVE_SYS_STAT_H)
@@ -76812,8 +77892,17 @@ index 5c5d6b9ef26..0115cff1907 100644
    std::string buf(st.st_size ? st.st_size + 1 : 128, '\0');
    do
      {
+@@ -1056,7 +1062,7 @@ fs::remove(const path& p, error_code& ec) noexcept
+ 	  return true;
+ 	}
+       else if (!ec)
+-	ec.assign((int)GetLastError(), generic_category());
++	ec.assign((int)GetLastError(), system_category());
+     }
+   else if (status_known(st))
+     ec.clear();
 diff --git a/libstdc++-v3/testsuite/17_intro/names.cc b/libstdc++-v3/testsuite/17_intro/names.cc
-index a47d53503e3..efb0bd137a7 100644
+index a47d53503e3..b04975df98a 100644
 --- a/libstdc++-v3/testsuite/17_intro/names.cc
 +++ b/libstdc++-v3/testsuite/17_intro/names.cc
 @@ -104,6 +104,11 @@
@@ -76828,6 +77917,119 @@ index a47d53503e3..efb0bd137a7 100644
  #if __cplusplus < 201703L
  // <charconv> defines to_chars_result::ptr and to_chars_result::ec
  #define ec (
+@@ -180,6 +185,8 @@
+ #undef r
+ #undef x
+ #undef y
++// <sys/var.h> defines vario::v
++#undef v
+ #endif
+ 
+ #ifdef __hpux__
+diff --git a/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/less.cc b/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/less.cc
+new file mode 100644
+index 00000000000..87962ff8991
+--- /dev/null
++++ b/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/less.cc
+@@ -0,0 +1,41 @@
++// { dg-do run { target c++11 } }
++// { dg-additional-options "-static-libstdc++" { target *-*-mingw* } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <system_error>
++#include <testsuite_error.h>
++
++int main()
++{
++  std::error_code e1;
++  std::error_code e2(std::make_error_code(std::errc::operation_not_supported));
++
++  VERIFY( !(e1 < e1) );
++  VERIFY( !(e2 < e2) );
++
++  VERIFY( (e1 < e2) == (e1.category() < e2.category()) );
++
++  const __gnu_test::test_category cat;
++  std::error_code e3(e2.value(), cat);
++  VERIFY( !(e3 < e3) );
++  VERIFY( (e2 < e3) == (e2.category() < e3.category()) );
++
++  std::error_code e4(std::make_error_code(std::errc::invalid_argument));
++  VERIFY( (e4 < e2) == (e4.value() < e2.value()) );
++}
+diff --git a/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/not_equal.cc b/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/not_equal.cc
+index c786771dc18..6d232267e49 100644
+--- a/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/not_equal.cc
++++ b/libstdc++-v3/testsuite/19_diagnostics/error_code/operators/not_equal.cc
+@@ -35,5 +35,6 @@ int main()
+   std::error_code e3(e2.value(), cat);
+   VERIFY( e2 != e3 );
+ 
+-  return 0;
++  std::error_code e4(std::make_error_code(std::errc::invalid_argument));
++  VERIFY( e4 != e2 );
+ }
+diff --git a/libstdc++-v3/testsuite/19_diagnostics/error_condition/operators/less.cc b/libstdc++-v3/testsuite/19_diagnostics/error_condition/operators/less.cc
+new file mode 100644
+index 00000000000..78b4f99f9ec
+--- /dev/null
++++ b/libstdc++-v3/testsuite/19_diagnostics/error_condition/operators/less.cc
+@@ -0,0 +1,39 @@
++// { dg-do run { target c++11 } }
++// { dg-additional-options "-static-libstdc++" { target *-*-mingw* } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <system_error>
++#include <testsuite_error.h>
++
++int main()
++{
++  std::error_condition e1;
++  std::error_condition e2(std::errc::operation_not_supported);
++
++  VERIFY( !(e1 < e1) );
++  VERIFY( !(e2 < e2) );
++
++  // e1.category() == e2.category(), so comparison depends on values:
++  VERIFY( (e1 < e2) == (e1.value() < e2.value()) );
++
++  const __gnu_test::test_category cat;
++  std::error_condition e3(e2.value(), cat);
++  VERIFY( !(e3 < e3) );
++  VERIFY( (e2 < e3) == (e2.category() < e3.category()) );
++}
 diff --git a/libstdc++-v3/testsuite/20_util/allocator/89510.cc b/libstdc++-v3/testsuite/20_util/allocator/89510.cc
 new file mode 100644
 index 00000000000..a3100a2b062
@@ -78992,6 +80194,217 @@ index 0a23c3f0d12..ec479053cf1 100644
  #endif
  
  void
+diff --git a/libstdc++-v3/testsuite/24_iterators/insert_iterator/dr561.cc b/libstdc++-v3/testsuite/24_iterators/insert_iterator/dr561.cc
+new file mode 100644
+index 00000000000..17533990983
+--- /dev/null
++++ b/libstdc++-v3/testsuite/24_iterators/insert_iterator/dr561.cc
+@@ -0,0 +1,47 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do compile { target c++11 } }
++
++// Example from https://wg21.link/lwg561
++
++#include <iterator>
++#include <string>
++
++namespace my
++{
++
++template <class String>
++struct my_type {};
++
++struct my_container
++{
++template <class String>
++void push_back(const my_type<String>&);
++};
++
++template <class String>
++void inserter(const my_type<String>& m, my_container& c) {c.push_back(m);}
++
++}  // my
++
++int main()
++{
++    my::my_container c;
++    my::my_type<std::string> m;
++    inserter(m, c);
++}
+diff --git a/libstdc++-v3/testsuite/24_iterators/range_access.cc b/libstdc++-v3/testsuite/24_iterators/range_access.cc
+index 8b1ac966503..a374e5a199c 100644
+--- a/libstdc++-v3/testsuite/24_iterators/range_access.cc
++++ b/libstdc++-v3/testsuite/24_iterators/range_access.cc
+@@ -27,4 +27,34 @@ test01()
+   int arr[3] = {1, 2, 3};
+   std::begin(arr);
+   std::end(arr);
++
++  static_assert( noexcept(std::begin(arr)), "LWG 2280" );
++  static_assert( noexcept(std::end(arr)), "LWG 2280" );
++}
++
++void
++test02()
++{
++  extern void require_int(int*);
++  extern void require_long(long*);
++
++  struct B
++  {
++    int* begin() { return nullptr; }
++    long* begin() const { return nullptr; }
++  };
++
++  B b;
++  require_int( std::begin(b) );
++  require_long( std::begin(const_cast<const B&>(b)) );
++
++  struct E
++  {
++    int* end() { return nullptr; }
++    long* end() const { return nullptr; }
++  };
++
++  E e;
++  require_int( std::end(e) );
++  require_long( std::end(const_cast<const E&>(e)) );
+ }
+diff --git a/libstdc++-v3/testsuite/24_iterators/range_access_cpp14.cc b/libstdc++-v3/testsuite/24_iterators/range_access_cpp14.cc
+index 29a469d7d6b..4cd239673ef 100644
+--- a/libstdc++-v3/testsuite/24_iterators/range_access_cpp14.cc
++++ b/libstdc++-v3/testsuite/24_iterators/range_access_cpp14.cc
+@@ -39,10 +39,21 @@ void
+ test02()
+ {
+   static int i[1];
++  // LWG 2280
+   constexpr auto b  __attribute__((unused)) = std::begin(i);
+   constexpr auto e  __attribute__((unused)) = std::end(i);
+   constexpr auto cb __attribute__((unused)) = std::cbegin(i);
+   constexpr auto ce __attribute__((unused)) = std::cend(i);
++
++  // LWG 2280
++  static_assert( noexcept(std::begin(i)),  "LWG 2280" );
++  static_assert( noexcept(std::end(i)),    "LWG 2280" );
++  static_assert( noexcept(std::cbegin(i)), "LWG 2280" );
++  static_assert( noexcept(std::cend(i)),   "LWG 2280" );
++
++  // LWG 3537
++  static_assert( noexcept(std::rbegin(i)),  "LWG 3537" );
++  static_assert( noexcept(std::rend(i)),    "LWG 3537" );
+ }
+ 
+ void
+@@ -55,6 +66,10 @@ test03()
+   VERIFY(std::rend(il) == std::reverse_iterator<const int*>(il.begin()));
+   VERIFY(std::crbegin(il) == std::reverse_iterator<const int*>(il.end()));
+   VERIFY(std::crend(il) == std::reverse_iterator<const int*>(il.begin()));
++
++  // LWG 3537
++  static_assert( noexcept(std::rbegin(il)),  "LWG 3537" );
++  static_assert( noexcept(std::rend(il)),    "LWG 3537" );
+ }
+ 
+ void
+diff --git a/libstdc++-v3/testsuite/24_iterators/range_access_cpp17.cc b/libstdc++-v3/testsuite/24_iterators/range_access_cpp17.cc
+index 9ba20090c77..e5085516ca6 100644
+--- a/libstdc++-v3/testsuite/24_iterators/range_access_cpp17.cc
++++ b/libstdc++-v3/testsuite/24_iterators/range_access_cpp17.cc
+@@ -41,6 +41,16 @@ test02()
+   static int i[] = { 1, 2 };
+   static_assert(std::distance(std::begin(i), std::end(i)) == 2);
+   static_assert(std::distance(std::cbegin(i), std::cend(i)) == 2);
++
++  // LWG 2280
++  static_assert( noexcept(std::begin(i)),  "LWG 2280" );
++  static_assert( noexcept(std::end(i)),    "LWG 2280" );
++  static_assert( noexcept(std::cbegin(i)), "LWG 2280" );
++  static_assert( noexcept(std::cend(i)),   "LWG 2280" );
++
++  // LWG 3537
++  static_assert( noexcept(std::rbegin(i)),  "LWG 3537" );
++  static_assert( noexcept(std::rend(i)),    "LWG 3537" );
+ }
+ 
+ void
+@@ -54,4 +64,8 @@ test03()
+   static_assert(std::rend(il) == reverse_iterator<const int*>(il.begin()));
+   static_assert(std::crbegin(il) == reverse_iterator<const int*>(il.end()));
+   static_assert(std::crend(il) == reverse_iterator<const int*>(il.begin()));
++
++  // LWG 3537
++  static_assert( noexcept(std::rbegin(il)),  "LWG 3537" );
++  static_assert( noexcept(std::rend(il)),    "LWG 3537" );
+ }
+diff --git a/libstdc++-v3/testsuite/25_algorithms/copy_n/5.cc b/libstdc++-v3/testsuite/25_algorithms/copy_n/5.cc
+new file mode 100644
+index 00000000000..cfd53cd9cfa
+--- /dev/null
++++ b/libstdc++-v3/testsuite/25_algorithms/copy_n/5.cc
+@@ -0,0 +1,46 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do run { target c++11 } }
++
++#include <algorithm>
++#include <testsuite_iterators.h>
++
++void
++test01()
++{
++  // Negative sizes should be a no-op
++
++  using namespace __gnu_test;
++
++  const int from[2] = { 1, 2 };
++  test_container<const int, input_iterator_wrapper> f(from);
++  int* to = nullptr;
++  std::copy_n(f.begin(), -1, to);
++
++  std::copy_n(from, -20000, to); // random access
++
++  test_container<const int, random_access_iterator_wrapper> f2(from);
++  std::copy_n(f2.end(), -1, to);
++  std::copy_n(f2.begin(), -1, to);
++}
++
++int
++main()
++{
++  test01();
++}
 diff --git a/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-2.cc b/libstdc++-v3/testsuite/25_algorithms/pstl/feature_test-2.cc
 new file mode 100644
 index 00000000000..3e74f89bc41
@@ -79483,6 +80896,16 @@ index 3a0f5bbe3eb..33327232af0 100644
  // { dg-prune-output "deleted function" }
 -// { dg-prune-output "invalid operands" }
 +// { dg-prune-output "incomplete type .*make_unsigned" }
+diff --git a/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc b/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc
+index b360203adf4..599d53665f3 100644
+--- a/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc
++++ b/libstdc++-v3/testsuite/26_numerics/random/pr60037-neg.cc
+@@ -12,4 +12,4 @@ auto x = std::generate_canonical<std::size_t,
+ 
+ // { dg-error "static assertion failed: template argument must be a floating point type" "" { target *-*-* } 156 }
+ 
+-// { dg-error "static assertion failed: template argument must be a floating point type" "" { target *-*-* } 3318 }
++// { dg-error "static assertion failed: template argument must be a floating point type" "" { target *-*-* } 3321 }
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
 index 3f31375f51b..5d6e62c421a 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/last_write_time.cc
@@ -79643,6 +81066,19 @@ index 3f31375f51b..5d6e62c421a 100644
    last_write_time(f.path, time, ec);
    VERIFY( !ec );
    VERIFY( approx_equal(last_write_time(f.path), time) );
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/proximate.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/proximate.cc
+index 8a7e258628a..e21b544c9b2 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/proximate.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/proximate.cc
+@@ -30,7 +30,7 @@ using __gnu_test::compare_paths;
+ std::string operator""_norm(const char* s, std::size_t n)
+ {
+   std::string str(s, n);
+-#if defined(__MING32__) || defined(__MINGW64__)
++#if defined(__MINGW32__) || defined(__MINGW64__)
+   for (auto& c : str)
+     if (c == '/')
+       c = '\\';
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc
 index db80087ba6c..9249cf682ef 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/path/append/source.cc
@@ -79669,6 +81105,19 @@ index db80087ba6c..9249cf682ef 100644
    test06();
 +  test07();
  }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/compare/lwg2936.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/compare/lwg2936.cc
+index bcb99cc6ddc..a7e02bf2ddc 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/path/compare/lwg2936.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/compare/lwg2936.cc
+@@ -59,7 +59,7 @@ test01()
+   check("c:", "d:", -1);
+   check("c:", "c:/", -1);
+   check("d:", "c:/", +1);
+-#if defined(__MING32__) || defined(__MINGW64__)
++#if defined(__MINGW32__) || defined(__MINGW64__)
+   check("c:/a/b", "c:a/b", +1);
+ #else
+   check("c:/a/b", "c:a/b", -1);
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/concat/94063.cc
 new file mode 100644
 index 00000000000..9f4c9c0aa08
@@ -79786,12 +81235,84 @@ index 00000000000..9f4c9c0aa08
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc
+index a49419f19dc..557fb9aff0c 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/decompose/parent_path.cc
+@@ -18,7 +18,7 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
+-// 8.4.9 path decomposition [path.decompose]
++// C++17 30.10.8.4.9 path decomposition [fs.path.decompose]
+ 
+ #include <filesystem>
+ #include <testsuite_hooks.h>
+@@ -64,9 +64,32 @@ test02()
+   }
+ }
+ 
++void
++test03()
++{
++  const std::string narrow = "there/are/no/wrong/turns/only/unexpected/paths";
++  const path::string_type s(narrow.begin(), narrow.end());
++  const auto s1 = s.substr(0, s.length() - 6);    // remove "/paths"
++  const auto s2 = s1.substr(0, s1.length() - 16); // remove "/only/..."
++
++  // PR libstdc++/99805
++  path p = path::string_type(s);
++  auto pp = p.parent_path();
++  VERIFY( pp.native() == s1 );
++  pp = pp.parent_path().parent_path();
++  VERIFY( pp.native() == s2 );
++
++  path from_lval(s);
++  pp = from_lval.parent_path();
++  VERIFY( pp.native() == s1 );
++  pp = pp.parent_path().parent_path();
++  VERIFY( pp.native() == s2 );
++}
++
+ int
+ main()
+ {
+   test01();
+   test02();
++  test03();
+ }
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generation/proximate.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generation/proximate.cc
+index 1d666791001..9b68e04207a 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/path/generation/proximate.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generation/proximate.cc
+@@ -29,7 +29,7 @@ using __gnu_test::compare_paths;
+ std::string operator""_norm(const char* s, std::size_t n)
+ {
+   std::string str(s, n);
+-#if defined(__MING32__) || defined(__MINGW64__)
++#if defined(__MINGW32__) || defined(__MINGW64__)
+   for (auto& c : str)
+     if (c == '/')
+       c = '\\';
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generation/relative.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generation/relative.cc
+index dde08d46f2c..201b76c1238 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/path/generation/relative.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generation/relative.cc
+@@ -29,7 +29,7 @@ using __gnu_test::compare_paths;
+ std::string operator""_norm(const char* s, std::size_t n)
+ {
+   std::string str(s, n);
+-#if defined(__MING32__) || defined(__MINGW64__)
++#if defined(__MINGW32__) || defined(__MINGW64__)
+   for (auto& c : str)
+     if (c == '/')
+       c = '\\';
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/generic/94242.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/94242.cc
 new file mode 100644
-index 00000000000..c917daed94e
+index 00000000000..6db35dcbed1
 --- /dev/null
 +++ b/libstdc++-v3/testsuite/27_io/filesystem/path/generic/94242.cc
-@@ -0,0 +1,52 @@
+@@ -0,0 +1,58 @@
 +// { dg-options "-std=gnu++17" }
 +// { dg-do run { target c++17 } }
 +
@@ -79818,7 +81339,13 @@ index 00000000000..c917daed94e
 +#include <testsuite_allocator.h>
 +
 +using std::filesystem::path;
++
++#if _GLIBCXX_USE_CXX11_ABI
 +using __gnu_test::SimpleAllocator;
++#else
++// COW std::basic_string doesn't use std::allocator_traits properly.
++template<typename T> using SimpleAllocator = __gnu_test::uneq_allocator<T>;
++#endif
 +
 +void
 +test01()
@@ -80181,6 +81708,139 @@ index 00000000000..dc4883c19a0
 +  }
 +  VERIFY( caught );
 +}
+diff --git a/libstdc++-v3/testsuite/30_threads/thread/cons/84535.cc b/libstdc++-v3/testsuite/30_threads/thread/cons/84535.cc
+index 66c2aded22b..6c60763008b 100644
+--- a/libstdc++-v3/testsuite/30_threads/thread/cons/84535.cc
++++ b/libstdc++-v3/testsuite/30_threads/thread/cons/84535.cc
+@@ -20,6 +20,8 @@
+ 
+ #include <thread>
+ 
++namespace __gnu_test
++{
+ using std::is_constructible;
+ using std::thread;
+ 
+@@ -28,3 +30,4 @@ static_assert(!is_constructible<thread, thread, int>::value, "");
+ static_assert(!is_constructible<thread, thread&, int>::value, "");
+ static_assert(!is_constructible<thread, const thread&, int>::value, "");
+ static_assert(!is_constructible<thread, const thread&&, int>::value, "");
++}
+diff --git a/libstdc++-v3/testsuite/30_threads/thread/cons/lwg2097.cc b/libstdc++-v3/testsuite/30_threads/thread/cons/lwg2097.cc
+index 4a540dcc9b4..86c990af5e0 100644
+--- a/libstdc++-v3/testsuite/30_threads/thread/cons/lwg2097.cc
++++ b/libstdc++-v3/testsuite/30_threads/thread/cons/lwg2097.cc
+@@ -20,9 +20,12 @@
+ 
+ #include <thread>
+ 
++namespace __gnu_test
++{
+ using std::thread;
+ using std::is_constructible;
+ 
+ static_assert( !is_constructible<thread, thread&>::value, "" );
+ static_assert( !is_constructible<thread, const thread&>::value, "" );
+ static_assert( !is_constructible<thread, const thread>::value, "" );
++}
+diff --git a/libstdc++-v3/testsuite/experimental/feat-lib-fund.cc b/libstdc++-v3/testsuite/experimental/feat-lib-fund.cc
+index b0e6e289009..342edc5352d 100644
+--- a/libstdc++-v3/testsuite/experimental/feat-lib-fund.cc
++++ b/libstdc++-v3/testsuite/experimental/feat-lib-fund.cc
+@@ -1,57 +1,36 @@
+-// { dg-do preprocess { target c++14 } }
+-
+-#if !__has_include(<experimental/tuple>)
+-#  error "<experimental/tuple>"
+-#endif
+-
+-#if !__has_include(<experimental/type_traits>)
+-#  error "<experimental/type_traits>"
+-#endif
+-
+-#if !__has_include(<experimental/ratio>)
+-#  error "<experimental/ratio>"
+-#endif
+-
+-#if !__has_include(<experimental/chrono>)
+-#  error "<experimental/chrono>"
+-#endif
+-
+-#if !__has_include(<experimental/system_error>)
+-#  error "<experimental/system_error>"
+-#endif
+-
+-#if !__has_include(<experimental/functional>)
+-#  error "<experimental/functional>"
+-#endif
+-
+-#if !__has_include(<experimental/optional>)
+-#  error "<experimental/optional>"
+-#endif
+-
+-#if !__has_include(<experimental/any>)
+-#  error "<experimental/any>"
+-#endif
+-
+-#if !__has_include(<experimental/string_view>)
+-#  error "<experimental/string_view>"
+-#endif
+-
+-//#if !__has_include(<experimental/memory>)
+-//#  error "<experimental/memory>"
+-//#endif
+-
+-//#if !__has_include(<experimental/memory_resource>)
+-//#  error "<experimental/memory_resource>"
+-//#endif
+-
+-//#if !__has_include(<experimental/future>)
+-//#  error "<experimental/future>"
+-//#endif
+-
+-#if !__has_include(<experimental/algorithm>)
+-#  error "<experimental/algorithm>"
+-#endif
+-
+-//#if !__has_include(<experimental/net>)
+-//#  error "<experimental/net>"
+-//#endif
++// { dg-do preprocess }
++
++// Include all the LFTS headers. This should work with any -std flag.
++
++#include <experimental/algorithm>
++#include <experimental/any>
++#include <experimental/array>
++#include <experimental/chrono>
++#include <experimental/deque>
++#include <experimental/forward_list>
++#include <experimental/functional>
++#if __has_include(<experimental/future>) // not supported as of GCC 11
++# include <experimental/future>
++#endif
++#include <experimental/iterator>
++#include <experimental/list>
++#include <experimental/map>
++#include <experimental/memory>
++#include <experimental/memory_resource>
++#include <experimental/numeric>
++#include <experimental/optional>
++#include <experimental/propagate_const>
++#include <experimental/random>
++#include <experimental/ratio>
++#include <experimental/regex>
++#include <experimental/set>
++#include <experimental/source_location>
++#include <experimental/string>
++#include <experimental/string_view>
++#include <experimental/system_error>
++#include <experimental/tuple>
++#include <experimental/type_traits>
++#include <experimental/unordered_map>
++#include <experimental/unordered_set>
++#include <experimental/utility>
++#include <experimental/vector>
 diff --git a/libstdc++-v3/testsuite/experimental/filesystem/filesystem_error/cons.cc b/libstdc++-v3/testsuite/experimental/filesystem/filesystem_error/cons.cc
 index a08852df1e3..58862ea0c65 100644
 --- a/libstdc++-v3/testsuite/experimental/filesystem/filesystem_error/cons.cc
@@ -80389,10 +82049,10 @@ index 1bbc37408c3..82061f9e7e9 100644
    VERIFY( !ec );
    VERIFY( approx_equal(last_write_time(f.path), time) );
 diff --git a/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc b/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc
-index 2788ebd3082..efaa452a586 100644
+index 2788ebd3082..8dc624ae17a 100644
 --- a/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc
 +++ b/libstdc++-v3/testsuite/experimental/filesystem/path/generic/generic_string.cc
-@@ -23,27 +23,55 @@
+@@ -23,27 +23,60 @@
  
  #include <experimental/filesystem>
  #include <testsuite_fs.h>
@@ -80410,7 +82070,12 @@ index 2788ebd3082..efaa452a586 100644
 +  __gnu_test::compare_paths( path("//a//b").generic_u16string(), "//a/b" );
 +}
 +
++#if _GLIBCXX_USE_CXX11_ABI
 +using __gnu_test::SimpleAllocator;
++#else
++// COW std::basic_string doesn't use std::allocator_traits properly.
++template<typename T> using SimpleAllocator = __gnu_test::uneq_allocator<T>;
++#endif
 +
 +void
 +test02()
@@ -80676,17 +82341,230 @@ index 5919845c2f7..1a933b902d5 100644
  #include <experimental/internet>
  #include <testsuite_hooks.h>
 diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc
-index 37ca8c81e32..2d71581ac2e 100644
+index 37ca8c81e32..ac72a6a9a16 100644
 --- a/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc
 +++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v4/members.cc
-@@ -17,6 +17,7 @@
+@@ -17,17 +17,17 @@
  
  // { dg-do run { target c++14 } }
  // { dg-add-options net_ts }
 +// { dg-require-gthreads "" }
  
  #include <experimental/internet>
++#include <sstream>
  #include <testsuite_hooks.h>
+ 
+ using std::experimental::net::ip::address_v4;
+ 
+-void
++constexpr bool
+ test01()
+ {
+-  bool test __attribute__((unused)) = false;
+-
+   address_v4 a;
+   VERIFY( a.is_unspecified() );
+ 
+@@ -39,13 +39,15 @@ test01()
+ 
+   a = address_v4::broadcast();
+   VERIFY( !a.is_unspecified() );
++
++  return true;
+ }
+ 
+-void
++static_assert(test01(), "");
++
++constexpr bool
+ test02()
+ {
+-  bool test __attribute__((unused)) = false;
+-
+   auto a = address_v4::loopback();
+   VERIFY( a.is_loopback() );
+ 
+@@ -63,13 +65,15 @@ test02()
+ 
+   a = address_v4::broadcast();
+   VERIFY( !a.is_loopback() );
++
++  return true;
+ }
+ 
+-void
++static_assert(test02(), "");
++
++constexpr bool
+ test03()
+ {
+-  bool test __attribute__((unused)) = false;
+-
+   auto a = address_v4{0xE0000001};
+   VERIFY( a.is_multicast() );
+ 
+@@ -84,13 +88,15 @@ test03()
+ 
+   a = address_v4{0xDFFFFFFF};
+   VERIFY( !a.is_multicast() );
++
++  return true;
+ }
+ 
++static_assert(test03(), "");
++
+ void
+ test04()
+ {
+-  bool test __attribute__((unused)) = false;
+-
+   VERIFY( address_v4::any().to_string() == "0.0.0.0" );
+   VERIFY( address_v4::loopback().to_string() == "127.0.0.1" );
+   VERIFY( address_v4::broadcast().to_string() == "255.255.255.255" );
+@@ -99,15 +105,12 @@ test04()
+ void
+ test05()
+ {
+-  bool test __attribute__((unused)) = false;
+-
+   std::ostringstream ss;
+   ss << address_v4::any() << ' ' << address_v4::loopback() << ' '
+     << address_v4::broadcast();
+   VERIFY( ss.str() == "0.0.0.0 127.0.0.1 255.255.255.255" );
+ }
+ 
+-
+ int
+ main()
+ {
+diff --git a/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc b/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc
+new file mode 100644
+index 00000000000..b77d6a29e3d
+--- /dev/null
++++ b/libstdc++-v3/testsuite/experimental/net/internet/address/v6/members.cc
+@@ -0,0 +1,122 @@
++// Copyright (C) 2021 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do run { target c++14 } }
++// { dg-add-options net_ts }
++
++#include <experimental/internet>
++#include <sstream>
++#include <testsuite_hooks.h>
++
++using std::experimental::net::ip::address_v6;
++
++constexpr bool
++test01()
++{
++  address_v6 a;
++  VERIFY( a.is_unspecified() );
++  VERIFY( !a.is_loopback() );
++  VERIFY( !a.is_multicast() );
++  VERIFY( !a.is_link_local() );
++  VERIFY( !a.is_site_local() );
++
++  a = address_v6::any();
++  VERIFY( a.is_unspecified() );
++  VERIFY( !a.is_loopback() );
++  VERIFY( !a.is_multicast() );
++  VERIFY( !a.is_link_local() );
++  VERIFY( !a.is_site_local() );
++
++  a = address_v6::loopback();
++  VERIFY( !a.is_unspecified() );
++  VERIFY( a.is_loopback() );
++  VERIFY( !a.is_multicast() );
++  VERIFY( !a.is_link_local() );
++  VERIFY( !a.is_site_local() );
++
++  a = address_v6{address_v6::loopback().to_bytes(), 1};
++  VERIFY( !a.is_unspecified() );
++  VERIFY( !a.is_loopback() );
++  VERIFY( !a.is_multicast() );
++  VERIFY( !a.is_link_local() );
++  VERIFY( !a.is_site_local() );
++
++  return true;
++}
++
++static_assert(test01(), "");
++
++constexpr bool
++test02()
++{
++  auto a = address_v6{address_v6::bytes_type{0xFF}};
++  VERIFY( a.is_multicast() );
++
++  a = address_v6{address_v6::bytes_type{0xFF, 0x01}};
++  VERIFY( a.is_multicast() );
++
++  a = address_v6{address_v6::bytes_type{0xFF, 0x00, 0x01}};
++  VERIFY( a.is_multicast() );
++
++  a = address_v6{address_v6::bytes_type{0xFE, 0x80}};
++  VERIFY( !a.is_multicast() );
++
++  a = address_v6{address_v6::bytes_type{0xFE, 0xC0}};
++  VERIFY( !a.is_multicast() );
++
++  return true;
++}
++
++static_assert(test02(), "");
++
++void
++test03()
++{
++  // Assume these addresses use the preferred forms:
++  VERIFY( address_v6::any().to_string() == "::" );
++  VERIFY( address_v6::loopback().to_string() == "::1" );
++
++  // Choose values with no leading zeros, so output is portable:
++  address_v6 a{address_v6::bytes_type{21,22,23,24,25,26,27,28,29}, 42};
++  const std::string s = a.to_string();
++  if (s.find("::") != s.npos)
++    VERIFY( s == "1516:1718:191a:1b1c:1d00::%42" );
++  else
++  {
++    // Contiguous zeros were not shortened to "::"
++    VERIFY( s.substr(0, 25) == "1516:1718:191a:1b1c:1d00:" );
++    VERIFY( s.substr(s.size() - 3) == "%42" );
++  }
++}
++
++void
++test04()
++{
++  address_v6 a{address_v6::bytes_type{1,2,3,4,5,6,7,8,9}, 42};
++  std::ostringstream ss;
++  ss << address_v6::any() << ' ' << address_v6::loopback() << ' ' << a;
++  VERIFY( ss.str() == (":: ::1 " + a.to_string()) );
++}
++
++int
++main()
++{
++  test01();
++  test02();
++  test03();
++  test04();
++}
 diff --git a/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc b/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc
 index 746557af656..f9bea5f9ccd 100644
 --- a/libstdc++-v3/testsuite/experimental/net/internet/resolver/base.cc
@@ -80723,6 +82601,54 @@ index 34ebe5eba70..831d78c44fe 100644
  
  #include <experimental/internet>
  #include <testsuite_hooks.h>
+diff --git a/libstdc++-v3/testsuite/experimental/net/system_context/1.cc b/libstdc++-v3/testsuite/experimental/net/system_context/1.cc
+new file mode 100644
+index 00000000000..bc2405d31d3
+--- /dev/null
++++ b/libstdc++-v3/testsuite/experimental/net/system_context/1.cc
+@@ -0,0 +1,42 @@
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// { dg-do run }
++// { dg-options "-pthread"  }
++// { dg-require-effective-target c++14 }
++// { dg-require-effective-target pthread }
++// { dg-require-gthreads "" }
++
++#include <experimental/executor>
++#include <testsuite_hooks.h>
++
++namespace net = std::experimental::net;
++
++void
++test01()
++{
++  net::system_context& c = net::system_executor{}.context();
++  net::post( [&c] { c.stop(); } );
++  c.join();
++  VERIFY( c.stopped() );
++}
++
++int
++main()
++{
++  test01();
++}
 diff --git a/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc b/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc
 index d1886e75f06..935df8373cb 100644
 --- a/libstdc++-v3/testsuite/experimental/net/timer/waitable/cons.cc
@@ -81372,6 +83298,50 @@ index 00000000000..692d79fa5a6
 +}
 +
 +// { dg-final { gdb-test SPOT } }
+diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple.cc
+index 5b70e2b3159..5f9526f56b2 100644
+--- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple.cc
++++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple.cc
+@@ -117,6 +117,17 @@ main()
+   std::vector<int>::iterator viter0;
+ // { dg-final { note-test viter0 {non-dereferenceable iterator for std::vector} } }
+ 
++  std::vector<bool> vb;
++  vb.reserve(100);
++  vb.push_back(true);
++  vb.push_back(true);
++  vb.push_back(true);
++  vb.push_back(false);
++  vb.push_back(false);
++  vb.push_back(true);
++  vb.erase(vb.begin());
++// { dg-final { regexp-test vb {std::(__debug::)?vector<bool> of length 5, capacity 128 = \\{true, true, false, false, true\\}} } }
++
+   __gnu_cxx::slist<int> sll;
+   sll.push_front(23);
+   sll.push_front(47);
+diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple11.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple11.cc
+index d24af91d0ea..414cfed2fd8 100644
+--- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple11.cc
++++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/simple11.cc
+@@ -110,6 +110,17 @@ main()
+   std::vector<int>::iterator viter0;
+ // { dg-final { note-test viter0 {non-dereferenceable iterator for std::vector} } }
+ 
++  std::vector<bool> vb;
++  vb.reserve(100);
++  vb.push_back(true);
++  vb.push_back(true);
++  vb.push_back(true);
++  vb.push_back(false);
++  vb.push_back(false);
++  vb.push_back(true);
++  vb.erase(vb.begin());
++// { dg-final { regexp-test vb {std::(__debug::)?vector<bool> of length 5, capacity 128 = \\{true, true, false, false, true\\}} } }
++
+   __gnu_cxx::slist<int> sll;
+   sll.push_front(23);
+   sll.push_front(47);
 diff --git a/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc b/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
 index e1feef99582..0f00a94da42 100644
 --- a/libstdc++-v3/testsuite/tr1/8_c_compatibility/cstdlib/functions.cc
@@ -81385,6 +83355,32 @@ index e1feef99582..0f00a94da42 100644
    char** endptr = 0;
    int base = 0;
  
+diff --git a/libstdc++-v3/testsuite/util/testsuite_fs.h b/libstdc++-v3/testsuite/util/testsuite_fs.h
+index fe42845ac4f..334bc81f3c1 100644
+--- a/libstdc++-v3/testsuite/util/testsuite_fs.h
++++ b/libstdc++-v3/testsuite/util/testsuite_fs.h
+@@ -82,7 +82,7 @@ namespace __gnu_test
+   test_fs::path
+   root_path()
+   {
+-#if defined(__MING32__) || defined(__MINGW64__)
++#if defined(__MINGW32__) || defined(__MINGW64__)
+     return L"c:/";
+ #else
+     return "/";
+diff --git a/libstdc++-v3/testsuite/util/testsuite_iterators.h b/libstdc++-v3/testsuite/util/testsuite_iterators.h
+index ac646a59cb8..72945fb601c 100644
+--- a/libstdc++-v3/testsuite/util/testsuite_iterators.h
++++ b/libstdc++-v3/testsuite/util/testsuite_iterators.h
+@@ -478,7 +478,7 @@ namespace __gnu_test
+ 	}
+       else
+ 	{
+-	  ITERATOR_VERIFY(n <= this->ptr - this->SharedInfo->first);
++	  ITERATOR_VERIFY(-n <= this->ptr - this->SharedInfo->first);
+ 	  this->ptr += n;
+ 	}
+       return *this;
 diff --git a/ltmain.sh b/ltmain.sh
 index 79f9ba89af5..70990740b6c 100644
 --- a/ltmain.sh
@@ -81429,3 +83425,16 @@ index 74cce1af18d..2456908d716 100755
      UPLOAD_PATH="${GCC_USERNAME}@${GCC_HOSTNAME}:${FTP_PATH}"
    else
      mkdir -p "${FTP_PATH}/diffs" \
+diff --git a/maintainer-scripts/generate_libstdcxx_web_docs b/maintainer-scripts/generate_libstdcxx_web_docs
+index 74886356bc7..29572172761 100755
+--- a/maintainer-scripts/generate_libstdcxx_web_docs
++++ b/maintainer-scripts/generate_libstdcxx_web_docs
+@@ -43,7 +43,7 @@ do
+   [ $dir == 'libstdc++-v3' ] || disabled_libs="$disabled_libs --disable-$dir"
+ done
+ set -x
+-${SRCDIR}/configure --enable-languages=c,c++ --disable-gcc $disabled_libs --docdir=/docs
++${SRCDIR}/configure --enable-languages=c,c++ --disable-gcc --disable-multilib $disabled_libs --docdir=/docs
+ eval `grep '^target=' config.log`
+ make configure-target
+ # If the following step fails with an error like
