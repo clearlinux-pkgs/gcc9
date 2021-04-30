@@ -615,10 +615,11 @@ Iain Buclaw (17):
       Fix ICE: in function_and_variable_visibility, at ipa-visibility.c:795 [PR99466]
       d: Fix ICE in when formating a string with '%' or '`' characters (PR98457)
 
-Iain Sandoe (3):
+Iain Sandoe (4):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
       Darwin, libgfortran : Do not use environ directly from the library.
       libobjc, Darwin : Fix powerpc encoding regression.
+      libgfortran, configure : Adjust configure to autoconf-2.69
 
 Ian Lance Taylor (2):
       go.test: update issue4085b.go to version from Go 1.13
@@ -771,7 +772,10 @@ Jakub Jelinek (145):
       intl: Add --enable-host-shared support [PR100096]
       sanitizer: Fix asan against glibc 2.34 [PR100114]
 
-Jason Merrill (19):
+James Clarke (1):
+      bootstrap/87338 - gcc 8.2 fails to bootstrap on ia64
+
+Jason Merrill (20):
       c++: Fix CTAD with multiple-arg ctor template [93248].
       c++: Fix ICE-after-error on partial spec [92068]
       c++: Find parameter pack in typedef in lambda [92909].
@@ -791,6 +795,7 @@ Jason Merrill (19):
       c++: Fix attr-lambda3.C
       c++: C++17 and decltype of multi-operator expression [PR95675]
       c++: Fix class NTTP constness handling [PR98810]
+      c++: Fix ICE with using and virtual function. [PR95719]
 
 Jiufu Guo (1):
       rs6000: Check -+0 and NaN for smax/smin generation
@@ -1086,8 +1091,9 @@ Peter Bergner (1):
 Piotr Kubaj (1):
       rs6000: Add support for powerpc64le-unknown-freebsd
 
-Prathamesh Kulkarni (1):
+Prathamesh Kulkarni (2):
       PR47785: Add support for handling Xassembler/Wa options with LTO.
+      Use safe_dyn_cast instead of dyn_cast in find_loop_guard to fix PR92608.
 
 Qian Jianhua (2):
       aarch64: Add A64FX machine model
@@ -1097,7 +1103,7 @@ Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
       libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
 
-Richard Biener (34):
+Richard Biener (35):
       tree-optimization/94163 constrain alignment set by PRE
       middle-end/94206 fix memset folding to avoid types with padding
       tree-optimization/94103 avoid CSE of loads with padding
@@ -1132,6 +1138,7 @@ Richard Biener (34):
       tree-optimization/99694 - fix value-numbering PHIs
       testsuite/100176 - fix struct-layout-1_generate.c compile
       tree-optimization/99954 - fix loop distribution memcpy classification
+      c++/98032 - add testcase
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
@@ -24835,7 +24842,7 @@ index 6441d647a54..d6bac1924db 100644
  
  	* GCC 9.3.0 released.
 diff --git a/gcc/cp/call.c b/gcc/cp/call.c
-index f365a5a7f7b..5822a85f520 100644
+index f365a5a7f7b..82303e093ef 100644
 --- a/gcc/cp/call.c
 +++ b/gcc/cp/call.c
 @@ -5790,6 +5790,15 @@ op_is_ordered (tree_code code)
@@ -24869,7 +24876,7 @@ index f365a5a7f7b..5822a85f520 100644
    savew = warningcount + werrorcount, savee = errorcount;
    args = make_tree_vector_single (expr);
    expr = build_special_member_call (NULL_TREE, complete_ctor_identifier,
-@@ -8292,6 +8309,15 @@ build_over_call (struct z_candidate *cand, int flags, tsubst_flags_t complain)
+@@ -8292,6 +8309,19 @@ build_over_call (struct z_candidate *cand, int flags, tsubst_flags_t complain)
  	  || CLASSTYPE_FINAL (TYPE_METHOD_BASETYPE (TREE_TYPE (fn))))
  	flags |= LOOKUP_NONVIRTUAL;
  
@@ -24878,14 +24885,18 @@ index f365a5a7f7b..5822a85f520 100644
 +      if (DECL_VINDEX (fn) && (flags & LOOKUP_NONVIRTUAL) == 0
 +	  && resolves_to_fixed_type_p (arg))
 +	{
-+	  fn = lookup_vfn_in_binfo (DECL_VINDEX (fn), cand->conversion_path);
++	  tree binfo = cand->conversion_path;
++	  if (BINFO_TYPE (binfo) != DECL_CONTEXT (fn))
++	    binfo = lookup_base (binfo, DECL_CONTEXT (fn), ba_unique,
++				 NULL, complain);
++	  fn = lookup_vfn_in_binfo (DECL_VINDEX (fn), binfo);
 +	  flags |= LOOKUP_NONVIRTUAL;
 +	}
 +
        /* [class.mfct.nonstatic]: If a nonstatic member function of a class
  	 X is called for an object that is not of type X, or of a type
  	 derived from X, the behavior is undefined.
-@@ -9895,17 +9921,6 @@ build_new_method_call_1 (tree instance, tree fns, vec<tree, va_gc> **args,
+@@ -9895,17 +9925,6 @@ build_new_method_call_1 (tree instance, tree fns, vec<tree, va_gc> **args,
  
  	  if (call != error_mark_node)
  	    {
@@ -24904,10 +24915,10 @@ index f365a5a7f7b..5822a85f520 100644
                  flags |= LOOKUP_EXPLICIT_TMPL_ARGS;
  	      /* Now we know what function is being called.  */
 diff --git a/gcc/cp/class.c b/gcc/cp/class.c
-index 6b57184e081..f7c8757c740 100644
+index 6b57184e081..a81eeee77d9 100644
 --- a/gcc/cp/class.c
 +++ b/gcc/cp/class.c
-@@ -2391,6 +2391,20 @@ get_vcall_index (tree fn, tree type)
+@@ -2391,6 +2391,24 @@ get_vcall_index (tree fn, tree type)
    gcc_unreachable ();
  }
  
@@ -24921,6 +24932,10 @@ index 6b57184e081..f7c8757c740 100644
 +  int ix = tree_to_shwi (idx);
 +  if (TARGET_VTABLE_USES_DESCRIPTORS)
 +    ix /= MAX (TARGET_VTABLE_USES_DESCRIPTORS, 1);
++  while (BINFO_PRIMARY_P (binfo))
++    /* BINFO_VIRTUALS in a primary base isn't accurate, find the derived
++       class that actually owns the vtable.  */
++    binfo = BINFO_INHERITANCE_CHAIN (binfo);
 +  tree virtuals = BINFO_VIRTUALS (binfo);
 +  return TREE_VALUE (chain_index (ix, virtuals));
 +}
@@ -28337,7 +28352,7 @@ index d6aed358484..1aaa0c845f6 100644
    cur_row = NULL;
    cur_trace = NULL;
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
-index 30c4c7007ee..0c15de2cca4 100644
+index 30c4c7007ee..6f2bfb919a9 100644
 --- a/gcc/dwarf2out.c
 +++ b/gcc/dwarf2out.c
 @@ -3808,7 +3808,7 @@ static void add_data_member_location_attribute (dw_die_ref, tree,
@@ -28576,7 +28591,21 @@ index 30c4c7007ee..0c15de2cca4 100644
      }
    else
      cached_next_real_insn = NULL;
-@@ -32132,13 +32176,13 @@ dwarf2out_early_finish (const char *filename)
+@@ -27671,11 +27715,8 @@ dwarf2out_inline_entry (tree block)
+   if (cur_line_info_table)
+     ied->view = cur_line_info_table->view;
+ 
+-  char label[MAX_ARTIFICIAL_LABEL_BYTES];
+-
+-  ASM_GENERATE_INTERNAL_LABEL (label, BLOCK_INLINE_ENTRY_LABEL,
+-			       BLOCK_NUMBER (block));
+-  ASM_OUTPUT_LABEL (asm_out_file, label);
++  ASM_OUTPUT_DEBUG_LABEL (asm_out_file, BLOCK_INLINE_ENTRY_LABEL,
++			  BLOCK_NUMBER (block));
+ }
+ 
+ /* Called from finalize_size_functions for size functions so that their body
+@@ -32132,13 +32173,13 @@ dwarf2out_early_finish (const char *filename)
       emit full debugging info for them.  */
    retry_incomplete_types ();
  
@@ -41400,6 +41429,32 @@ index 00000000000..81466dc3b81
 +    }
 +  return 0;
 +}
+diff --git a/gcc/testsuite/g++.dg/pr98032.C b/gcc/testsuite/g++.dg/pr98032.C
+new file mode 100644
+index 00000000000..d7eef276668
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/pr98032.C
+@@ -0,0 +1,20 @@
++// { dg-do compile }
++
++namespace osl {
++class Thread {
++public:
++  virtual ~Thread();
++  virtual void join();
++};
++} // namespace osl
++class SimpleReferenceObject {
++protected:
++  virtual ~SimpleReferenceObject();
++};
++class Thread : SimpleReferenceObject, osl::Thread {
++public:
++  using osl::Thread::join;
++};
++class RenderThread : Thread {
++  RenderThread() { join(); }
++};
 diff --git a/gcc/testsuite/g++.dg/pr98136.C b/gcc/testsuite/g++.dg/pr98136.C
 new file mode 100644
 index 00000000000..f3c27f6b09f
@@ -41653,6 +41708,22 @@ index 00000000000..3cddde58bdd
 +	  o = n;
 +      }
 +}
+diff --git a/gcc/testsuite/g++.dg/tree-ssa/final4.C b/gcc/testsuite/g++.dg/tree-ssa/final4.C
+new file mode 100644
+index 00000000000..cce6e9afadb
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/tree-ssa/final4.C
+@@ -0,0 +1,10 @@
++// PR c++/95719
++// { dg-do compile { target c++11 } }
++
++struct S1 { virtual ~S1(); };
++struct S2 {
++    virtual ~S2();
++    virtual void f();
++};
++struct S3 final: S1, S2 { using S2::f; };
++void g(S3 & s) { s.f(); }
 diff --git a/gcc/testsuite/g++.dg/tree-ssa/pr95638.C b/gcc/testsuite/g++.dg/tree-ssa/pr95638.C
 new file mode 100644
 index 00000000000..d1bea6dffaa
@@ -44733,6 +44804,37 @@ index 00000000000..86ffaad7f48
 +__thread int tlsvar = 3;
 +/* { dg-final { scan-assembler ".weak_definition ___emutls_t.tlsvar" { target *-*-darwin* } } } */
 +/* { dg-final { scan-assembler ".private_extern ___emutls_t.tlsvar" { target *-*-darwin* } } } */
+diff --git a/gcc/testsuite/gcc.dg/torture/pr92608.c b/gcc/testsuite/gcc.dg/torture/pr92608.c
+new file mode 100644
+index 00000000000..3a6beaba441
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr92608.c
+@@ -0,0 +1,25 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-funswitch-loops" } */
++
++int op, bs;
++
++void
++q0 (void)
++{
++  op += 1 % (op == bs);
++}
++
++void __attribute__ ((returns_twice))
++co (void)
++{
++}
++
++void __attribute__ ((simd))
++uq (void)
++{
++  q0 ();
++  co ();
++
++  while (bs < 1)
++    ++bs;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr94206.c b/gcc/testsuite/gcc.dg/torture/pr94206.c
 new file mode 100644
 index 00000000000..9e54bba4ed4
@@ -58378,6 +58480,19 @@ index 470b6a295be..200344b42dd 100644
    /* Nothing to analyze if the loop is known to be infinite.  */
    if (loop_constraint_set_p (loop, LOOP_C_INFINITE))
      return false;
+diff --git a/gcc/tree-ssa-loop-unswitch.c b/gcc/tree-ssa-loop-unswitch.c
+index 30a2a9dd26e..a5becadfdbe 100644
+--- a/gcc/tree-ssa-loop-unswitch.c
++++ b/gcc/tree-ssa-loop-unswitch.c
+@@ -587,7 +587,7 @@ find_loop_guard (struct loop *loop)
+ 	next = single_succ (header);
+       else
+ 	{
+-	  cond = dyn_cast <gcond *> (last_stmt (header));
++	  cond = safe_dyn_cast <gcond *> (last_stmt (header));
+ 	  if (! cond)
+ 	    return NULL;
+ 	  extract_true_false_edges_from_block (header, &te, &fe);
 diff --git a/gcc/tree-ssa-phiopt.c b/gcc/tree-ssa-phiopt.c
 index 19b37b43b8e..47227dc16dc 100644
 --- a/gcc/tree-ssa-phiopt.c
@@ -61075,6 +61190,122 @@ index a2f4281d0c5..bf4d78586c9 100644
  #else
        __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libgfortran/configure b/libgfortran/configure
+index 60867b93d0e..71f48166ec6 100755
+--- a/libgfortran/configure
++++ b/libgfortran/configure
+@@ -780,7 +780,6 @@ infodir
+ docdir
+ oldincludedir
+ includedir
+-runstatedir
+ localstatedir
+ sharedstatedir
+ sysconfdir
+@@ -871,7 +870,6 @@ datadir='${datarootdir}'
+ sysconfdir='${prefix}/etc'
+ sharedstatedir='${prefix}/com'
+ localstatedir='${prefix}/var'
+-runstatedir='${localstatedir}/run'
+ includedir='${prefix}/include'
+ oldincludedir='/usr/include'
+ docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
+@@ -1124,15 +1122,6 @@ do
+   | -silent | --silent | --silen | --sile | --sil)
+     silent=yes ;;
+ 
+-  -runstatedir | --runstatedir | --runstatedi | --runstated \
+-  | --runstate | --runstat | --runsta | --runst | --runs \
+-  | --run | --ru | --r)
+-    ac_prev=runstatedir ;;
+-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+-  | --run=* | --ru=* | --r=*)
+-    runstatedir=$ac_optarg ;;
+-
+   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
+     ac_prev=sbindir ;;
+   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
+@@ -1270,7 +1259,7 @@ fi
+ for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
+ 		datadir sysconfdir sharedstatedir localstatedir includedir \
+ 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
+-		libdir localedir mandir runstatedir
++		libdir localedir mandir
+ do
+   eval ac_val=\$$ac_var
+   # Remove trailing slashes.
+@@ -1423,7 +1412,6 @@ Fine tuning of the installation directories:
+   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
+   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
+   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
+   --libdir=DIR            object code libraries [EPREFIX/lib]
+   --includedir=DIR        C header files [PREFIX/include]
+   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
+@@ -12700,7 +12688,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12703 "configure"
++#line 12691 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -12806,7 +12794,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12809 "configure"
++#line 12797 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -16055,7 +16043,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -16101,7 +16089,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -16125,7 +16113,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -16170,7 +16158,7 @@ else
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
+@@ -16194,7 +16182,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     We can't simply define LARGE_OFF_T to be 9223372036854775807,
+     since some C++ compilers masquerading as C compilers
+     incorrectly reject 9223372036854775807.  */
+-#define LARGE_OFF_T ((((off_t) 1 << 31) << 31) - 1 + (((off_t) 1 << 31) << 31))
++#define LARGE_OFF_T (((off_t) 1 << 62) - 1 + ((off_t) 1 << 62))
+   int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
+ 		       && LARGE_OFF_T % 2147483647 == 1)
+ 		      ? 1 : -1];
 diff --git a/libgfortran/generated/iall_i1.c b/libgfortran/generated/iall_i1.c
 index 3e848ff6787..23f55822812 100644
 --- a/libgfortran/generated/iall_i1.c
