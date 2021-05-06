@@ -2,7 +2,7 @@ Alan Modra (2):
       [RS6000] PR94145, make PLT loads volatile
       [RS6000] ICE in decompose, at rtl.h:2282
 
-Alex Coplan (7):
+Alex Coplan (8):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
       arm: Don't generate invalid LDRD insns
       aarch64: Add support for Neoverse V1 CPU
@@ -10,6 +10,7 @@ Alex Coplan (7):
       aarch64: Add support for Neoverse N2 CPU
       arm: Add support for Neoverse N2 CPU
       arm: Add missing part number for Neoverse V1
+      early-remat.c: Fix new/delete mismatch [PR100230]
 
 Alexandre Oliva (2):
       [rs6000] fix mffsl emulation
@@ -74,7 +75,7 @@ Douglas Rupp (1):
 Ed Schonberg (1):
       Fix PR ada/98230
 
-Eric Botcazou (28):
+Eric Botcazou (29):
       Fix incorrect filling of delay slots in branchy code at -O2
       Fix wrong year in ChangeLog.
       Fix Ada bootstrap on Cygwin64
@@ -103,6 +104,7 @@ Eric Botcazou (28):
       Fix thinko in libcpp preparation patch for modules
       Further increase the limit on the size of accepted Ada files
       Fix another -freorder-blocks-and-partition glitch with Windows SEH
+      Fix PR target/100402
 
 François Dumont (3):
       libstdc++: Fix pretty printers script and tests
@@ -113,7 +115,12 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (412):
+GCC Administrator (417):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -549,7 +556,7 @@ H.J. Lu (11):
 Haijian Zhang (1):
       pr94780.c fails with ICE on aarch64 [PR94820]
 
-Harald Anlauf (39):
+Harald Anlauf (40):
       PR fortran/93364 - ICE in gfc_set_array_spec, at fortran/array.c:879
       PR fortran/95104 - Segfault on a legal WAIT statement
       PR fortran/95104 - Segfault on a legal WAIT statement
@@ -589,6 +596,7 @@ Harald Anlauf (39):
       PR fortran/97491 - Wrong restriction for VALUE arguments of pure procedures
       PR fortran/99840 - ICE in gfc_simplify_matmul, at fortran/simplify.c:4777
       PR fortran/100154 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
+      PR fortran/100274 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
 
 Hongtao Liu (1):
       backport TIGERLAKE part to GCC9.
@@ -615,17 +623,32 @@ Iain Buclaw (17):
       Fix ICE: in function_and_variable_visibility, at ipa-visibility.c:795 [PR99466]
       d: Fix ICE in when formating a string with '%' or '`' characters (PR98457)
 
-Iain Sandoe (4):
+Iain Sandoe (19):
       Darwin: Fix i686 bootstrap when the assembler supports GOTOFF in data.
       Darwin, libgfortran : Do not use environ directly from the library.
       libobjc, Darwin : Fix powerpc encoding regression.
       libgfortran, configure : Adjust configure to autoconf-2.69
+      Darwin, testsuite: Fix darwin-version-1.c fails with XCode 11.4.
+      Darwin: Make sanitizer local vars linker-visible.
+      Objective-C, NeXT ABI: Identify V2 IVAR refs by metadata.
+      Darwin, machopic: Arrange to indirect IVARs when needed.
+      testsuite, Darwin: XFAIL runs for two timode conversion tests.
+      Darwin : Update libc function availability.
+      Darwin : Avoid a C++ ODR violation seen with LTO.
+      Darwin : Fix out-of-bounds access to df_regs_ever_live.
+      dwarf2unwind : Force the CFA after remember/restore pairs [44107/48097].
+      Darwin: Adjust the PCH area to allow for 16384byte page size.
+      Darwin: Darwin 20 is to be macOS 11 (Big Sur).
+      Darwin : Update the kernel version to macOS version mapping.
+      Darwin : Adjust handling of MACOSX_DEPLOYMENT_TARGET for macOS 11.
+      Darwin : Update libtool and dependencies for Darwin20 [PR97865]
+      Darwin, libsanitizer : Support libsanitizer for x86_64-darwin20.
 
 Ian Lance Taylor (2):
       go.test: update issue4085b.go to version from Go 1.13
       runtime: cast SIGSTKSZ to uintptr
 
-Jakub Jelinek (145):
+Jakub Jelinek (150):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -771,6 +794,11 @@ Jakub Jelinek (145):
       vectorizer: Remove dead scalar .COND_* calls from vectorized loops [PR99767]
       intl: Add --enable-host-shared support [PR100096]
       sanitizer: Fix asan against glibc 2.34 [PR100114]
+      cprop: Fix -fcompare-debug bug in constprop_register [PR100148]
+      vmsdbgout: Remove useless register keywords
+      cfgcleanup: Fix -fcompare-debug issue in outgoing_edges_match [PR100254]
+      aarch64: Fix ICE in aarch64_add_offset_1_temporaries [PR100302]
+      nvptx: Fix up nvptx build against latest libstdc++ [PR100375]
 
 James Clarke (1):
       bootstrap/87338 - gcc 8.2 fails to bootstrap on ia64
@@ -804,7 +832,7 @@ John David Anglin (2):
       Define __BIG_ENDIAN__
       Add mi_thunk support for vcalls on hppa.
 
-Jonathan Wakely (99):
+Jonathan Wakely (100):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -904,6 +932,7 @@ Jonathan Wakely (99):
       libstdc++: Disable test for non-gthreads targets [PR 100180]
       libstdc++: Define __cpp_lib_constexpr_string macro
       libstdc++: Add missing 'inline' specifiers to net::ip functions [PR 100259]
+      libstdc++: Fix inconsistent feature test macro
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -1023,8 +1052,9 @@ Martin Liska (26):
       Sync gcc-changelog scripts.
       Sync gcc-changelog scripts.
 
-Martin Sebor (1):
+Martin Sebor (2):
       c++: reject scalar array initialization with nullptr [PR94510]
+      Minimal change to avoid incorrect strlen constant folding (PR 91914).
 
 Matthew Malcomson (3):
       aarch64: New Straight Line Speculation (SLS) mitigation flags
@@ -1103,7 +1133,7 @@ Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
       libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
 
-Richard Biener (35):
+Richard Biener (38):
       tree-optimization/94163 constrain alignment set by PRE
       middle-end/94206 fix memset folding to avoid types with padding
       tree-optimization/94103 avoid CSE of loads with padding
@@ -1139,6 +1169,9 @@ Richard Biener (35):
       testsuite/100176 - fix struct-layout-1_generate.c compile
       tree-optimization/99954 - fix loop distribution memcpy classification
       c++/98032 - add testcase
+      rtl-optimization/98144 - tame REE memory usage
+      tree-optimization/100053 - fix predication in VN
+      tree-optimization/98786 - fix issue with phiopt and abnormals
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
@@ -1181,8 +1214,9 @@ Sinan Lin (1):
 Stam Markianos-Wright (1):
       Backport of the patch for PR target/91816
 
-Stefan Schulze Frielinghaus (1):
+Stefan Schulze Frielinghaus (2):
       S/390: Emit vector alignment hints for z13 if AS accepts them
+      PR rtl-optimization/100263: Ensure register can change mode
 
 Sylvia Taylor (1):
       add intrinsics for vld1(q)_x4 and vst1(q)_x4
@@ -1301,10 +1335,17 @@ liuhongt (2):
       Fix missing defination of PTA_CLDEMOTE, PTA_MOVDIRI, PTA_MOVDIR64B.
 
 diff --git a/ChangeLog b/ChangeLog
-index 9605d767a80..6ffd0baf86c 100644
+index 9605d767a80..4e28235fb61 100644
 --- a/ChangeLog
 +++ b/ChangeLog
-@@ -1,3 +1,34 @@
+@@ -1,3 +1,41 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* libtool.m4: Update handling of Darwin platform link flags
++	for Darwin20.
++
 +2021-03-09  Ian Lance Taylor  <iant@golang.org>
 +
 +	PR go/99458
@@ -6765,10 +6806,206 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..fd1631ddff0 100644
+index d8e53874e68..e71c5907180 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,3218 @@
+@@ -1,3 +1,3414 @@
++2021-05-04  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2021-04-23  Alex Coplan  <alex.coplan@arm.com>
++
++	PR rtl-optimization/100230
++	* early-remat.c (early_remat::sort_candidates): Use delete[]
++	instead of delete for array allocated with new[].
++
++2021-05-04  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100053
++	* tree-ssa-sccvn.c (vn_nary_op_get_predicated_value): Do
++	not use optimistic dominance queries for backedges to validate
++	predicated values.
++	(dominated_by_p_w_unex): Add parameter to ignore executable
++	state on backedges.
++	(rpo_elim::eliminate_avail): Adjust.
++
++2021-05-04  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-01-29  Richard Biener  <rguenther@suse.de>
++
++	PR rtl-optimization/98144
++	* df.h (df_mir_bb_info): Add con_visited member.
++	* df-problems.c (df_mir_alloc): Initialize con_visited,
++	do not fully populate IN and OUT.
++	(df_mir_reset): Likewise.
++	(df_mir_confluence_0): Set con_visited.
++	(df_mir_confluence_n): Properly handle implicitely
++	fully populated IN and OUT as designated by con_visited
++	and update con_visited accordingly.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-05-02  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/100375
++	* config/nvptx/nvptx.c (nvptx_sese_pseudo): Use NULL instead of 0
++	as first argument of pseudo_node_t constructors.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-29  Jakub Jelinek  <jakub@redhat.com>
++
++	PR target/100302
++	* config/aarch64/aarch64.c (aarch64_add_offset_1_temporaries): Use
++	absu_hwi instead of abs_hwi.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100254
++	* cfgcleanup.c (outgoing_edges_match): Check REG_EH_REGION on
++	last1 and last2 insns rather than BB_END (bb1) and BB_END (bb2) insns.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-26  Jakub Jelinek  <jakub@redhat.com>
++
++	PR debug/100255
++	* vmsdbgout.c (ASM_OUTPUT_DEBUG_STRING, vmsdbgout_begin_block,
++	vmsdbgout_end_block, lookup_filename, vmsdbgout_source_line): Remove
++	register keywords.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100148
++	* cprop.c (constprop_register): Use next_nondebug_insn instead of
++	NEXT_INSN.
++
++2021-05-04  Martin Sebor  <msebor@redhat.com>
++
++	PR tree-optimization/91914
++	* expr.c (string_constant): Pass argument type to
++	fold_ctor_reference to guide it.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-12-23  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin-driver.c (validate_macosx_version_min): Allow
++	MACOSX_DEPLOYMENT_TARGET=11.
++	(darwin_default_min_version): Adjust warning spelling to avoid
++	an apostrophe.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-12-21  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin-driver.c (darwin_find_version_from_kernel):
++	Compute the minor OS version from the minor kernel version.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-11-06  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin-c.c: Allow for Darwin20 to correspond to macOS 11.
++	* config/darwin-driver.c: Likewise.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-11-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/host-darwin.c: Align pch_address_space to 16384.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2021-03-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	PR target/44107
++	PR target/48097
++	* config/darwin-protos.h (darwin_should_restore_cfa_state): New.
++	* config/darwin.c (darwin_should_restore_cfa_state): New.
++	* config/darwin.h (TARGET_ASM_SHOULD_RESTORE_CFA_STATE): New.
++	* doc/tm.texi: Regenerated.
++	* doc/tm.texi.in: Document TARGET_ASM_SHOULD_RESTORE_CFA_STATE.
++	* dwarf2cfi.c (connect_traces): If the target requests, restore
++	the CFA expression after a DW_CFA_restore.
++	* target.def (TARGET_ASM_SHOULD_RESTORE_CFA_STATE): New hook.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2021-04-03  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (machopic_legitimize_pic_address): Check
++	that the current pic register is one of the hard reg set
++	before setting liveness.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-11-22  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin-c.c (struct f_align_stack): Rename
++	to type from align_stack to f_align_stack.
++	(push_field_alignment): Likewise.
++	(pop_field_alignment): Likewise.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-09-07  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c (darwin_libc_has_function): Report sincos
++	available from 10.9.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.c: Lookup Objective C metadata and force indirection
++	for IVAR refs.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* config/darwin.h (ASM_GENERATE_INTERNAL_LABEL):
++	Make ubsan_{data,type},ASAN symbols linker-visible.
++
++2021-04-30  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	Backported from master:
++	2019-11-21  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	PR tree-optimization/92608
++	* tree-ssa-loop-unswitch.c (find_loop_guard): Use safe_dyn_cast instead
++	of dyn_cast.
++
++2021-04-30  James Clarke  <jrtc27@jrtc27.com>
++
++	PR bootstrap/87338
++	* dwarf2out.c (dwarf2out_inline_entry): Use ASM_OUTPUT_DEBUG_LABEL
++	instead of ASM_GENERATE_INTERNAL_LABEL and ASM_OUTPUT_LABEL.
++
 +2021-04-28  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	Backported from master:
@@ -11953,6 +12190,21 @@ index 934325c6538..81d3edf862e 100644
  	}
  
        if (control_flow_insn_p (insn))
+diff --git a/gcc/cfgcleanup.c b/gcc/cfgcleanup.c
+index 01e13b9dc4f..3b4855f7e92 100644
+--- a/gcc/cfgcleanup.c
++++ b/gcc/cfgcleanup.c
+@@ -1890,8 +1890,8 @@ outgoing_edges_match (int mode, basic_block bb1, basic_block bb2)
+ 
+   /* Ensure the same EH region.  */
+   {
+-    rtx n1 = find_reg_note (BB_END (bb1), REG_EH_REGION, 0);
+-    rtx n2 = find_reg_note (BB_END (bb2), REG_EH_REGION, 0);
++    rtx n1 = find_reg_note (last1, REG_EH_REGION, 0);
++    rtx n2 = find_reg_note (last2, REG_EH_REGION, 0);
+ 
+     if (!n1 && n2)
+       return false;
 diff --git a/gcc/cfgexpand.c b/gcc/cfgexpand.c
 index e252975f546..26b6bf3e6c6 100644
 --- a/gcc/cfgexpand.c
@@ -13146,7 +13398,7 @@ index 91a0ff5ea04..47852b509d3 100644
 +
  #undef AARCH64_EXTRA_TUNING_OPTION
 diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
-index b452a53af99..45c0465a55d 100644
+index b452a53af99..e96a350ed5b 100644
 --- a/gcc/config/aarch64/aarch64.c
 +++ b/gcc/config/aarch64/aarch64.c
 @@ -317,6 +317,22 @@ static const struct cpu_addrcost_table qdf24xx_addrcost_table =
@@ -13367,6 +13619,15 @@ index b452a53af99..45c0465a55d 100644
        else
  	{
  	  rtx t, cc_reg;
+@@ -2791,7 +2951,7 @@ aarch64_mov128_immediate (rtx imm)
+ static unsigned int
+ aarch64_add_offset_1_temporaries (HOST_WIDE_INT offset)
+ {
+-  return abs_hwi (offset) < 0x1000000 ? 0 : 1;
++  return absu_hwi (offset) < 0x1000000 ? 0 : 1;
+ }
+ 
+ /* A subroutine of aarch64_add_offset.  Set DEST to SRC + OFFSET for
 @@ -2818,7 +2978,7 @@ aarch64_add_offset_1 (scalar_int_mode mode, rtx dest,
    gcc_assert (emit_move_imm || temp1 != NULL_RTX);
    gcc_assert (temp1 == NULL_RTX || !reg_overlap_mentioned_p (temp1, src));
@@ -17385,6 +17646,308 @@ index 041e2db343f..8f051f87c0f 100644
     (set_attr "type" "multiple")]
  )
  
+diff --git a/gcc/config/darwin-c.c b/gcc/config/darwin-c.c
+index aa5d2f20b1e..f51cc5eb523 100644
+--- a/gcc/config/darwin-c.c
++++ b/gcc/config/darwin-c.c
+@@ -44,13 +44,12 @@ static bool using_frameworks = false;
+ static const char *find_subframework_header (cpp_reader *pfile, const char *header,
+ 					     cpp_dir **dirp);
+ 
+-typedef struct align_stack
+-{
+-  int alignment;
+-  struct align_stack * prev;
+-} align_stack;
++struct fld_align_stack {
++  int	alignment;
++  struct fld_align_stack * prev;
++};
+ 
+-static struct align_stack * field_align_stack = NULL;
++static struct fld_align_stack * field_align_stack;
+ 
+ /* Maintain a small stack of alignments.  This is similar to pragma
+    pack's stack, but simpler.  */
+@@ -58,7 +57,7 @@ static struct align_stack * field_align_stack = NULL;
+ static void
+ push_field_alignment (int bit_alignment)
+ {
+-  align_stack *entry = XNEW (align_stack);
++  fld_align_stack *entry = XNEW (fld_align_stack);
+ 
+   entry->alignment = maximum_field_alignment;
+   entry->prev = field_align_stack;
+@@ -72,7 +71,7 @@ pop_field_alignment (void)
+ {
+   if (field_align_stack)
+     {
+-      align_stack *entry = field_align_stack;
++      fld_align_stack *entry = field_align_stack;
+ 
+       maximum_field_alignment = entry->alignment;
+       field_align_stack = entry->prev;
+@@ -692,10 +691,10 @@ macosx_version_as_macro (void)
+   if (!version_array)
+     goto fail;
+ 
+-  if (version_array[MAJOR] != 10)
++  if (version_array[MAJOR] < 10 || version_array[MAJOR] > 11)
+     goto fail;
+ 
+-  if (version_array[MINOR] < 10)
++  if (version_array[MAJOR] == 10 && version_array[MINOR] < 10)
+     version_macro = version_as_legacy_macro (version_array);
+   else
+     version_macro = version_as_modern_macro (version_array);
+diff --git a/gcc/config/darwin-driver.c b/gcc/config/darwin-driver.c
+index b3577c416bc..e50ff232181 100644
+--- a/gcc/config/darwin-driver.c
++++ b/gcc/config/darwin-driver.c
+@@ -43,13 +43,13 @@ static const char *
+ validate_macosx_version_min (const char *version_str)
+ {
+   size_t version_len;
+-  unsigned long major, minor, tiny = 0;
++  unsigned long major, minor = 0, tiny = 0;
+   char *end;
+   const char *old_version = version_str;
+   bool need_rewrite = false;
+ 
+   version_len = strlen (version_str);
+-  if (version_len < 4) /* The minimum would be 10.x  */
++  if (version_len < 2) /* The minimum would be 11  */
+     return NULL;
+ 
+   /* Version string must consist of digits and periods only.  */
+@@ -63,18 +63,27 @@ validate_macosx_version_min (const char *version_str)
+     need_rewrite = true;
+ 
+   major = strtoul (version_str, &end, 10);
+-  version_str = end + ((*end == '.') ? 1 : 0);
+ 
+-  if (major != 10) /* So far .. all MacOS 10 ... */
++  if (major < 10 || major > 11 ) /* MacOS 10 and 11 are known. */
+     return NULL;
+ 
+-  /* Version string components must be present and numeric.  */
+-  if (!ISDIGIT (version_str[0]))
++  /* Skip a separating period, if there's one.  */
++  version_str = end + ((*end == '.') ? 1 : 0);
++
++  if (major == 11 && *end != '\0' && !ISDIGIT (version_str[0]))
++     /* For MacOS 11, we allow just the major number, but if the minor is
++	there it must be numeric.  */
++    return NULL;
++  else if (major == 11 && *end == '\0')
++    /* We will rewrite 11 =>  11.0.0.  */
++    need_rewrite = true;
++  else if (major == 10 && (*end == '\0' || !ISDIGIT (version_str[0])))
++    /* Otherwise, minor version components must be present and numeric.  */
+     return NULL;
+ 
+   /* If we have one or more leading zeros on a component, then rewrite the
+      version string.  */
+-  if (version_str[0] == '0' && version_str[1] != '\0'
++  if (*end != '\0' && version_str[0] == '0' && version_str[1] != '\0'
+       && version_str[1] != '.')
+     need_rewrite = true;
+ 
+@@ -104,7 +113,7 @@ validate_macosx_version_min (const char *version_str)
+   if (need_rewrite)
+     {
+       char *new_version;
+-      asprintf (&new_version, "10.%lu.%lu", minor, tiny);
++      asprintf (&new_version, "%2lu.%lu.%lu", major, minor, tiny);
+       return new_version;
+     }
+ 
+@@ -115,6 +124,12 @@ validate_macosx_version_min (const char *version_str)
+ #include <sys/sysctl.h>
+ #include "xregex.h"
+ 
++/* Determine the version of the running OS.
++   We only look at the first two components (ignoring the patch one) and
++   report NN.MM.0 where NN is currently either 10 or 11 and MM is the OS
++   minor release number.
++   If we can't parse what the kernel gives us, warn the user, and do nothing.  */
++
+ static char *
+ darwin_find_version_from_kernel (void)
+ {
+@@ -125,8 +140,6 @@ darwin_find_version_from_kernel (void)
+   char * version_p;
+   char * new_flag;
+ 
+-  /* Determine the version of the running OS.  If we can't, warn user,
+-     and do nothing.  */
+   if (sysctl (osversion_name, ARRAY_SIZE (osversion_name), osversion,
+ 	      &osversion_len, NULL, 0) == -1)
+     {
+@@ -144,10 +157,24 @@ darwin_find_version_from_kernel (void)
+     major_vers = major_vers * 10 + (*version_p++ - '0');
+   if (*version_p++ != '.')
+     goto parse_failed;
+-  
+-  /* The major kernel version number is 4 plus the second OS version
+-     component.  */
+-  if (major_vers - 4 <= 4)
++
++  /* Darwin20 sees a transition to macOS 11.  In this, it seems that the
++     mapping to macOS minor version is now shifted to the kernel minor
++     version - 1 (at least for the initial releases).  At this stage, we
++     don't know what macOS version will correspond to Darwin21.  */
++  if (major_vers >= 20)
++    {
++      int minor_vers = *version_p++ - '0';
++      if (ISDIGIT (*version_p))
++	minor_vers = minor_vers * 10 + (*version_p++ - '0');
++      if (*version_p++ != '.')
++	goto parse_failed;
++      if (minor_vers > 0)
++	minor_vers -= 1; /* Kernel 20.3 => macOS 11.2.  */
++      /* It's not yet clear whether patch level will be considered.  */
++      asprintf (&new_flag, "11.%02d.00", minor_vers);
++    }
++  else if (major_vers - 4 <= 4)
+     /* On 10.4 and earlier, the old linker is used which does not
+        support three-component system versions.
+        FIXME: we should not assume this - a newer linker could be used.  */
+@@ -202,7 +229,7 @@ darwin_default_min_version (void)
+       const char *checked = validate_macosx_version_min (new_flag);
+       if (checked == NULL)
+ 	{
+-	  warning (0, "couldn%'t understand version %s\n", new_flag);
++	  warning (0, "could not understand version %s", new_flag);
+ 	  return NULL;
+ 	}
+       new_flag = xstrndup (checked, strlen (checked));
+diff --git a/gcc/config/darwin-protos.h b/gcc/config/darwin-protos.h
+index afeca81f807..5f0ddfb2c0b 100644
+--- a/gcc/config/darwin-protos.h
++++ b/gcc/config/darwin-protos.h
+@@ -66,6 +66,7 @@ extern void darwin_non_lazy_pcrel (FILE *, rtx);
+ 
+ extern void darwin_emit_unwind_label (FILE *, tree, int, int);
+ extern void darwin_emit_except_table_label (FILE *);
++extern bool darwin_should_restore_cfa_state (void);
+ 
+ extern void darwin_pragma_ignore (struct cpp_reader *);
+ extern void darwin_pragma_options (struct cpp_reader *);
+diff --git a/gcc/config/darwin.c b/gcc/config/darwin.c
+index a7610829f75..853c349209d 100644
+--- a/gcc/config/darwin.c
++++ b/gcc/config/darwin.c
+@@ -924,7 +924,7 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+ 	      emit_use (gen_rtx_REG (Pmode, PIC_OFFSET_TABLE_REGNUM));
+ #endif
+ 
+-	      if (lra_in_progress)
++	      if (lra_in_progress && HARD_REGISTER_P (pic))
+ 		df_set_regs_ever_live (REGNO (pic), true);
+ 	      pic_ref = gen_rtx_PLUS (Pmode, pic,
+ 				      machopic_gen_offset (XEXP (orig, 0)));
+@@ -994,7 +994,8 @@ machopic_legitimize_pic_address (rtx orig, machine_mode mode, rtx reg)
+ #if 0
+ 		  emit_use (pic_offset_table_rtx);
+ #endif
+-		  if (lra_in_progress)
++
++		  if (lra_in_progress && HARD_REGISTER_P (pic))
+ 		    df_set_regs_ever_live (REGNO (pic), true);
+ 		  pic_ref = gen_rtx_PLUS (Pmode,
+ 					  pic,
+@@ -1295,6 +1296,17 @@ darwin_encode_section_info (tree decl, rtx rtl, int first)
+       || (DECL_WEAK (decl) && ! MACHO_SYMBOL_HIDDEN_VIS_P (sym_ref))
+       || lookup_attribute ("weakref", DECL_ATTRIBUTES (decl)))
+      SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_MUST_INDIRECT;
++
++#if DARWIN_PPC
++  /* Objective C V2 (m64) IVAR offset refs from Apple GCC-4.x have an
++     indirection for m64 code on PPC.  Historically, these indirections
++     also appear in the .data section.  */
++  tree o2meta = lookup_attribute ("OBJC2META", DECL_ATTRIBUTES (decl));
++  o2meta = o2meta ? TREE_VALUE (o2meta) : NULL_TREE;
++
++  if (o2meta && strncmp (IDENTIFIER_POINTER (o2meta), "V2_IVRF",7) == 0)
++    SYMBOL_REF_FLAGS (sym_ref) |= MACHO_SYMBOL_FLAG_MUST_INDIRECT;
++#endif
+ }
+ 
+ void
+@@ -2219,6 +2231,17 @@ darwin_emit_except_table_label (FILE *file)
+ 			       except_table_label_num++);
+   ASM_OUTPUT_LABEL (file, section_start_label);
+ }
++
++/* The unwinders in earlier Darwin versions are based on an old version
++   of libgcc_s and need current frame address stateto be reset after a
++   DW_CFA_restore_state recovers the register values.  */
++
++bool
++darwin_should_restore_cfa_state (void)
++{
++  return generating_for_darwin_version <= 10;
++}
++
+ /* Generate a PC-relative reference to a Mach-O non-lazy-symbol.  */
+ 
+ void
+@@ -3584,7 +3607,8 @@ bool
+ darwin_libc_has_function (enum function_class fn_class)
+ {
+   if (fn_class == function_sincos)
+-    return false;
++    return (strverscmp (darwin_macosx_version_min, "10.9") >= 0);
++
+   if (fn_class == function_c99_math_complex
+       || fn_class == function_c99_misc)
+     return (TARGET_64BIT
+diff --git a/gcc/config/darwin.h b/gcc/config/darwin.h
+index fab9af97afd..f017353778b 100644
+--- a/gcc/config/darwin.h
++++ b/gcc/config/darwin.h
+@@ -581,6 +581,11 @@ extern GTY(()) int darwin_ms_struct;
+ /* Emit a label to separate the exception table.  */
+ #define TARGET_ASM_EMIT_EXCEPT_TABLE_LABEL darwin_emit_except_table_label
+ 
++/* Some of Darwin's unwinders need current frame address state to be reset
++   after a DW_CFA_restore_state recovers the register values.  */
++#undef TARGET_ASM_SHOULD_RESTORE_CFA_STATE
++#define TARGET_ASM_SHOULD_RESTORE_CFA_STATE darwin_should_restore_cfa_state
++
+ /* Our profiling scheme doesn't LP labels and counter words.  */
+ 
+ #define NO_PROFILE_COUNTERS	1
+@@ -799,6 +804,12 @@ extern GTY(()) section * darwin_sections[NUM_DARWIN_SECTIONS];
+   do {							\
+     if (strcmp ("LC", PREFIX) == 0)			\
+       sprintf (LABEL, "*%s%ld", "lC", (long)(NUM));	\
++    else if (strcmp ("Lubsan_data", PREFIX) == 0)	\
++      sprintf (LABEL, "*%s%ld", "lubsan_data", (long)(NUM));\
++    else if (strcmp ("Lubsan_type", PREFIX) == 0)	\
++      sprintf (LABEL, "*%s%ld", "lubsan_type", (long)(NUM));\
++    else if (strcmp ("LASAN", PREFIX) == 0)	\
++      sprintf (LABEL, "*%s%ld", "lASAN", (long)(NUM));\
+     else						\
+       sprintf (LABEL, "*%s%ld", PREFIX, (long)(NUM));	\
+   } while (0)
+diff --git a/gcc/config/host-darwin.c b/gcc/config/host-darwin.c
+index 49d3af77a92..b9cf347f1e8 100644
+--- a/gcc/config/host-darwin.c
++++ b/gcc/config/host-darwin.c
+@@ -24,7 +24,10 @@
+ #include "config/host-darwin.h"
+ 
+ /* Yes, this is really supposed to work.  */
+-static char pch_address_space[1024*1024*1024] __attribute__((aligned (4096)));
++/* This allows for a pagesize of 16384, which we have on Darwin20, but should
++   continue to work OK for pagesize 4096 which we have on earlier versions.
++   The size is 1 (binary) Gb.  */
++static char pch_address_space[65536*16384] __attribute__((aligned (16384)));
+ 
+ /* Return the address of the PCH address space, if the PCH will fit in it.  */
+ 
 diff --git a/gcc/config/i386/avx2intrin.h b/gcc/config/i386/avx2intrin.h
 index c9b6f9bc868..abae781deda 100644
 --- a/gcc/config/i386/avx2intrin.h
@@ -19308,7 +19871,7 @@ index 5e7e46fcebe..ee74f2954cc 100644
  
    if (!TARGET_80387)
 diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
-index 1bca5a7eea6..ac3100cd7ab 100644
+index 1bca5a7eea6..b079985e9e2 100644
 --- a/gcc/config/i386/i386.c
 +++ b/gcc/config/i386/i386.c
 @@ -149,8 +149,10 @@ const struct processor_costs *ix86_cost = NULL;
@@ -19391,7 +19954,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
    /* Calculate the size of the va-arg area (not including padding, if any).  */
    frame->va_arg_size = ix86_varargs_gpr_size + ix86_varargs_fpr_size;
  
-@@ -11641,14 +11657,22 @@ ix86_compute_frame_layout (void)
+@@ -11641,14 +11657,39 @@ ix86_compute_frame_layout (void)
       the unwind data structure.  */
    if (TARGET_SEH)
      {
@@ -19399,6 +19962,10 @@ index 1bca5a7eea6..ac3100cd7ab 100644
 +      /* Force the frame pointer to point at or below the lowest register save
 +	 area, see the SEH code in config/i386/winnt.c for the rationale.  */
 +      frame->hard_frame_pointer_offset = frame->sse_reg_save_offset;
++
++      /* If we can leave the frame pointer where it is, do so; however return
++	 the establisher frame for __builtin_frame_address (0) or else if the
++	 frame overflows the SEH maximum frame size.
  
 -      /* If we can leave the frame pointer where it is, do so.  Also, returns
 -	 the establisher frame for __builtin_frame_address (0).  */
@@ -19406,12 +19973,25 @@ index 1bca5a7eea6..ac3100cd7ab 100644
 -      if (diff <= SEH_MAX_FRAME_SIZE
 -	  && (diff > 240 || (diff & 15) != 0)
 -	  && !crtl->accesses_prior_frames)
-+      /* If we can leave the frame pointer where it is, do so.  Also, return
-+	 the establisher frame for __builtin_frame_address (0) or else if the
-+	 frame overflows the SEH maximum frame size.  */
++	 Note that the value returned by __builtin_frame_address (0) is quite
++	 constrained, because setjmp is piggybacked on the SEH machinery with
++	 recent versions of MinGW:
++
++	  #    elif defined(__SEH__)
++	  #     if defined(__aarch64__) || defined(_ARM64_)
++	  #      define setjmp(BUF) _setjmp((BUF), __builtin_sponentry())
++	  #     elif (__MINGW_GCC_VERSION < 40702)
++	  #      define setjmp(BUF) _setjmp((BUF), mingw_getsp())
++	  #     else
++	  #      define setjmp(BUF) _setjmp((BUF), __builtin_frame_address (0))
++	  #     endif
++
++	 and the second argument passed to _setjmp, if not null, is forwarded
++	 to the TargetFrame parameter of RtlUnwindEx by longjmp (after it has
++	 built an ExceptionRecord on the fly describing the setjmp buffer).  */
 +      const HOST_WIDE_INT diff
 +	= frame->stack_pointer_offset - frame->hard_frame_pointer_offset;
-+      if (diff <= 255)
++      if (diff <= 255 && !crtl->accesses_prior_frames)
 +	{
 +	  /* The resulting diff will be a multiple of 16 lower than 255,
 +	     i.e. at most 240 as required by the unwind data structure.  */
@@ -19421,7 +20001,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	{
  	  /* Ideally we'd determine what portion of the local stack frame
  	     (within the constraint of the lowest 240) is most heavily used.
-@@ -11657,6 +11681,8 @@ ix86_compute_frame_layout (void)
+@@ -11657,6 +11698,8 @@ ix86_compute_frame_layout (void)
  	     frame that is addressable with 8-bit offsets.  */
  	  frame->hard_frame_pointer_offset = frame->stack_pointer_offset - 128;
  	}
@@ -19430,7 +20010,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
      }
  }
  
-@@ -12274,10 +12300,12 @@ ix86_update_stack_boundary (void)
+@@ -12274,10 +12317,12 @@ ix86_update_stack_boundary (void)
  static rtx
  ix86_get_drap_rtx (void)
  {
@@ -19445,7 +20025,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	  && !ACCUMULATE_OUTGOING_ARGS))
      crtl->need_drap = true;
  
-@@ -13459,17 +13487,6 @@ ix86_expand_prologue (void)
+@@ -13459,17 +13504,6 @@ ix86_expand_prologue (void)
        insn = emit_insn (gen_push (hard_frame_pointer_rtx));
        RTX_FRAME_RELATED_P (insn) = 1;
  
@@ -19463,7 +20043,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
        if (m->fs.sp_offset == frame.hard_frame_pointer_offset)
  	{
  	  insn = emit_move_insn (hard_frame_pointer_rtx, stack_pointer_rtx);
-@@ -14347,8 +14364,13 @@ ix86_expand_epilogue (int style)
+@@ -14347,8 +14381,13 @@ ix86_expand_epilogue (int style)
  	      t = plus_constant (Pmode, t, m->fs.fp_offset - UNITS_PER_WORD);
  	      emit_insn (gen_rtx_SET (sa, t));
  
@@ -19479,7 +20059,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  
  	      /* Note that we use SA as a temporary CFA, as the return
  		 address is at the proper place relative to it.  We
-@@ -14363,7 +14385,7 @@ ix86_expand_epilogue (int style)
+@@ -14363,7 +14402,7 @@ ix86_expand_epilogue (int style)
  	      add_reg_note (insn, REG_CFA_DEF_CFA,
  			    plus_constant (Pmode, sa, UNITS_PER_WORD));
  	      ix86_add_queued_cfa_restore_notes (insn);
@@ -19488,7 +20068,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	      RTX_FRAME_RELATED_P (insn) = 1;
  
  	      m->fs.cfa_reg = sa;
-@@ -28440,7 +28462,17 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
+@@ -28440,7 +28479,17 @@ ix86_expand_call (rtx retval, rtx fnaddr, rtx callarg1,
  	    }
  	  else if (!TARGET_PECOFF && !TARGET_MACHO)
  	    {
@@ -19507,7 +20087,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  		{
  		  fnaddr = gen_rtx_UNSPEC (Pmode,
  					   gen_rtvec (1, addr),
-@@ -31993,7 +32025,8 @@ enum processor_model
+@@ -31993,7 +32042,8 @@ enum processor_model
    M_INTEL_COREI7_ICELAKE_CLIENT,
    M_INTEL_COREI7_ICELAKE_SERVER,
    M_AMDFAM17H_ZNVER2,
@@ -19517,7 +20097,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  };
  
  struct _arch_names_table
-@@ -32022,6 +32055,7 @@ static const _arch_names_table arch_names_table[] =
+@@ -32022,6 +32072,7 @@ static const _arch_names_table arch_names_table[] =
    {"icelake-client", M_INTEL_COREI7_ICELAKE_CLIENT},
    {"icelake-server", M_INTEL_COREI7_ICELAKE_SERVER},
    {"cascadelake", M_INTEL_COREI7_CASCADELAKE},
@@ -19525,7 +20105,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
    {"bonnell", M_INTEL_BONNELL},
    {"silvermont", M_INTEL_SILVERMONT},
    {"goldmont", M_INTEL_GOLDMONT},
-@@ -32212,6 +32246,9 @@ get_builtin_code_for_version (tree decl, tree *predicate_list)
+@@ -32212,6 +32263,9 @@ get_builtin_code_for_version (tree decl, tree *predicate_list)
  	      arg_str = "cascadelake";
  	      priority = P_PROC_AVX512F;
  	      break;
@@ -19535,7 +20115,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	    case PROCESSOR_BONNELL:
  	      arg_str = "bonnell";
  	      priority = P_PROC_SSSE3;
-@@ -44150,43 +44187,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
+@@ -44150,43 +44204,51 @@ emit_reduc_half (rtx dest, rtx src, int i)
        break;
      case E_V64QImode:
      case E_V32HImode:
@@ -19616,7 +20196,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
        break;
      default:
        gcc_unreachable ();
-@@ -44391,40 +44436,18 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
+@@ -44391,40 +44453,18 @@ ix86_md_asm_adjust (vec<rtx> &outputs, vec<rtx> &/*inputs*/,
  	  continue;
  	}
  
@@ -19665,7 +20245,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
    rtx_insn *seq = get_insns ();
    end_sequence ();
  
-@@ -45457,7 +45480,7 @@ ix86_expand_rint (rtx operand0, rtx operand1)
+@@ -45457,7 +45497,7 @@ ix86_expand_rint (rtx operand0, rtx operand1)
          return copysign (xa, operand1);
     */
    machine_mode mode = GET_MODE (operand0);
@@ -19674,7 +20254,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
    rtx_code_label *label;
  
    res = gen_reg_rtx (mode);
-@@ -45470,16 +45493,18 @@ ix86_expand_rint (rtx operand0, rtx operand1)
+@@ -45470,16 +45510,18 @@ ix86_expand_rint (rtx operand0, rtx operand1)
    TWO52 = ix86_gen_TWO52 (mode);
    label = ix86_expand_sse_compare_and_jump (UNLE, TWO52, xa, false);
  
@@ -19698,7 +20278,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  
    ix86_sse_copysign_to_positive (res, xa, res, mask);
  
-@@ -45500,12 +45525,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
+@@ -45500,12 +45542,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
            return x;
          xa = xa + TWO52 - TWO52;
          x2 = copysign (xa, x);
@@ -19713,7 +20293,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	if (HONOR_SIGNED_ZEROS (mode))
  	  x2 = copysign (x2, x);
  	return x2;
-@@ -45542,8 +45569,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
+@@ -45542,8 +45586,14 @@ ix86_expand_floorceildf_32 (rtx operand0, rtx operand1, bool do_floor)
    emit_insn (gen_rtx_SET (tmp, gen_rtx_AND (mode, one, tmp)));
    tmp = expand_simple_binop (mode, do_floor ? MINUS : PLUS,
  			     xa, tmp, NULL_RTX, 0, OPTAB_DIRECT);
@@ -19730,7 +20310,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
    emit_move_insn (res, tmp);
  
    emit_label (label);
-@@ -45562,12 +45595,14 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
+@@ -45562,12 +45612,14 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
          if (!isless (xa, TWO52))
            return x;
  	x2 = (double)(long)x;
@@ -19745,7 +20325,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	if (HONOR_SIGNED_ZEROS (mode))
  	  return copysign (x2, x);
  	return x2;
-@@ -45602,10 +45637,15 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
+@@ -45602,10 +45654,15 @@ ix86_expand_floorceil (rtx operand0, rtx operand1, bool do_floor)
    emit_insn (gen_rtx_SET (tmp, gen_rtx_AND (mode, one, tmp)));
    tmp = expand_simple_binop (mode, do_floor ? MINUS : PLUS,
  			     xa, tmp, NULL_RTX, 0, OPTAB_DIRECT);
@@ -19764,7 +20344,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  
    emit_label (label);
    LABEL_NUSES (label) = 1;
-@@ -45736,7 +45776,7 @@ void
+@@ -45736,7 +45793,7 @@ void
  ix86_expand_truncdf_32 (rtx operand0, rtx operand1)
  {
    machine_mode mode = GET_MODE (operand0);
@@ -19773,7 +20353,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
    rtx_code_label *label;
  
    /* C code for SSE variant we expand below.
-@@ -45759,28 +45799,29 @@ ix86_expand_truncdf_32 (rtx operand0, rtx operand1)
+@@ -45759,28 +45816,29 @@ ix86_expand_truncdf_32 (rtx operand0, rtx operand1)
    emit_move_insn (res, operand1);
  
    /* xa = abs (operand1) */
@@ -19815,7 +20395,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  
    emit_label (label);
    LABEL_NUSES (label) = 1;
-@@ -46667,7 +46708,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
+@@ -46667,7 +46725,7 @@ expand_vec_perm_pshufb (struct expand_vec_perm_d *d)
  	      /* vpshufb only works intra lanes, it is not
  		 possible to shuffle bytes in between the lanes.  */
  	      for (i = 0; i < nelt; ++i)
@@ -19824,7 +20404,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  		  return false;
  	    }
  	}
-@@ -50265,7 +50306,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
+@@ -50265,7 +50323,9 @@ ix86_get_mask_mode (poly_uint64 nunits, poly_uint64 vector_size)
    if ((TARGET_AVX512F && vector_size == 64)
        || (TARGET_AVX512VL && (vector_size == 32 || vector_size == 16)))
      {
@@ -19835,7 +20415,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
  	return smallest_int_mode_for_size (nunits);
      }
  
-@@ -50919,11 +50962,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50919,11 +50979,12 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        *clear = build_call_expr (fnclex, 0);
        tree sw_var = create_tmp_var_raw (short_unsigned_type_node);
        tree fnstsw_call = build_call_expr (fnstsw, 0);
@@ -19852,7 +20432,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
        *update = build2 (COMPOUND_EXPR, integer_type_node,
  			sw_mod, update_mod);
        tree update_fldenv = build_call_expr (fldenv, 1, fenv_addr);
-@@ -50936,15 +50980,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50936,15 +50997,17 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
        tree stmxcsr = ix86_builtins[IX86_BUILTIN_STMXCSR];
        tree ldmxcsr = ix86_builtins[IX86_BUILTIN_LDMXCSR];
        tree stmxcsr_hold_call = build_call_expr (stmxcsr, 0);
@@ -19874,7 +20454,7 @@ index 1bca5a7eea6..ac3100cd7ab 100644
        tree ldmxcsr_hold_call = build_call_expr (ldmxcsr, 1, mxcsr_mod_var);
        tree hold_all = build2 (COMPOUND_EXPR, unsigned_type_node,
  			      hold_assign_orig, hold_assign_mod);
-@@ -50973,8 +51019,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+@@ -50973,8 +51036,8 @@ ix86_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
  			    exceptions_assign);
  	}
        else
@@ -20429,6 +21009,49 @@ index 1b439552f9c..e4e86ac3bc5 100644
        fputs ("\t.seh_endproc\n", asm_out_file);
        seh->in_cold_section = true;
        return;
+diff --git a/gcc/config/nvptx/nvptx.c b/gcc/config/nvptx/nvptx.c
+index 1986e79309a..ea2f1f2148c 100644
+--- a/gcc/config/nvptx/nvptx.c
++++ b/gcc/config/nvptx/nvptx.c
+@@ -3576,9 +3576,9 @@ nvptx_sese_pseudo (basic_block me, bb_sese *sese, int depth, int dir,
+   edge e;
+   edge_iterator (ei);
+   int hi_back = depth;
+-  pseudo_node_t node_back (0, depth);
++  pseudo_node_t node_back (NULL, depth);
+   int hi_child = depth;
+-  pseudo_node_t node_child (0, depth);
++  pseudo_node_t node_child (NULL, depth);
+   basic_block child = NULL;
+   unsigned num_children = 0;
+   int usd = -dir * sese->dir;
+@@ -3645,7 +3645,7 @@ nvptx_sese_pseudo (basic_block me, bb_sese *sese, int depth, int dir,
+       else
+ 	{ /* Fallen off graph, backlink to entry node.  */
+ 	  hi_back = 0;
+-	  node_back = pseudo_node_t (0, 0);
++	  node_back = pseudo_node_t (NULL, 0);
+ 	}
+     }
+ 
+@@ -3666,7 +3666,7 @@ nvptx_sese_pseudo (basic_block me, bb_sese *sese, int depth, int dir,
+       else
+ 	{
+ 	  /* back edge to entry node */
+-	  sese->push (pseudo_node_t (0, 0));
++	  sese->push (pseudo_node_t (NULL, 0));
+ 	}
+     }
+   
+@@ -3675,7 +3675,7 @@ nvptx_sese_pseudo (basic_block me, bb_sese *sese, int depth, int dir,
+   if (!sese->brackets.length () || !edges || !edges->length ())
+     {
+       hi_back = 0;
+-      node_back = pseudo_node_t (0, 0);
++      node_back = pseudo_node_t (NULL, 0);
+       sese->push (node_back);
+     }
+ 
 diff --git a/gcc/config/pa/pa.c b/gcc/config/pa/pa.c
 index 84a8cae22e4..d0dc2fb6a40 100644
 --- a/gcc/config/pa/pa.c
@@ -24205,10 +24828,68 @@ index 362e5ff3c1f..673ddad2eae 100644
     (set_attr "mode"	"SI")
     (set_attr "length"	"3,3")])
 diff --git a/gcc/configure b/gcc/configure
-index a065ba23728..4349e0f3226 100755
+index a065ba23728..9e4c8693966 100755
 --- a/gcc/configure
 +++ b/gcc/configure
-@@ -27779,6 +27779,37 @@ if test $gcc_cv_as_s390_vector_loadstore_alignment_hints = yes; then
+@@ -15122,23 +15122,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -18647,7 +18649,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 18650 "configure"
++#line 18652 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -18753,7 +18755,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 18756 "configure"
++#line 18758 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -27779,6 +27781,37 @@ if test $gcc_cv_as_s390_vector_loadstore_alignment_hints = yes; then
  
  $as_echo "#define HAVE_AS_VECTOR_LOADSTORE_ALIGNMENT_HINTS 1" >>confdefs.h
  
@@ -24246,7 +24927,7 @@ index a065ba23728..4349e0f3226 100755
  fi
  
  
-@@ -28919,6 +28950,9 @@ case "$target:$tm_file" in
+@@ -28919,6 +28952,9 @@ case "$target:$tm_file" in
       *-*-linux*)
       emul_name="-melf64ppc"
        ;;
@@ -24335,10 +25016,16 @@ index 1ffefd5f482..c442e2fb008 100644
        if (!gcov_open (bbg_file_name, -1))
  	{
 diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-index 6441d647a54..d6bac1924db 100644
+index 6441d647a54..481f8b57498 100644
 --- a/gcc/cp/ChangeLog
 +++ b/gcc/cp/ChangeLog
-@@ -1,3 +1,502 @@
+@@ -1,3 +1,508 @@
++2021-04-30  Jason Merrill  <jason@redhat.com>
++
++	PR c++/95719
++	* call.c (build_over_call): Look up the overrider in base_binfo.
++	* class.c (lookup_vfn_in_binfo): Look through BINFO_PRIMARY_P.
++
 +2021-04-21  Patrick Palka  <ppalka@redhat.com>
 +
 +	Backported from master:
@@ -26630,6 +27317,32 @@ index b406368a5d6..aae5ff24c98 100644
  	  else
  	    {
  	      /* The default zero-initialization is fine for us; don't
+diff --git a/gcc/cprop.c b/gcc/cprop.c
+index 65c0130cc07..fdce3622fb6 100644
+--- a/gcc/cprop.c
++++ b/gcc/cprop.c
+@@ -1008,16 +1008,18 @@ static int
+ constprop_register (rtx from, rtx src, rtx_insn *insn)
+ {
+   rtx sset;
++  rtx_insn *next_insn;
+ 
+   /* Check for reg or cc0 setting instructions followed by
+      conditional branch instructions first.  */
+   if ((sset = single_set (insn)) != NULL
+-      && NEXT_INSN (insn)
+-      && any_condjump_p (NEXT_INSN (insn)) && onlyjump_p (NEXT_INSN (insn)))
++      && (next_insn = next_nondebug_insn (insn)) != NULL
++      && any_condjump_p (next_insn)
++      && onlyjump_p (next_insn))
+     {
+       rtx dest = SET_DEST (sset);
+       if ((REG_P (dest) || CC0_P (dest))
+-	  && cprop_jump (BLOCK_FOR_INSN (insn), insn, NEXT_INSN (insn),
++	  && cprop_jump (BLOCK_FOR_INSN (insn), insn, next_insn,
+ 			 from, src))
+ 	return 1;
+     }
 diff --git a/gcc/cse.c b/gcc/cse.c
 index 6c9cda16a98..eb78783e601 100644
 --- a/gcc/cse.c
@@ -27609,6 +28322,82 @@ index b19ba289d16..2f5d0f02d17 100644
  }
  
  /* Worklist-based dataflow solver. It uses sbitmap as a worklist,
+diff --git a/gcc/df-problems.c b/gcc/df-problems.c
+index a9dfa6203cf..a19eff7b9bb 100644
+--- a/gcc/df-problems.c
++++ b/gcc/df-problems.c
+@@ -1909,8 +1909,7 @@ df_mir_alloc (bitmap all_blocks)
+ 	  bitmap_initialize (&bb_info->gen, &problem_data->mir_bitmaps);
+ 	  bitmap_initialize (&bb_info->in, &problem_data->mir_bitmaps);
+ 	  bitmap_initialize (&bb_info->out, &problem_data->mir_bitmaps);
+-	  bitmap_set_range (&bb_info->in, 0, DF_REG_SIZE (df));
+-	  bitmap_set_range (&bb_info->out, 0, DF_REG_SIZE (df));
++	  bb_info->con_visited = false;
+ 	}
+     }
+ 
+@@ -1933,9 +1932,8 @@ df_mir_reset (bitmap all_blocks)
+       gcc_assert (bb_info);
+ 
+       bitmap_clear (&bb_info->in);
+-      bitmap_set_range (&bb_info->in, 0, DF_REG_SIZE (df));
+       bitmap_clear (&bb_info->out);
+-      bitmap_set_range (&bb_info->out, 0, DF_REG_SIZE (df));
++      bb_info->con_visited = false;
+     }
+ }
+ 
+@@ -2013,6 +2011,7 @@ df_mir_confluence_0 (basic_block bb)
+   struct df_mir_bb_info *bb_info = df_mir_get_bb_info (bb->index);
+ 
+   bitmap_clear (&bb_info->in);
++  bb_info->con_visited = true;
+ }
+ 
+ 
+@@ -2021,12 +2020,27 @@ df_mir_confluence_0 (basic_block bb)
+ static bool
+ df_mir_confluence_n (edge e)
+ {
+-  bitmap op1 = &df_mir_get_bb_info (e->dest->index)->in;
+-  bitmap op2 = &df_mir_get_bb_info (e->src->index)->out;
+-
+   if (e->flags & EDGE_FAKE)
+     return false;
+ 
++  df_mir_bb_info *src_info = df_mir_get_bb_info (e->src->index);
++  /* If SRC was not visited yet then we'll and with all-ones which
++     means no changes.  Do not consider DST con_visited by this
++     operation alone either.  */
++  if (!src_info->con_visited)
++    return false;
++
++  df_mir_bb_info *dst_info = df_mir_get_bb_info (e->dest->index);
++  bitmap op1 = &dst_info->in;
++  bitmap op2 = &src_info->out;
++  /* If DEST was not visited yet just copy the SRC bitmap.  */
++  if (!dst_info->con_visited)
++    {
++      dst_info->con_visited = true;
++      bitmap_copy (op1, op2);
++      return true;
++    }
++
+   /* A register is must-initialized at the entry of a basic block iff it is
+      must-initialized at the exit of all the predecessors.  */
+   return bitmap_and_into (op1, op2);
+diff --git a/gcc/df.h b/gcc/df.h
+index d76d31baa84..d522188bfb4 100644
+--- a/gcc/df.h
++++ b/gcc/df.h
+@@ -922,6 +922,7 @@ struct df_mir_bb_info
+   /* The results of the dataflow problem.  */
+   bitmap_head in;    /* At the top of the block.  */
+   bitmap_head out;   /* At the bottom of the block.  */
++  bool con_visited;  /* Visited by con_fun_{0,n}.  */
+ };
+ 
+ 
 diff --git a/gcc/dfp.c b/gcc/dfp.c
 index 65d5fcb0845..25a79c4df8a 100644
 --- a/gcc/dfp.c
@@ -28104,7 +28893,7 @@ index 546af7f7261..6bed48907c8 100644
  
  @subsubsection MIPS-specific attributes
 diff --git a/gcc/doc/tm.texi b/gcc/doc/tm.texi
-index 8c8978bb13a..7f5c370d97a 100644
+index 8c8978bb13a..842ee2be790 100644
 --- a/gcc/doc/tm.texi
 +++ b/gcc/doc/tm.texi
 @@ -8330,11 +8330,11 @@ as the number of bits.
@@ -28122,8 +28911,19 @@ index 8c8978bb13a..7f5c370d97a 100644
  the variable's decl in order to chose what to output.
  @end defmac
  
+@@ -9495,6 +9495,10 @@ returns @code{UI_TARGET}.
+ True if the @code{TARGET_ASM_UNWIND_EMIT} hook should be called before the assembly for @var{insn} has been emitted, false if the hook should be called afterward.
+ @end deftypevr
+ 
++@deftypefn {Target Hook} bool TARGET_ASM_SHOULD_RESTORE_CFA_STATE (void)
++For DWARF-based unwind frames, two CFI instructions provide for save and restore of register state.  GCC maintains the current frame address (CFA) separately from the register bank but the unwinder in libgcc preserves this state along with the registers (and this is expected by the code that writes the unwind frames).  This hook allows the target to specify that the CFA data is not saved/restored along with the registers by the target unwinder so that suitable additional instructions should be emitted to restore it.
++@end deftypefn
++
+ @node Exception Region Output
+ @subsection Assembler Commands for Exception Regions
+ 
 diff --git a/gcc/doc/tm.texi.in b/gcc/doc/tm.texi.in
-index fe1194ef91a..44a15dda240 100644
+index fe1194ef91a..397c7dc9047 100644
 --- a/gcc/doc/tm.texi.in
 +++ b/gcc/doc/tm.texi.in
 @@ -5403,11 +5403,11 @@ as the number of bits.
@@ -28140,6 +28940,15 @@ index fe1194ef91a..44a15dda240 100644
 +@code{ASM_OUTPUT_ALIGNED_LOCAL}.  Define this macro when you need to see
  the variable's decl in order to chose what to output.
  @end defmac
+ 
+@@ -6447,6 +6447,8 @@ the jump-table.
+ 
+ @hook TARGET_ASM_UNWIND_EMIT_BEFORE_INSN
+ 
++@hook TARGET_ASM_SHOULD_RESTORE_CFA_STATE
++
+ @node Exception Region Output
+ @subsection Assembler Commands for Exception Regions
  
 diff --git a/gcc/dse.c b/gcc/dse.c
 index 4becdcf1cbb..a63890d8f60 100644
@@ -28198,7 +29007,7 @@ index 14b6dfea75e..abab401b3e7 100644
    dump_context::s_current = &m_context;
    if (forcibly_enable_optinfo)
 diff --git a/gcc/dwarf2cfi.c b/gcc/dwarf2cfi.c
-index d6aed358484..1aaa0c845f6 100644
+index d6aed358484..a7d8dcdc5da 100644
 --- a/gcc/dwarf2cfi.c
 +++ b/gcc/dwarf2cfi.c
 @@ -71,6 +71,9 @@ struct GTY(()) dw_cfi_row
@@ -28233,11 +29042,13 @@ index d6aed358484..1aaa0c845f6 100644
  static void
 -dwarf2out_frame_debug_cfa_window_save (bool fake)
 +dwarf2out_frame_debug_cfa_window_save (void)
-+{
-+  dw_cfi_ref cfi = new_cfi ();
-+
-+  cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
-+  add_cfi (cfi);
+ {
+   dw_cfi_ref cfi = new_cfi ();
+ 
+   cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
+   add_cfi (cfi);
+-  if (!fake)
+-    cur_row->window_save = true;
 +  cur_row->window_save = true;
 +}
 +
@@ -28248,13 +29059,11 @@ index d6aed358484..1aaa0c845f6 100644
 +
 +static void
 +dwarf2out_frame_debug_cfa_toggle_ra_mangle (void)
- {
-   dw_cfi_ref cfi = new_cfi ();
- 
-   cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
-   add_cfi (cfi);
--  if (!fake)
--    cur_row->window_save = true;
++{
++  dw_cfi_ref cfi = new_cfi ();
++
++  cfi->dw_cfi_opc = DW_CFA_GNU_window_save;
++  add_cfi (cfi);
 +  cur_row->ra_mangled = !cur_row->ra_mangled;
  }
  
@@ -28351,6 +29160,19 @@ index d6aed358484..1aaa0c845f6 100644
    add_cfi_insn = NULL;
    cur_row = NULL;
    cur_trace = NULL;
+@@ -2812,6 +2863,12 @@ connect_traces (void)
+ 	      cfi->dw_cfi_opc = DW_CFA_restore_state;
+ 	      add_cfi (cfi);
+ 
++	      /* If the target unwinder does not save the CFA as part of the
++		 register state, we need to restore it separately.  */
++	      if (targetm.asm_out.should_restore_cfa_state ()
++		  && (cfi = def_cfa_0 (&old_row->cfa, &ti->beg_row->cfa)))
++		add_cfi (cfi);
++
+ 	      old_row = prev_ti->beg_row;
+ 	    }
+ 	  /* Otherwise, we'll simply change state from the previous end.  */
 diff --git a/gcc/dwarf2out.c b/gcc/dwarf2out.c
 index 30c4c7007ee..6f2bfb919a9 100644
 --- a/gcc/dwarf2out.c
@@ -28640,9 +29462,18 @@ index add883629bb..d0132cfa9b9 100644
  
  
 diff --git a/gcc/early-remat.c b/gcc/early-remat.c
-index 122891c1edb..712e39033f4 100644
+index 122891c1edb..0265619de87 100644
 --- a/gcc/early-remat.c
 +++ b/gcc/early-remat.c
+@@ -1069,7 +1069,7 @@ early_remat::sort_candidates (void)
+ 
+   m_candidates.qsort (compare_candidates);
+ 
+-  delete postorder_index;
++  delete[] postorder_index;
+ }
+ 
+ /* Commit to the current candidate indices and initialize cross-references.  */
 @@ -1995,7 +1995,7 @@ early_remat::process_block (basic_block bb)
  	}
  
@@ -28691,7 +29522,7 @@ index c5f5499c013..13a9f7c1b95 100644
  	xop0 = gen_lowpart_SUBREG (op_mode, xop0);
      }
 diff --git a/gcc/expr.c b/gcc/expr.c
-index fa15b7eceae..9295c91cffc 100644
+index fa15b7eceae..8cf9f879235 100644
 --- a/gcc/expr.c
 +++ b/gcc/expr.c
 @@ -7967,7 +7967,7 @@ expand_expr_addr_expr_1 (tree exp, rtx target, scalar_int_mode tmode,
@@ -28748,6 +29579,15 @@ index fa15b7eceae..9295c91cffc 100644
        int count = GET_MODE_PRECISION (mode) - prec;
        exp = expand_shift (LSHIFT_EXPR, mode, exp, count, target, 0);
        return expand_shift (RSHIFT_EXPR, mode, exp, count, target, 0);
+@@ -11556,7 +11557,7 @@ string_constant (tree arg, tree *ptr_offset, tree *mem_size, tree *decl)
+ 
+       base_off = wioff.to_uhwi ();
+       unsigned HOST_WIDE_INT fieldoff = 0;
+-      init = fold_ctor_reference (NULL_TREE, init, base_off, 0, array,
++      init = fold_ctor_reference (TREE_TYPE (arg), init, base_off, 0, array,
+ 				  &fieldoff);
+       HOST_WIDE_INT cstoff;
+       if (!base_off.is_constant (&cstoff))
 diff --git a/gcc/fold-const.c b/gcc/fold-const.c
 index c717f24501e..a7eff832ff6 100644
 --- a/gcc/fold-const.c
@@ -30658,7 +31498,7 @@ index d7071ae5fcf..ad689e6a509 100644
  /* simplify.c */
  
 diff --git a/gcc/fortran/interface.c b/gcc/fortran/interface.c
-index b5701b1a59a..d88fa77573d 100644
+index b5701b1a59a..7e67881df05 100644
 --- a/gcc/fortran/interface.c
 +++ b/gcc/fortran/interface.c
 @@ -1464,6 +1464,19 @@ gfc_check_dummy_characteristics (gfc_symbol *s1, gfc_symbol *s2,
@@ -30699,7 +31539,26 @@ index b5701b1a59a..d88fa77573d 100644
  	  if (where)
  	    gfc_error ("Actual argument to non-INTENT(INOUT) dummy %qs at %L, "
  		       "which is EVENT_TYPE or has a EVENT_TYPE component",
-@@ -3798,7 +3811,7 @@ gfc_procedure_use (gfc_symbol *sym, gfc_actual_arglist **ap, locus *where)
+@@ -3096,11 +3109,13 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
+ 	  && f->sym->attr.flavor != FL_PROCEDURE)
+ 	{
+ 	  if (a->expr->ts.type == BT_CHARACTER && !f->sym->as && where)
+-	    gfc_warning (OPT_Wargument_mismatch,
+-			 "Character length of actual argument shorter "
+-			 "than of dummy argument %qs (%lu/%lu) at %L",
+-			 f->sym->name, actual_size, formal_size,
+-			 &a->expr->where);
++	    {
++	      gfc_warning (0, "Character length of actual argument shorter "
++			   "than of dummy argument %qs (%lu/%lu) at %L",
++			   f->sym->name, actual_size, formal_size,
++			   &a->expr->where);
++	      goto skip_size_check;
++	    }
+           else if (where)
+ 	    {
+ 	      /* Emit a warning for -std=legacy and an error otherwise. */
+@@ -3798,7 +3813,7 @@ gfc_procedure_use (gfc_symbol *sym, gfc_actual_arglist **ap, locus *where)
    if (!compare_actual_formal (ap, dummy_args, 0, sym->attr.elemental,
  			      sym->attr.proc == PROC_ST_FUNCTION, where))
      return false;
@@ -30708,7 +31567,7 @@ index b5701b1a59a..d88fa77573d 100644
    if (!check_intents (dummy_args, *ap))
      return false;
  
-@@ -4979,7 +4992,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
+@@ -4979,7 +4994,8 @@ gfc_find_typebound_dtio_proc (gfc_symbol *derived, bool write, bool formatted)
    gfc_symtree *tb_io_st = NULL;
    bool t = false;
  
@@ -32344,7 +33203,7 @@ index 71f751de76f..fb957d187d3 100644
    /* Output the GENERIC tree.  */
    dump_function (TDI_original, fndecl);
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index fe10d52dd16..e903b438007 100644
+index fe10d52dd16..9be8dd185bf 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -257,6 +257,42 @@ gfc_class_len_or_zero_get (tree decl)
@@ -32588,15 +33447,18 @@ index fe10d52dd16..e903b438007 100644
  	}
        else if (se->ss && se->ss->info->useflags)
  	{
-@@ -5668,6 +5868,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -5666,8 +5866,10 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 		      bool add_clobber;
+ 		      add_clobber = fsym && fsym->attr.intent == INTENT_OUT
  			&& !fsym->attr.allocatable && !fsym->attr.pointer
++			&& e->symtree && e->symtree->n.sym
  			&& !e->symtree->n.sym->attr.dimension
  			&& !e->symtree->n.sym->attr.pointer
 +			&& !e->symtree->n.sym->attr.allocatable
  			/* See PR 41453.  */
  			&& !e->symtree->n.sym->attr.dummy
  			/* FIXME - PR 87395 and PR 41453  */
-@@ -5958,7 +6159,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -5958,7 +6160,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  				fsym && fsym->attr.pointer);
  
  	      else if (gfc_is_class_array_ref (e, NULL)
@@ -32605,7 +33467,7 @@ index fe10d52dd16..e903b438007 100644
  		/* The actual argument is a component reference to an
  		   array of derived types.  In this case, the argument
  		   is converted to a temporary, which is passed and then
-@@ -5967,26 +6168,26 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -5967,26 +6169,26 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  		   the same as the declared type, copy-in/copy-out does
  		   not occur.  */
  		gfc_conv_subref_array_arg (&parmse, e, nodesc_arg,
@@ -32640,7 +33502,7 @@ index fe10d52dd16..e903b438007 100644
  		}
  	      else
  		gfc_conv_array_parameter (&parmse, e, nodesc_arg, fsym,
-@@ -7462,12 +7663,14 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
+@@ -7462,12 +7664,14 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
  	  return se.expr;
  
  	case BT_CHARACTER:
@@ -32660,7 +33522,7 @@ index fe10d52dd16..e903b438007 100644
  	default:
  	  gfc_init_se (&se, NULL);
  	  gfc_conv_constant (&se, expr);
-@@ -8558,6 +8761,7 @@ gfc_conv_expr_reference (gfc_se * se, gfc_expr * expr, bool add_clobber)
+@@ -8558,6 +8762,7 @@ gfc_conv_expr_reference (gfc_se * se, gfc_expr * expr, bool add_clobber)
  
    if (expr->expr_type == EXPR_FUNCTION
        && ((expr->value.function.esym
@@ -32668,7 +33530,7 @@ index fe10d52dd16..e903b438007 100644
  	   && expr->value.function.esym->result->attr.pointer
  	   && !expr->value.function.esym->result->attr.dimension)
  	  || (!expr->value.function.esym && !expr->ref
-@@ -8645,14 +8849,32 @@ trans_class_vptr_len_assignment (stmtblock_t *block, gfc_expr * le,
+@@ -8645,14 +8850,32 @@ trans_class_vptr_len_assignment (stmtblock_t *block, gfc_expr * le,
    tree tmp, to_len = NULL_TREE, from_len = NULL_TREE, lhs_vptr;
    bool set_vptr = false, temp_rhs = false;
    stmtblock_t *pre = block;
@@ -32704,7 +33566,7 @@ index fe10d52dd16..e903b438007 100644
        rse->expr = tmp;
        temp_rhs = true;
      }
-@@ -8720,9 +8942,17 @@ trans_class_vptr_len_assignment (stmtblock_t *block, gfc_expr * le,
+@@ -8720,9 +8943,17 @@ trans_class_vptr_len_assignment (stmtblock_t *block, gfc_expr * le,
  	  else if (temp_rhs && re->ts.type == BT_CLASS)
  	    {
  	      vptr_expr = NULL;
@@ -32724,7 +33586,7 @@ index fe10d52dd16..e903b438007 100644
  	    }
  	  else if (re->expr_type != EXPR_NULL)
  	    /* Only when rhs is non-NULL use its declared type for vptr
-@@ -9461,7 +9691,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
+@@ -9461,7 +9692,7 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
  	  gfc_add_expr_to_block (&block, tmp);
  	}
      }
@@ -32733,7 +33595,7 @@ index fe10d52dd16..e903b438007 100644
      {
        gfc_add_block_to_block (&block, &lse->pre);
        gfc_add_block_to_block (&block, &rse->pre);
-@@ -9469,7 +9699,20 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
+@@ -9469,7 +9700,20 @@ gfc_trans_scalar_assign (gfc_se * lse, gfc_se * rse, gfc_typespec ts,
  			     TREE_TYPE (lse->expr), rse->expr);
        gfc_add_modify (&block, lse->expr, tmp);
      }
@@ -32755,7 +33617,7 @@ index fe10d52dd16..e903b438007 100644
      {
        gfc_add_block_to_block (&block, &lse->pre);
        gfc_add_block_to_block (&block, &rse->pre);
-@@ -10366,23 +10609,53 @@ trans_class_assignment (stmtblock_t *block, gfc_expr *lhs, gfc_expr *rhs,
+@@ -10366,23 +10610,53 @@ trans_class_assignment (stmtblock_t *block, gfc_expr *lhs, gfc_expr *rhs,
  			gfc_se *lse, gfc_se *rse, bool use_vptr_copy,
  			bool class_realloc)
  {
@@ -32815,7 +33677,7 @@ index fe10d52dd16..e903b438007 100644
        tmp = fold_build2_loc (input_location, EQ_EXPR,
  			     logical_type_node, class_han,
  			     build_int_cst (prvoid_type_node, 0));
-@@ -10390,7 +10663,7 @@ trans_class_assignment (stmtblock_t *block, gfc_expr *lhs, gfc_expr *rhs,
+@@ -10390,7 +10664,7 @@ trans_class_assignment (stmtblock_t *block, gfc_expr *lhs, gfc_expr *rhs,
  			     gfc_unlikely (tmp,
  					   PRED_FORTRAN_FAIL_ALLOC),
  			     gfc_finish_block (&alloc),
@@ -32824,7 +33686,7 @@ index fe10d52dd16..e903b438007 100644
        gfc_add_expr_to_block (&lse->pre, tmp);
      }
  
-@@ -10493,6 +10766,7 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10493,6 +10767,7 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
    bool maybe_workshare = false, lhs_refs_comp = false, rhs_refs_comp = false;
    symbol_attribute lhs_caf_attr, rhs_caf_attr, lhs_attr;
    bool is_poly_assign;
@@ -32832,7 +33694,7 @@ index fe10d52dd16..e903b438007 100644
  
    /* Assignment of the form lhs = rhs.  */
    gfc_start_block (&block);
-@@ -10533,6 +10807,10 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10533,6 +10808,10 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  		       || gfc_is_class_array_ref (expr2, NULL)
  		       || gfc_is_class_scalar_expr (expr2));
  
@@ -32843,7 +33705,7 @@ index fe10d52dd16..e903b438007 100644
  
    /* Only analyze the expressions for coarray properties, when in coarray-lib
       mode.  */
-@@ -10776,10 +11054,24 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10776,10 +11055,24 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
    tmp = NULL_TREE;
  
    if (is_poly_assign)
@@ -32872,7 +33734,7 @@ index fe10d52dd16..e903b438007 100644
    else if (flag_coarray == GFC_FCOARRAY_LIB
  	   && lhs_caf_attr.codimension && rhs_caf_attr.codimension
  	   && ((lhs_caf_attr.allocatable && lhs_refs_comp)
-@@ -10809,7 +11101,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10809,7 +11102,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
      {
        /* This case comes about when the scalarizer provides array element
  	 references. Use the vptr copy function, since this does a deep
@@ -32882,7 +33744,7 @@ index fe10d52dd16..e903b438007 100644
        tmp = gfc_get_vptr_from_expr (rse.expr);
        if (tmp != NULL_TREE)
  	{
-@@ -10884,10 +11177,7 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10884,10 +11178,7 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  	}
  
        /* F2003: Allocate or reallocate lhs of allocatable array.  */
@@ -32894,7 +33756,7 @@ index fe10d52dd16..e903b438007 100644
  	{
  	  realloc_lhs_warning (expr1->ts.type, true, &expr1->where);
  	  ompws_flags &= ~OMPWS_SCALARIZER_WS;
-@@ -10996,8 +11286,7 @@ gfc_trans_assignment (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10996,8 +11287,7 @@ gfc_trans_assignment (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  	return tmp;
      }
  
@@ -34293,6 +35155,69 @@ index 059b5440123..b312903a36d 100644
  	  break;
  	}
  
+diff --git a/gcc/objc/ChangeLog b/gcc/objc/ChangeLog
+index 0a09de70e5d..9f4fe0f9eb7 100644
+--- a/gcc/objc/ChangeLog
++++ b/gcc/objc/ChangeLog
+@@ -1,3 +1,12 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* objc-next-metadata-tags.h (OCTI_RT_META_IVAR_REF): New.
++	(meta_ivar_ref): New.
++	* objc-next-runtime-abi-02.c
++	(next_runtime_abi_02_init_metadata_attributes): Create the
++	IVAR ref metadata identifier.
++	(ivar_offset_ref): Tag IVAR refs with specific metadata.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/gcc/objc/objc-next-metadata-tags.h b/gcc/objc/objc-next-metadata-tags.h
+index 1822aa7d615..933f08c3ab5 100644
+--- a/gcc/objc/objc-next-metadata-tags.h
++++ b/gcc/objc/objc-next-metadata-tags.h
+@@ -74,6 +74,8 @@ enum objc_runtime_tree_index
+ 
+   OCTI_RT_META_CONST_STR,
+ 
++  OCTI_RT_META_IVAR_REF,
++
+   OCTI_RT_META_MAX
+ };
+ 
+@@ -167,6 +169,8 @@ enum objc_runtime_tree_index
+ 
+ #define meta_const_str	objc_rt_trees[OCTI_RT_META_CONST_STR]
+ 
++#define meta_ivar_ref	objc_rt_trees[OCTI_RT_META_IVAR_REF]
++
+ #define OBJCMETA(DECL,VERS,KIND)					\
+   if (VERS)								\
+     DECL_ATTRIBUTES (DECL) = build_tree_list ((VERS), (KIND));
+diff --git a/gcc/objc/objc-next-runtime-abi-02.c b/gcc/objc/objc-next-runtime-abi-02.c
+index a2214195b2c..cbe91caa536 100644
+--- a/gcc/objc/objc-next-runtime-abi-02.c
++++ b/gcc/objc/objc-next-runtime-abi-02.c
+@@ -343,6 +343,8 @@ next_runtime_abi_02_init_metadata_attributes (void)
+   meta_ehtype = get_identifier ("V2_EHTY");
+ 
+   meta_const_str = get_identifier ("V2_CSTR");
++
++  meta_ivar_ref = get_identifier ("V2_IVRF");
+ }
+ 
+ static void next_runtime_02_initialize (void)
+@@ -2793,8 +2795,8 @@ ivar_offset_ref (tree class_name, tree field_decl)
+   else
+     decl = create_hidden_decl (TREE_TYPE (size_zero_node), buf);
+ 
+-  /* Make sure it ends up in an ObjC section.  */
+-  OBJCMETA (decl, objc_meta, meta_base);
++  /* Identify so that we can indirect these where the ABI requires.  */
++  OBJCMETA (decl, objc_meta, meta_ivar_ref);
+ 
+   e.decl = decl;
+   e.offset = byte_position (field_decl);
 diff --git a/gcc/omp-expand.c b/gcc/omp-expand.c
 index 74159734fc8..99ad994266c 100644
 --- a/gcc/omp-expand.c
@@ -34661,6 +35586,20 @@ index 8e4887e50a2..e23a4530bfa 100644
  DEFPARAM (PARAM_IPA_CP_VALUE_LIST_SIZE,
  	  "ipa-cp-value-list-size",
  	  "Maximum size of a list of values associated with each parameter for "
+diff --git a/gcc/postreload.c b/gcc/postreload.c
+index b76c7b0b758..c7b806f4749 100644
+--- a/gcc/postreload.c
++++ b/gcc/postreload.c
+@@ -1717,7 +1717,8 @@ move2add_valid_value_p (int regno, scalar_int_mode mode)
+     {
+       scalar_int_mode old_mode;
+       if (!is_a <scalar_int_mode> (reg_mode[regno], &old_mode)
+-	  || !MODES_OK_FOR_MOVE2ADD (mode, old_mode))
++	  || !MODES_OK_FOR_MOVE2ADD (mode, old_mode)
++	  || !REG_CAN_CHANGE_MODE_P (regno, old_mode, mode))
+ 	return false;
+       /* The value loaded into regno in reg_mode[regno] is also valid in
+ 	 mode after truncation only if (REG:mode regno) is the lowpart of
 diff --git a/gcc/print-rtl.c b/gcc/print-rtl.c
 index fbb108568b3..819b8473d9d 100644
 --- a/gcc/print-rtl.c
@@ -34973,11 +35912,108 @@ index 5d6f2e0166c..125fc66b5ce 100644
      warning (OPT_Wpadded, "padding struct size to alignment boundary");
  
    if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
+diff --git a/gcc/target.def b/gcc/target.def
+index 66cee075018..a9f1f195e7a 100644
+--- a/gcc/target.def
++++ b/gcc/target.def
+@@ -201,6 +201,20 @@ DEFHOOKPOD
+  be called afterward.",
+  bool, true)
+ 
++/* Return true if the target needs extra instructions to restore the current
++   frame address after a DW_CFA_restore_state opcode.  */
++DEFHOOK
++(should_restore_cfa_state,
++ "For DWARF-based unwind frames, two CFI instructions provide for save and\
++ restore of register state.  GCC maintains the current frame address (CFA)\
++ separately from the register bank but the unwinder in libgcc preserves this\
++ state along with the registers (and this is expected by the code that writes\
++ the unwind frames).  This hook allows the target to specify that the CFA data\
++ is not saved/restored along with the registers by the target unwinder so that\
++ suitable additional instructions should be emitted to restore it.",
++ bool, (void),
++ hook_bool_void_false)
++
+ /* Generate an internal label.
+    For now this is just a wrapper for ASM_GENERATE_INTERNAL_LABEL.  */
+ DEFHOOK_UNDOC
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..d4adf74bc51 100644
+index e132f2657ef..ecc6bafcdfb 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,2901 @@
+@@ -1,3 +1,2973 @@
++2021-05-04  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100053
++	* gcc.dg/torture/pr100053.c: New testcase.
++	* gcc.dg/tree-ssa/ssa-fre-93.c: Likewise.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-27  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100254
++	* g++.dg/opt/pr100254.C: New test.
++
++2021-05-04  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-04-21  Jakub Jelinek  <jakub@redhat.com>
++
++	PR rtl-optimization/100148
++	* g++.dg/opt/pr100148.C: New test.
++
++2021-05-04  Martin Sebor  <msebor@redhat.com>
++
++	PR tree-optimization/91914
++	* gcc.dg/strlenopt-79.c: New test.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-11-06  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* gcc.dg/darwin-minversion-link.c: Allow for Darwin19 (macOS 10.15)
++	and Darwin20 (macOS 11.0).
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-08-09  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* gcc.dg/torture/fp-int-convert-timode-3.c: XFAIL run.
++	* gcc.dg/torture/fp-int-convert-timode-4.c: Likewise.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* gcc.dg/darwin-version-1.c: Use -mmacosx-version-min= 10.8
++	for system versions 10.14 and 10.15.
++
++2021-04-30  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-04-30  Richard Biener  <rguenther@suse.de>
++
++	PR c++/98032
++	* g++.dg/pr98032.C: New testcase.
++
++2021-04-30  Jason Merrill  <jason@redhat.com>
++
++	PR c++/95719
++	* g++.dg/tree-ssa/final4.C: New test.
++
++2021-04-30  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	Backported from master:
++	2019-11-21  Prathamesh Kulkarni  <prathamesh.kulkarni@linaro.org>
++
++	PR tree-optimization/92608
++	* gcc.dg/torture/pr92608.c: New test.
++
 +2021-04-28  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	Backported from master:
@@ -41089,6 +42125,146 @@ index 00000000000..ae2dc98efc4
 +int main() {
 +  MakeAndRegisterTestInfo(new TestFactoryImpl<Test>);
 +}
+diff --git a/gcc/testsuite/g++.dg/opt/pr100148.C b/gcc/testsuite/g++.dg/opt/pr100148.C
+new file mode 100644
+index 00000000000..d038879b6b8
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr100148.C
+@@ -0,0 +1,27 @@
++// PR rtl-optimization/100148
++// { dg-do compile }
++// { dg-options "-O2 -fno-dce -fno-tree-dce -fno-tree-dominator-opts -fno-tree-sink -fcompare-debug" }
++
++int i;
++enum E { } e, ee;
++
++bool
++baz (int)
++{
++  return ee;
++}
++
++bool bar ();
++bool a, b;
++
++void
++foo ()
++{
++  switch (ee)
++    {
++    case 0:
++      e = E (a ? : i);
++    case 1:
++      !(b || baz (0) && bar ());
++    }
++}
+diff --git a/gcc/testsuite/g++.dg/opt/pr100254.C b/gcc/testsuite/g++.dg/opt/pr100254.C
+new file mode 100644
+index 00000000000..dbdac1638c7
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/opt/pr100254.C
+@@ -0,0 +1,101 @@
++// PR rtl-optimization/100254
++// { dg-do compile }
++// { dg-options "-O2 -fno-guess-branch-probability -fipa-pta -fnon-call-exceptions -fcompare-debug" }
++// { dg-additional-options "-mtune=goldmont" { target i?86-*-* x86_64-*-* } }
++
++struct _Rb_tree_node_base {
++  typedef _Rb_tree_node_base *_Base_ptr;
++  typedef _Rb_tree_node_base *_Const_Base_ptr;
++  _Base_ptr _M_left;
++};
++template <typename _Key_compare> struct _Rb_tree_key_compare {
++  _Key_compare _M_key_compare;
++};
++struct _Rb_tree_header {
++  _Rb_tree_node_base _M_header;
++};
++struct _Rb_tree_iterator {
++  _Rb_tree_iterator(_Rb_tree_node_base::_Base_ptr);
++  friend bool operator==(_Rb_tree_iterator, _Rb_tree_iterator);
++};
++template <typename _Tp> struct _Rb_tree_const_iterator {
++  typedef _Rb_tree_const_iterator _Self;
++  _Rb_tree_const_iterator(_Rb_tree_node_base::_Const_Base_ptr) {}
++  _Tp operator*();
++  template <typename _Up>
++  friend bool operator!=(_Rb_tree_const_iterator<_Up>, _Rb_tree_const_iterator<_Up>);
++};
++template <typename _Key, typename _Val, typename _Compare> struct _Rb_tree {
++  template <typename _Key_compare>
++  struct _Rb_tree_impl : _Rb_tree_key_compare<_Key_compare>, _Rb_tree_header {};
++  _Rb_tree_impl<_Compare> _M_impl;
++  _Key _S_key();
++  typedef _Rb_tree_const_iterator<_Val> const_iterator;
++  const_iterator begin() { return _M_impl._M_header._M_left; }
++  _Rb_tree_iterator find(const _Key &);
++};
++template <typename _Key, typename _Val, typename _Compare>
++_Rb_tree_iterator _Rb_tree<_Key, _Val, _Compare>::find(const _Key &__k) {
++  _Rb_tree_iterator __j = 0;
++  return __j == 0 || _M_impl._M_key_compare(__k, _S_key()) ? 0 : __j;
++}
++template <typename _Key, typename _Compare = _Key> struct set {
++  typedef _Key key_type;
++  typedef _Rb_tree<key_type, _Key, _Compare> _Rep_type;
++  _Rep_type _M_t;
++  typedef typename _Rep_type::const_iterator iterator;
++  iterator begin() { return _M_t.begin(); }
++  iterator end();
++  void find(key_type __x) { _M_t.find(__x); }
++};
++struct WindowDesc {
++  WindowDesc(short);
++} _station_view_desc(0);
++struct Window {
++  void IsWidgetLowered();
++  virtual void OnClick(int, int, int);
++};
++int AllocateWindowDescFront_window_number;
++template <typename Wcls> void AllocateWindowDescFront(WindowDesc *desc, bool) {
++  Wcls(desc, AllocateWindowDescFront_window_number);
++}
++class CargoDataEntry;
++struct CargoSorter {
++  bool operator()(const CargoDataEntry *, const CargoDataEntry *) const;
++};
++struct CargoDataEntry {
++  ~CargoDataEntry();
++  char Retrieve_cargo;
++  void Retrieve() {
++    CargoDataEntry t(Retrieve_cargo);
++    children->find(&t);
++  }
++  CargoDataEntry(char);
++  set<CargoDataEntry *, CargoSorter> *children;
++};
++CargoDataEntry::CargoDataEntry(char) : children() {}
++CargoDataEntry::~CargoDataEntry() {
++  if (children)
++    for (set<CargoDataEntry *>::iterator i = children->begin();
++         i != children->end();)
++      delete *i;
++}
++bool CargoSorter::operator()(const CargoDataEntry *,
++                             const CargoDataEntry *) const { return false; }
++struct StationViewWindow : Window {
++  StationViewWindow(WindowDesc *, int);
++  CargoDataEntry HandleCargoWaitingClick_filter;
++  void OnClick(int, int widget, int) {
++    switch (widget) {
++    case 0:
++      HandleCargoWaitingClick_filter.Retrieve();
++      HandleCargoWaitingClick_filter.Retrieve();
++    case 1:
++      IsWidgetLowered();
++    }
++  }
++};
++void ShowStationViewWindow_station() {
++  AllocateWindowDescFront<StationViewWindow>(&_station_view_desc,
++                                             ShowStationViewWindow_station);
++}
 diff --git a/gcc/testsuite/g++.dg/opt/pr94618.C b/gcc/testsuite/g++.dg/opt/pr94618.C
 new file mode 100644
 index 00000000000..e6a81d2c5ab
@@ -42822,6 +43998,43 @@ index 00000000000..7a41e5c64b1
 +  va_end (a);
 +  return r;
 +}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/20210505-1.c b/gcc/testsuite/gcc.c-torture/execute/20210505-1.c
+new file mode 100644
+index 00000000000..10a2de07921
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/20210505-1.c
+@@ -0,0 +1,31 @@
++/* PR target/100402 */
++/* Testcase by Hannes Domani <ssbssa@yahoo.de> */
++
++/* { dg-require-effective-target indirect_jumps } */
++
++#include <setjmp.h>
++#include <stdbool.h>
++
++static jmp_buf buf;
++static _Bool stop = false;
++
++void call_func (void(*func)(void))
++{
++  func ();
++}
++
++void func (void)
++{
++  stop = true;
++  longjmp (buf, 1);
++}
++
++int main (void)
++{
++  setjmp (buf);
++
++  while (!stop)
++    call_func (func);
++
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c b/gcc/testsuite/gcc.c-torture/execute/packed-aligned.c
 new file mode 100644
 index 00000000000..f768af0ab02
@@ -43529,6 +44742,37 @@ index 75e902cd1f4..35dff89c377 100644
      }
  }
  
+diff --git a/gcc/testsuite/gcc.dg/darwin-minversion-link.c b/gcc/testsuite/gcc.dg/darwin-minversion-link.c
+index 0a80048ba35..765fb799a91 100644
+--- a/gcc/testsuite/gcc.dg/darwin-minversion-link.c
++++ b/gcc/testsuite/gcc.dg/darwin-minversion-link.c
+@@ -13,8 +13,9 @@
+ /* { dg-additional-options "-mmacosx-version-min=010.011.06 -DCHECK=101106" { target *-*-darwin15* } } */
+ /* { dg-additional-options "-mmacosx-version-min=010.012.06 -DCHECK=101206" { target *-*-darwin16* } } */
+ /* { dg-additional-options "-mmacosx-version-min=010.013.06 -DCHECK=101306" { target *-*-darwin17* } } */
+-/* This next test covers 10.18 and (currently unreleased) 10.19 for now. */  
+-/* { dg-additional-options "-mmacosx-version-min=010.014.05 -DCHECK=101405" { target *-*-darwin1[89]* } } */
++/* { dg-additional-options "-mmacosx-version-min=010.014.05 -DCHECK=101405" { target *-*-darwin18* } } */
++/* { dg-additional-options "-mmacosx-version-min=010.015.06 -DCHECK=101506" { target *-*-darwin19* } } */
++/* { dg-additional-options "-mmacosx-version-min=011.000.00 -DCHECK=110000" { target *-*-darwin20 } } */
+ 
+ int
+ main ()
+diff --git a/gcc/testsuite/gcc.dg/darwin-version-1.c b/gcc/testsuite/gcc.dg/darwin-version-1.c
+index ad7f7da3b63..2ca34c6c007 100644
+--- a/gcc/testsuite/gcc.dg/darwin-version-1.c
++++ b/gcc/testsuite/gcc.dg/darwin-version-1.c
+@@ -5,7 +5,9 @@
+ /* Later Darwin linkers decline to link for less than Darwin8/MacOS 10.4.
+    However, we need to make the link for 10.6 because the relevant libgcc_s
+    shim files for 10.4 and 10.5 are also not installed in later SDKs.  */
+-/* { dg-options "-mmacosx-version-min=10.6" { target *-*-darwin[123]* } } */
++/* { dg-options "-mmacosx-version-min=10.6" { target *-*-darwin1[01234567]* } } */
++/* From XCode 11.4 on 10.14/15 10.6 and 10.7 are also deprecated.  */
++/* { dg-options "-mmacosx-version-min=10.8" { target *-*-darwin1[89]* } } */
+ /* { dg-do link { target *-*-darwin* } } */
+ 
+ int main()
 diff --git a/gcc/testsuite/gcc.dg/declare-simd.c b/gcc/testsuite/gcc.dg/declare-simd.c
 index 1c71b60c974..2c8c1b7da4f 100644
 --- a/gcc/testsuite/gcc.dg/declare-simd.c
@@ -44762,6 +46006,58 @@ index 00000000000..8c90489bdeb
 +  garply (&p, &a[0], &a[0], &a[0], u);
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/strlenopt-79.c b/gcc/testsuite/gcc.dg/strlenopt-79.c
+new file mode 100644
+index 00000000000..362cbfbe274
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/strlenopt-79.c
+@@ -0,0 +1,46 @@
++/* PR tree-optimization/91914 - Invalid strlen folding for offset into struct
++   { dg-do run }
++   { dg-options "-O2 -Wall" } */
++
++#define assert(expr)						\
++  ((expr)							\
++   ? (void)0							\
++   : (__builtin_printf ("%s:%i: assertion failed: %s\n",	\
++			__FILE__, __LINE__, #expr),		\
++      __builtin_abort ()))
++
++extern __SIZE_TYPE__ strlen (const char*);
++
++struct stringpool_t
++{
++  char s1[sizeof ("1")];
++  char s2[sizeof ("12")];
++  char s3[sizeof ("123")];
++  char s4[sizeof ("1234")];
++  char s5[sizeof ("12345")];
++};
++
++static const struct stringpool_t stringpool_contents =
++  {
++   "1", "12", "123", "1234", "12345"
++  };
++
++#define stringpool ((const char *) &stringpool_contents)
++
++volatile int i0 = 0, i2 = 2, i5 = 5, i9 = 9, i14 = 14;
++
++int main (void)
++{
++  /* These shouldn't trigger warnings.  */
++  assert (strlen (stringpool) == 1);
++  assert (strlen (stringpool + 2) == 2);
++  assert (strlen (stringpool + 5) == 3);
++  assert (strlen (stringpool + 9) == 4);
++  assert (strlen (stringpool + 14) == 5);
++
++  assert (strlen (stringpool + i0) == 1);
++  assert (strlen (stringpool + i2) == 2);
++  assert (strlen (stringpool + i5) == 3);
++  assert (strlen (stringpool + i9) == 4);
++  assert (strlen (stringpool + i14) == 5);
++}
 diff --git a/gcc/testsuite/gcc.dg/strncmp-2.c b/gcc/testsuite/gcc.dg/strncmp-2.c
 index f5555ba4081..40a4f501448 100644
 --- a/gcc/testsuite/gcc.dg/strncmp-2.c
@@ -44804,6 +46100,61 @@ index 00000000000..86ffaad7f48
 +__thread int tlsvar = 3;
 +/* { dg-final { scan-assembler ".weak_definition ___emutls_t.tlsvar" { target *-*-darwin* } } } */
 +/* { dg-final { scan-assembler ".private_extern ___emutls_t.tlsvar" { target *-*-darwin* } } } */
+diff --git a/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-3.c b/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-3.c
+index 707d539335f..10702302bf8 100644
+--- a/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-3.c
++++ b/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-3.c
+@@ -4,6 +4,7 @@
+ /* { dg-require-effective-target int128 } */
+ /* { dg-require-effective-target fenv } */
+ /* { dg-options "-frounding-math" } */
++/* { dg-xfail-run-if "see PR80556 c63" { x86_64-*-darwin* i68?-*-darwin* } { "*" } { "" } } */
+ 
+ #include <fenv.h>
+ #include <stdlib.h>
+diff --git a/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-4.c b/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-4.c
+index 09600f90903..3facf32fb8b 100644
+--- a/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-4.c
++++ b/gcc/testsuite/gcc.dg/torture/fp-int-convert-timode-4.c
+@@ -4,6 +4,7 @@
+ /* { dg-require-effective-target int128 } */
+ /* { dg-require-effective-target fenv } */
+ /* { dg-options "-frounding-math" } */
++/* { dg-xfail-run-if "see PR80556 c63" { x86_64-*-darwin* i68?-*-darwin* } { "*" } { "" } } */
+ 
+ #include <fenv.h>
+ #include <stdlib.h>
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100053.c b/gcc/testsuite/gcc.dg/torture/pr100053.c
+new file mode 100644
+index 00000000000..3d1767513f3
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr100053.c
+@@ -0,0 +1,25 @@
++/* { dg-do run } */
++
++int __attribute__((returns_twice,noipa)) x() { return 0; }
++void __attribute__((noipa)) ar() {}
++void __attribute__((noipa)) as() { __builtin_abort (); }
++int a1, a2, a3;
++void __attribute__((noipa)) v(int init)
++{
++  if (!init) {
++    as();
++    if (a1)
++      goto aq;
++    x ();
++  }
++  ar();
++aq:
++  if (!init)
++    as();
++}
++
++int main()
++{
++  v(1);
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr92608.c b/gcc/testsuite/gcc.dg/torture/pr92608.c
 new file mode 100644
 index 00000000000..3a6beaba441
@@ -45057,6 +46408,35 @@ index 00000000000..7b9fdb2b613
 +    c = b[0];
 +    b = a;
 +  }
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr98786.c b/gcc/testsuite/gcc.dg/torture/pr98786.c
+new file mode 100644
+index 00000000000..ea364717af2
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr98786.c
+@@ -0,0 +1,23 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-fno-tree-dce" } */
++
++void
++func_30 (void);
++
++int __attribute__ ((pure, returns_twice))
++func_38 (int g_15, int p_39)
++{
++  return !!g_15 ? p_39 : 0;
++}
++
++void
++func_26 (int func_26___trans_tmp_1)
++{
++  long int l_37 = 0;
++  int __trans_tmp_1;
++
++  func_26___trans_tmp_1 = func_38 (func_26___trans_tmp_1, 1);
++  __trans_tmp_1 = func_38 (func_26___trans_tmp_1, l_37);
++  l_37 = 1;
++  func_30 ();
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr99694.c b/gcc/testsuite/gcc.dg/torture/pr99694.c
 new file mode 100644
@@ -45535,6 +46915,33 @@ index 00000000000..741dbc270c3
 +  foo (2, 4);
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/ssa-fre-93.c b/gcc/testsuite/gcc.dg/tree-ssa/ssa-fre-93.c
+new file mode 100644
+index 00000000000..7f66b7ee3f4
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/ssa-fre-93.c
+@@ -0,0 +1,21 @@
++/* { dg-do compile } */
++/* { dg-options "-O -fdump-tree-fre1" } */
++
++void bar ();
++void foo (int pred, int *other)
++{
++  *other = 0;
++  if (*other)
++    goto cnt;
++  if (pred)
++    {
++      *other = 1;
++cnt:
++      if (!pred)
++        bar ();
++    }
++}
++
++/* The first VN pass should figure that if (!pred) is false because
++   if (*other) is and thus the predicate test is redundant.  */
++/* { dg-final { scan-tree-dump-not "bar" "fre1" } } */
 diff --git a/gcc/testsuite/gcc.dg/ubsan/pr94423.c b/gcc/testsuite/gcc.dg/ubsan/pr94423.c
 new file mode 100644
 index 00000000000..76f831f26e2
@@ -53462,6 +54869,24 @@ index 00000000000..9916e9ba2a7
 +*/
 +import imports.issue21295ast_node;
 +Visitor should_fail;
+diff --git a/gcc/testsuite/gfortran.dg/argument_checking_25.f90 b/gcc/testsuite/gfortran.dg/argument_checking_25.f90
+new file mode 100644
+index 00000000000..e699160fee1
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/argument_checking_25.f90
+@@ -0,0 +1,12 @@
++! { dg-do compile }
++! PR fortran/100274 - ICE in gfc_conv_procedure_call, at fortran/trans-expr.c:6131
++
++program p
++  call s('y')   ! { dg-warning "Character length of actual argument" }
++contains
++  subroutine s(x)
++    character(8), intent(out) :: x
++  end
++end
++
++! { dg-error "in variable definition context"  " " { target *-*-* } 5 }
 diff --git a/gcc/testsuite/gfortran.dg/bessel_5_redux.f90 b/gcc/testsuite/gfortran.dg/bessel_5_redux.f90
 new file mode 100644
 index 00000000000..72d2db43959
@@ -58494,10 +59919,30 @@ index 30a2a9dd26e..a5becadfdbe 100644
  	    return NULL;
  	  extract_true_false_edges_from_block (header, &te, &fe);
 diff --git a/gcc/tree-ssa-phiopt.c b/gcc/tree-ssa-phiopt.c
-index 19b37b43b8e..47227dc16dc 100644
+index 19b37b43b8e..e5a47c6614b 100644
 --- a/gcc/tree-ssa-phiopt.c
 +++ b/gcc/tree-ssa-phiopt.c
-@@ -1040,7 +1040,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
+@@ -465,6 +465,9 @@ factor_out_conditional_conversion (edge e0, edge e1, gphi *phi,
+       if (!is_gimple_reg_type (TREE_TYPE (new_arg0)))
+ 	return NULL;
+     }
++  if (TREE_CODE (new_arg0) == SSA_NAME
++      && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (new_arg0))
++    return NULL;
+ 
+   if (TREE_CODE (arg1) == SSA_NAME)
+     {
+@@ -479,6 +482,9 @@ factor_out_conditional_conversion (edge e0, edge e1, gphi *phi,
+       new_arg1 = gimple_assign_rhs1 (arg1_def_stmt);
+       if (convert_code == VIEW_CONVERT_EXPR)
+ 	new_arg1 = TREE_OPERAND (new_arg1, 0);
++      if (TREE_CODE (new_arg1) == SSA_NAME
++	  && SSA_NAME_OCCURS_IN_ABNORMAL_PHI (new_arg1))
++	return NULL;
+     }
+   else
+     {
+@@ -1040,7 +1046,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
    gimple *cond;
    edge true_edge, false_edge;
    enum tree_code code;
@@ -58506,7 +59951,7 @@ index 19b37b43b8e..47227dc16dc 100644
  
    /* If the type says honor signed zeros we cannot do this
       optimization.  */
-@@ -1059,7 +1059,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
+@@ -1059,7 +1065,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
  	{
  	  if (gimple_code (stmt) != GIMPLE_PREDICT
  	      && gimple_code (stmt) != GIMPLE_NOP)
@@ -58515,7 +59960,7 @@ index 19b37b43b8e..47227dc16dc 100644
  	  continue;
  	}
        /* Now try to adjust arg0 or arg1 according to the computation
-@@ -1069,7 +1069,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
+@@ -1069,7 +1075,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
  	     && jump_function_from_stmt (&arg0, stmt))
  	    || (lhs == arg1
  		&& jump_function_from_stmt (&arg1, stmt)))
@@ -58524,7 +59969,7 @@ index 19b37b43b8e..47227dc16dc 100644
      }
  
    cond = last_stmt (cond_bb);
-@@ -1121,7 +1121,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
+@@ -1121,7 +1127,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
        /* If the middle basic block was empty or is defining the
  	 PHI arguments and this is a single phi where the args are different
  	 for the edges e0 and e1 then we can remove the middle basic block. */
@@ -58533,7 +59978,7 @@ index 19b37b43b8e..47227dc16dc 100644
  	  && single_non_singleton_phi_for_edges (phi_nodes (gimple_bb (phi)),
  						 e0, e1) == phi)
  	{
-@@ -1239,7 +1239,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
+@@ -1239,7 +1245,7 @@ value_replacement (basic_block cond_bb, basic_block middle_bb,
        && profile_status_for_fn (cfun) != PROFILE_ABSENT
        && EDGE_PRED (middle_bb, 0)->probability < profile_probability::even ()
        /* If assign is cheap, there is no point avoiding it.  */
@@ -58670,7 +60115,7 @@ index 6794fbde29e..4bc691d5797 100644
  						   || negate_result,
  						   len != orig_len);
 diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
-index 32f45c95cdf..57e0e613a62 100644
+index 32f45c95cdf..15420df87bb 100644
 --- a/gcc/tree-ssa-sccvn.c
 +++ b/gcc/tree-ssa-sccvn.c
 @@ -535,7 +535,8 @@ vn_get_stmt_kind (gimple *stmt)
@@ -58683,7 +60128,56 @@ index 32f45c95cdf..57e0e613a62 100644
  		  return VN_NARY;
  
  		/* Fallthrough.  */
-@@ -3731,6 +3732,8 @@ set_ssa_val_to (tree from, tree to)
+@@ -3331,7 +3332,7 @@ vn_nary_op_insert_pieces_predicated (unsigned int length, enum tree_code code,
+ }
+ 
+ static bool
+-dominated_by_p_w_unex (basic_block bb1, basic_block bb2);
++dominated_by_p_w_unex (basic_block bb1, basic_block bb2, bool);
+ 
+ static tree
+ vn_nary_op_get_predicated_value (vn_nary_op_t vno, basic_block bb)
+@@ -3340,9 +3341,12 @@ vn_nary_op_get_predicated_value (vn_nary_op_t vno, basic_block bb)
+     return vno->u.result;
+   for (vn_pval *val = vno->u.values; val; val = val->next)
+     for (unsigned i = 0; i < val->n; ++i)
+-      if (dominated_by_p_w_unex (bb,
+-			  BASIC_BLOCK_FOR_FN
+-			    (cfun, val->valid_dominated_by_p[i])))
++      /* Do not handle backedge executability optimistically since
++	 when figuring out whether to iterate we do not consider
++	 changed predication.  */
++      if (dominated_by_p_w_unex
++	    (bb, BASIC_BLOCK_FOR_FN (cfun, val->valid_dominated_by_p[i]),
++	     false))
+ 	return val->result;
+   return NULL_TREE;
+ }
+@@ -3642,10 +3646,11 @@ vn_phi_insert (gimple *phi, tree result, bool backedges_varying_p)
+ 
+ 
+ /* Return true if BB1 is dominated by BB2 taking into account edges
+-   that are not executable.  */
++   that are not executable.  When ALLOW_BACK is false consider not
++   executable backedges as executable.  */
+ 
+ static bool
+-dominated_by_p_w_unex (basic_block bb1, basic_block bb2)
++dominated_by_p_w_unex (basic_block bb1, basic_block bb2, bool allow_back)
+ {
+   edge_iterator ei;
+   edge e;
+@@ -3662,7 +3667,8 @@ dominated_by_p_w_unex (basic_block bb1, basic_block bb2)
+     {
+       edge prede = NULL;
+       FOR_EACH_EDGE (e, ei, bb1->preds)
+-	if (e->flags & EDGE_EXECUTABLE)
++	if ((e->flags & EDGE_EXECUTABLE)
++	    || (!allow_back && (e->flags & EDGE_DFS_BACK)))
+ 	  {
+ 	    if (prede)
+ 	      {
+@@ -3731,6 +3737,8 @@ set_ssa_val_to (tree from, tree to)
    vn_ssa_aux_t from_info = VN_INFO (from);
    tree currval = from_info->valnum; // SSA_VAL (from)
    poly_int64 toff, coff;
@@ -58692,7 +60186,7 @@ index 32f45c95cdf..57e0e613a62 100644
  
    /* The only thing we allow as value numbers are ssa_names
       and invariants.  So assert that here.  We don't allow VN_TOP
-@@ -3773,9 +3776,9 @@ set_ssa_val_to (tree from, tree to)
+@@ -3773,9 +3781,9 @@ set_ssa_val_to (tree from, tree to)
  	    }
  	  return false;
  	}
@@ -58705,7 +60199,7 @@ index 32f45c95cdf..57e0e613a62 100644
        if (currval != VN_TOP
  	  && !curr_invariant
  	  && !curr_undefined
-@@ -3830,9 +3833,8 @@ set_and_exit:
+@@ -3830,9 +3838,8 @@ set_and_exit:
        && !operand_equal_p (currval, to, 0)
        /* Different undefined SSA names are not actually different.  See
           PR82320 for a testcase were we'd otherwise not terminate iteration.  */
@@ -58716,7 +60210,7 @@ index 32f45c95cdf..57e0e613a62 100644
  	   && ssa_undefined_value_p (to, false))
        /* ???  For addresses involving volatile objects or types operand_equal_p
           does not reliably detect ADDR_EXPRs as equal.  We know we are only
-@@ -3844,6 +3846,22 @@ set_and_exit:
+@@ -3844,6 +3851,22 @@ set_and_exit:
  	       == get_addr_base_and_unit_offset (TREE_OPERAND (to, 0), &toff))
  	   && known_eq (coff, toff)))
      {
@@ -58739,7 +60233,7 @@ index 32f45c95cdf..57e0e613a62 100644
        if (dump_file && (dump_flags & TDF_DETAILS))
  	fprintf (dump_file, " (changed)\n");
        from_info->valnum = to;
-@@ -4124,13 +4142,22 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
+@@ -4124,13 +4147,22 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
    if (result
        && !useless_type_conversion_p (TREE_TYPE (result), TREE_TYPE (op)))
      {
@@ -58769,7 +60263,7 @@ index 32f45c95cdf..57e0e613a62 100644
        /* When building the conversion fails avoid inserting the reference
           again.  */
        if (!result)
-@@ -4293,6 +4320,8 @@ visit_phi (gimple *phi, bool *inserted, bool backedges_varying_p)
+@@ -4293,6 +4325,8 @@ visit_phi (gimple *phi, bool *inserted, bool backedges_varying_p)
        {
  	tree def = PHI_ARG_DEF_FROM_EDGE (phi, e);
  
@@ -58778,6 +60272,15 @@ index 32f45c95cdf..57e0e613a62 100644
  	++n_executable;
  	if (TREE_CODE (def) == SSA_NAME)
  	  {
+@@ -5871,7 +5905,7 @@ rpo_elim::eliminate_avail (basic_block bb, tree op)
+ 	     may also be able to "pre-compute" (bits of) the next immediate
+ 	     (non-)dominator during the RPO walk when marking edges as
+ 	     executable.  */
+-	  if (dominated_by_p_w_unex (bb, abb))
++	  if (dominated_by_p_w_unex (bb, abb, true))
+ 	    {
+ 	      tree leader = ssa_name ((*av)[i].second);
+ 	      /* Prevent eliminations that break loop-closed SSA.  */
 diff --git a/gcc/tree-ssa-structalias.c b/gcc/tree-ssa-structalias.c
 index 0ea0b461d2b..4396bcd8f20 100644
 --- a/gcc/tree-ssa-structalias.c
@@ -59395,6 +60898,68 @@ index 8f006dcff67..7749be05b6f 100644
    if (! TREE_PUBLIC (decl))
      {
        error ("weak declaration of %q+D must be public", decl);
+diff --git a/gcc/vmsdbgout.c b/gcc/vmsdbgout.c
+index 9c34be4d314..cdfe1efb2ca 100644
+--- a/gcc/vmsdbgout.c
++++ b/gcc/vmsdbgout.c
+@@ -365,13 +365,13 @@ static char text_end_label[MAX_ARTIFICIAL_LABEL_BYTES];
+ #define ASM_OUTPUT_DEBUG_STRING(FILE,P)		\
+   do						\
+     {						\
+-      register int slen = strlen (P);		\
+-      register const char *p = (P);		\
+-      register int i;				\
++      int slen = strlen (P);			\
++      const char *p = (P);			\
++      int i;					\
+       fprintf (FILE, "\t.ascii \"");		\
+       for (i = 0; i < slen; i++)		\
+ 	{					\
+-	  register int c = p[i];		\
++	  int c = p[i];				\
+ 	  if (c == '\"' || c == '\\')		\
+ 	    putc ('\\', FILE);			\
+ 	  if (c >= ' ' && c < 0177)		\
+@@ -1229,7 +1229,7 @@ vmsdbgout_end_epilogue (unsigned int line, const char *file)
+    a lexical block.  */
+ 
+ static void
+-vmsdbgout_begin_block (register unsigned line, register unsigned blocknum)
++vmsdbgout_begin_block (unsigned line, unsigned blocknum)
+ {
+   if (write_symbols == VMS_AND_DWARF2_DEBUG)
+     (*dwarf2_debug_hooks.begin_block) (line, blocknum);
+@@ -1242,7 +1242,7 @@ vmsdbgout_begin_block (register unsigned line, register unsigned blocknum)
+    lexical block.  */
+ 
+ static void
+-vmsdbgout_end_block (register unsigned line, register unsigned blocknum)
++vmsdbgout_end_block (unsigned line, unsigned blocknum)
+ {
+   if (write_symbols == VMS_AND_DWARF2_DEBUG)
+     (*dwarf2_debug_hooks.end_block) (line, blocknum);
+@@ -1315,8 +1315,8 @@ static unsigned int
+ lookup_filename (const char *file_name)
+ {
+   static unsigned int last_file_lookup_index = 0;
+-  register char *fn;
+-  register unsigned i;
++  char *fn;
++  unsigned i;
+   const char *fnam;
+   long long cdt = 0;
+   long ebk = 0;
+@@ -1405,8 +1405,8 @@ vmsdbgout_write_source_line (unsigned line, const char *filename,
+ }
+ 
+ static void
+-vmsdbgout_source_line (register unsigned line, unsigned int column,
+-		       register const char *filename,
++vmsdbgout_source_line (unsigned line, unsigned int column,
++		       const char *filename,
+                        int discriminator, bool is_stmt)
+ {
+   if (write_symbols == VMS_AND_DWARF2_DEBUG)
 diff --git a/gcc/wide-int.cc b/gcc/wide-int.cc
 index c2dfe85f2f0..0fa7f51bd67 100644
 --- a/gcc/wide-int.cc
@@ -59579,10 +61144,16 @@ index 48832b98f1a..708ae65c551 100644
  AC_CONFIG_FILES(Makefile config.intl)
  AC_OUTPUT
 diff --git a/libatomic/ChangeLog b/libatomic/ChangeLog
-index 5c0aa2db0c8..93ba72ae5ef 100644
+index 5c0aa2db0c8..94d284bce4f 100644
 --- a/libatomic/ChangeLog
 +++ b/libatomic/ChangeLog
-@@ -1,3 +1,8 @@
+@@ -1,3 +1,14 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
 +2020-04-19  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	* config/x86/fenv.c (__atomic_feraiseexcept) [__SSE_MATH__]:
@@ -59625,6 +61196,315 @@ index 9b8a3bd9308..b4c7edc249e 100644
  #else
        asm volatile ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
+diff --git a/libatomic/configure b/libatomic/configure
+index e7076a0ff64..c629ad8e35e 100755
+--- a/libatomic/configure
++++ b/libatomic/configure
+@@ -7562,23 +7562,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -11355,7 +11357,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11358 "configure"
++#line 11360 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11461,7 +11463,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11464 "configure"
++#line 11466 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+diff --git a/libbacktrace/ChangeLog b/libbacktrace/ChangeLog
+index 0bbbbb7ab8a..e940429a025 100644
+--- a/libbacktrace/ChangeLog
++++ b/libbacktrace/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libbacktrace/configure b/libbacktrace/configure
+index 51d7cb4582a..91f57a9c740 100755
+--- a/libbacktrace/configure
++++ b/libbacktrace/configure
+@@ -7966,23 +7966,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -11492,7 +11494,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11495 "configure"
++#line 11497 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11598,7 +11600,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11601 "configure"
++#line 11603 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+diff --git a/libcc1/ChangeLog b/libcc1/ChangeLog
+index 2802ce5c0b1..46a568a00b3 100644
+--- a/libcc1/ChangeLog
++++ b/libcc1/ChangeLog
+@@ -1,3 +1,12 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* Makefile.am: Add dynamic_lookup to LD flags for Darwin.
++	* configure.ac: Test for Darwin host and set a flag.
++	* Makefile.in: Regenerate.
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libcc1/Makefile.am b/libcc1/Makefile.am
+index 72c6aead475..ad8800e299c 100644
+--- a/libcc1/Makefile.am
++++ b/libcc1/Makefile.am
+@@ -25,6 +25,9 @@ CPPFLAGS_FOR_C_FAMILY = -I $(srcdir)/../gcc/c-family \
+ CPPFLAGS_FOR_C = $(CPPFLAGS_FOR_C_FAMILY) -I $(srcdir)/../gcc/c
+ CPPFLAGS_FOR_CXX = $(CPPFLAGS_FOR_C_FAMILY) -I $(srcdir)/../gcc/cp
+ AM_CXXFLAGS = $(WARN_FLAGS) $(WERROR) $(visibility)
++if DARWIN_DYNAMIC_LOOKUP
++AM_CXXFLAGS += -Wl,-undefined,dynamic_lookup
++endif
+ override CXXFLAGS := $(filter-out -fsanitize=address,$(CXXFLAGS))
+ override LDFLAGS := $(filter-out -fsanitize=address,$(LDFLAGS))
+ # Can be simplified when libiberty becomes a normal convenience library.
+diff --git a/libcc1/Makefile.in b/libcc1/Makefile.in
+index 7104b649026..2def836cb06 100644
+--- a/libcc1/Makefile.in
++++ b/libcc1/Makefile.in
+@@ -89,6 +89,7 @@ POST_UNINSTALL = :
+ build_triplet = @build@
+ host_triplet = @host@
+ target_triplet = @target@
++@DARWIN_DYNAMIC_LOOKUP_TRUE@am__append_1 = -Wl,-undefined,dynamic_lookup
+ subdir = .
+ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
+ am__aclocal_m4_deps = $(top_srcdir)/../config/acx.m4 \
+@@ -382,7 +383,7 @@ CPPFLAGS_FOR_C_FAMILY = -I $(srcdir)/../gcc/c-family \
+ 
+ CPPFLAGS_FOR_C = $(CPPFLAGS_FOR_C_FAMILY) -I $(srcdir)/../gcc/c
+ CPPFLAGS_FOR_CXX = $(CPPFLAGS_FOR_C_FAMILY) -I $(srcdir)/../gcc/cp
+-AM_CXXFLAGS = $(WARN_FLAGS) $(WERROR) $(visibility)
++AM_CXXFLAGS = $(WARN_FLAGS) $(WERROR) $(visibility) $(am__append_1)
+ # Can be simplified when libiberty becomes a normal convenience library.
+ libiberty_normal = ../libiberty/libiberty.a
+ libiberty_noasan = ../libiberty/noasan/libiberty.a
+diff --git a/libcc1/configure b/libcc1/configure
+index 53f40d31135..936a2567718 100755
+--- a/libcc1/configure
++++ b/libcc1/configure
+@@ -635,6 +635,8 @@ LTLIBOBJS
+ LIBOBJS
+ ENABLE_PLUGIN_FALSE
+ ENABLE_PLUGIN_TRUE
++DARWIN_DYNAMIC_LOOKUP_FALSE
++DARWIN_DYNAMIC_LOOKUP_TRUE
+ libsuffix
+ GMPINC
+ WERROR
+@@ -7250,23 +7252,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -10775,7 +10779,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10778 "configure"
++#line 10782 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -10881,7 +10885,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10884 "configure"
++#line 10888 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -14771,6 +14775,19 @@ fi
+ $as_echo "$libcc1_cv_lib_sockets" >&6; }
+ LIBS="$LIBS $libcc1_cv_lib_sockets"
+ 
++case "$host" in
++  *-*-darwin*) darwin_dynamic_lookup=yes ;;
++  *) darwin_dynamic_lookup=no ;;
++esac
++ if test $darwin_dynamic_lookup = yes; then
++  DARWIN_DYNAMIC_LOOKUP_TRUE=
++  DARWIN_DYNAMIC_LOOKUP_FALSE='#'
++else
++  DARWIN_DYNAMIC_LOOKUP_TRUE='#'
++  DARWIN_DYNAMIC_LOOKUP_FALSE=
++fi
++
++
+ # If any of these functions are missing, simply don't bother building
+ # this plugin.
+ # Check for plugin support
+@@ -15139,6 +15156,10 @@ if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
+   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+ fi
++if test -z "${DARWIN_DYNAMIC_LOOKUP_TRUE}" && test -z "${DARWIN_DYNAMIC_LOOKUP_FALSE}"; then
++  as_fn_error $? "conditional \"DARWIN_DYNAMIC_LOOKUP\" was never defined.
++Usually this means the macro was only invoked conditionally." "$LINENO" 5
++fi
+ if test -z "${ENABLE_PLUGIN_TRUE}" && test -z "${ENABLE_PLUGIN_FALSE}"; then
+   as_fn_error $? "conditional \"ENABLE_PLUGIN\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+diff --git a/libcc1/configure.ac b/libcc1/configure.ac
+index 78bd2087497..eee5235221c 100644
+--- a/libcc1/configure.ac
++++ b/libcc1/configure.ac
+@@ -101,6 +101,12 @@ AC_CACHE_CHECK([for socket libraries], libcc1_cv_lib_sockets,
+ ])
+ LIBS="$LIBS $libcc1_cv_lib_sockets"
+ 
++case "$host" in
++  *-*-darwin*) darwin_dynamic_lookup=yes ;;
++  *) darwin_dynamic_lookup=no ;;
++esac
++AM_CONDITIONAL(DARWIN_DYNAMIC_LOOKUP, test $darwin_dynamic_lookup = yes)
++
+ # If any of these functions are missing, simply don't bother building
+ # this plugin.
+ GCC_ENABLE_PLUGINS
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
 index ee91cc18084..c040acd550c 100644
 --- a/libcpp/ChangeLog
@@ -59713,6 +61593,82 @@ index b73f5067c24..6b5c36524ee 100644
  }
  
  /* Given two virtual locations *LOC0 and *LOC1, return the first
+diff --git a/libffi/ChangeLog b/libffi/ChangeLog
+index bef94178c31..315b8a83a77 100644
+--- a/libffi/ChangeLog
++++ b/libffi/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libffi/configure b/libffi/configure
+index 2324890a5ec..2630d564115 100755
+--- a/libffi/configure
++++ b/libffi/configure
+@@ -7758,23 +7758,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -11552,7 +11554,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11555 "configure"
++#line 11557 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11658,7 +11660,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11661 "configure"
++#line 11663 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/libgcc/ChangeLog b/libgcc/ChangeLog
 index a5c30516ff8..41d7b8b48b1 100644
 --- a/libgcc/ChangeLog
@@ -61014,10 +62970,20 @@ index e6130af2fb5..8c21ab8a121 100644
        _Unwind_Frames_Extra (FRAMES);					\
        __builtin_eh_return (offset, handler);				\
 diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
-index 01aa551b914..bc22134382c 100644
+index 01aa551b914..3af0a56dca9 100644
 --- a/libgfortran/ChangeLog
 +++ b/libgfortran/ChangeLog
-@@ -1,3 +1,138 @@
+@@ -1,3 +1,148 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
++2021-04-30  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* configure: Regenerate.
++
 +2021-03-07  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -61191,7 +63157,7 @@ index a2f4281d0c5..bf4d78586c9 100644
        __asm__ __volatile__ ("fdivs\t%1" : "+t" (f) : "m" (g));
        /* No need for fwait, exception is triggered by emitted fstp.  */
 diff --git a/libgfortran/configure b/libgfortran/configure
-index 60867b93d0e..71f48166ec6 100755
+index 60867b93d0e..51916643866 100755
 --- a/libgfortran/configure
 +++ b/libgfortran/configure
 @@ -780,7 +780,6 @@ infodir
@@ -61243,25 +63209,65 @@ index 60867b93d0e..71f48166ec6 100755
    --libdir=DIR            object code libraries [EPREFIX/lib]
    --includedir=DIR        C header files [PREFIX/include]
    --oldincludedir=DIR     C header files for non-gcc [/usr/include]
-@@ -12700,7 +12688,7 @@ else
+@@ -9149,23 +9137,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -12700,7 +12690,7 @@ else
    lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
    lt_status=$lt_dlunknown
    cat > conftest.$ac_ext <<_LT_EOF
 -#line 12703 "configure"
-+#line 12691 "configure"
++#line 12693 "configure"
  #include "confdefs.h"
  
  #if HAVE_DLFCN_H
-@@ -12806,7 +12794,7 @@ else
+@@ -12806,7 +12796,7 @@ else
    lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
    lt_status=$lt_dlunknown
    cat > conftest.$ac_ext <<_LT_EOF
 -#line 12809 "configure"
-+#line 12797 "configure"
++#line 12799 "configure"
  #include "confdefs.h"
  
  #if HAVE_DLFCN_H
-@@ -16055,7 +16043,7 @@ else
+@@ -16055,7 +16045,7 @@ else
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
      incorrectly reject 9223372036854775807.  */
@@ -61270,7 +63276,7 @@ index 60867b93d0e..71f48166ec6 100755
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
  		       && LARGE_OFF_T % 2147483647 == 1)
  		      ? 1 : -1];
-@@ -16101,7 +16089,7 @@ else
+@@ -16101,7 +16091,7 @@ else
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
      incorrectly reject 9223372036854775807.  */
@@ -61279,7 +63285,7 @@ index 60867b93d0e..71f48166ec6 100755
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
  		       && LARGE_OFF_T % 2147483647 == 1)
  		      ? 1 : -1];
-@@ -16125,7 +16113,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+@@ -16125,7 +16115,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
      incorrectly reject 9223372036854775807.  */
@@ -61288,7 +63294,7 @@ index 60867b93d0e..71f48166ec6 100755
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
  		       && LARGE_OFF_T % 2147483647 == 1)
  		      ? 1 : -1];
-@@ -16170,7 +16158,7 @@ else
+@@ -16170,7 +16160,7 @@ else
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
      incorrectly reject 9223372036854775807.  */
@@ -61297,7 +63303,7 @@ index 60867b93d0e..71f48166ec6 100755
    int off_t_is_large[(LARGE_OFF_T % 2147483629 == 721
  		       && LARGE_OFF_T % 2147483647 == 1)
  		      ? 1 : -1];
-@@ -16194,7 +16182,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+@@ -16194,7 +16184,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
      We can't simply define LARGE_OFF_T to be 9223372036854775807,
      since some C++ compilers masquerading as C compilers
      incorrectly reject 9223372036854775807.  */
@@ -66440,10 +68446,16 @@ index 1569b5bb898..bb4c56dceb2 100644
  		}
  
 diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-index 0156d5f7bc9..965c4bd595e 100644
+index 0156d5f7bc9..1c212105aa3 100644
 --- a/libgomp/ChangeLog
 +++ b/libgomp/ChangeLog
-@@ -1,3 +1,232 @@
+@@ -1,3 +1,238 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
 +2021-04-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -66691,10 +68703,68 @@ index 73f1b12805e..714020db03a 100644
  #undef LIBGOMP_GNU_SYMBOL_VERSIONING
  
 diff --git a/libgomp/configure b/libgomp/configure
-index b4bc4f43628..6f19f8c5822 100755
+index b4bc4f43628..c4d3913a783 100755
 --- a/libgomp/configure
 +++ b/libgomp/configure
-@@ -15641,21 +15641,30 @@ if test x"$enable_offload_targets" != x; then
+@@ -7600,23 +7600,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -11393,7 +11395,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11396 "configure"
++#line 11398 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11499,7 +11501,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11502 "configure"
++#line 11504 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -15641,21 +15643,30 @@ if test x"$enable_offload_targets" != x; then
  	tgt_plugin=intelmic
  	;;
        nvptx*)
@@ -66740,7 +68810,7 @@ index b4bc4f43628..6f19f8c5822 100755
  /* end confdefs.h.  */
  #include "cuda.h"
  int
-@@ -15671,25 +15680,33 @@ if ac_fn_c_try_link "$LINENO"; then :
+@@ -15671,25 +15682,33 @@ if ac_fn_c_try_link "$LINENO"; then :
  fi
  rm -f core conftest.err conftest.$ac_objext \
      conftest$ac_exeext conftest.$ac_ext
@@ -66793,7 +68863,7 @@ index b4bc4f43628..6f19f8c5822 100755
  	esac
  	;;
        hsa*)
-@@ -15796,16 +15813,6 @@ cat >>confdefs.h <<_ACEOF
+@@ -15796,16 +15815,6 @@ cat >>confdefs.h <<_ACEOF
  _ACEOF
  
  
@@ -68841,6 +70911,82 @@ index 3bd7446571d..157e369d4e7 100644
        PRINT *, "CheCKpOInT"
  !$ACC PARALLEL
        STOP "SiGN"
+diff --git a/libhsail-rt/ChangeLog b/libhsail-rt/ChangeLog
+index 9dec465a52a..e43ce9b52d6 100644
+--- a/libhsail-rt/ChangeLog
++++ b/libhsail-rt/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libhsail-rt/configure b/libhsail-rt/configure
+index 6a086102d08..4b3c995be7c 100755
+--- a/libhsail-rt/configure
++++ b/libhsail-rt/configure
+@@ -7415,23 +7415,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -11207,7 +11209,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11210 "configure"
++#line 11212 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11313,7 +11315,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11316 "configure"
++#line 11318 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/libiberty/ChangeLog b/libiberty/ChangeLog
 index c5a095dec5d..78791709429 100644
 --- a/libiberty/ChangeLog
@@ -68876,10 +71022,17 @@ index 3d49f339631..a5cf6043dc3 100644
  	      if (discard)
  		{
 diff --git a/libitm/ChangeLog b/libitm/ChangeLog
-index 703db28ee23..d8203bfb37a 100644
+index 703db28ee23..1385a3932f8 100644
 --- a/libitm/ChangeLog
 +++ b/libitm/ChangeLog
-@@ -1,3 +1,18 @@
+@@ -1,3 +1,25 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure.tgt: Add dynamic_lookup to XLDFLAGS for Darwin.
++	* configure: Regenerate.
++
 +2020-07-16  Szabolcs Nagy  <szabolcs.nagy@arm.com>
 +
 +	Backported from master:
@@ -68958,11 +71111,109 @@ index c704d1b0898..367806b68fd 100644
 +GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI)
 +# endif
  #endif
+diff --git a/libitm/configure b/libitm/configure
+index fb742d79eb1..3c4f875dbd4 100644
+--- a/libitm/configure
++++ b/libitm/configure
+@@ -8238,23 +8238,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -12032,7 +12034,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12035 "configure"
++#line 12037 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -12138,7 +12140,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12141 "configure"
++#line 12143 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+diff --git a/libitm/configure.tgt b/libitm/configure.tgt
+index 4c0b602034b..3b6d532e1db 100644
+--- a/libitm/configure.tgt
++++ b/libitm/configure.tgt
+@@ -40,6 +40,7 @@ if test "$gcc_cv_have_tls" = yes ; then
+     *-*-linux*)
+ 	XCFLAGS="${XCFLAGS} -ftls-model=initial-exec"
+ 	;;
++
+   esac
+ fi
+ 
+@@ -141,10 +142,16 @@ case "${target}" in
+   *-*-gnu* | *-*-k*bsd*-gnu \
+   | *-*-netbsd* | *-*-freebsd* | *-*-openbsd* \
+   | *-*-solaris2* | *-*-sysv4* | *-*-hpux11* \
+-  | *-*-darwin* | *-*-aix* | *-*-dragonfly*)
++  | *-*-aix* | *-*-dragonfly*)
+ 	# POSIX system.  The OS is supported.
+ 	;;
+ 
++  *-*-darwin*)
++	# The OS is supported, but we need dynamic lookup to support undefined
++	# weak symbols at link-time.
++	XLDFLAGS="${XLDFLAGS} -Wl,-undefined,dynamic_lookup"
++	;;
++
+   *)	# Non-POSIX, or embedded system
+ 	UNSUPPORTED=1
+ 	;;
 diff --git a/libobjc/ChangeLog b/libobjc/ChangeLog
-index 9003252bebd..56ed2d3323d 100644
+index 9003252bebd..a114ebc2f01 100644
 --- a/libobjc/ChangeLog
 +++ b/libobjc/ChangeLog
-@@ -1,3 +1,11 @@
+@@ -1,3 +1,17 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
 +2020-12-29  Iain Sandoe  <iain@sandoe.co.uk>
 +
 +	Backported from master:
@@ -68974,6 +71225,68 @@ index 9003252bebd..56ed2d3323d 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/libobjc/configure b/libobjc/configure
+index c122c817d95..6578a4011c1 100755
+--- a/libobjc/configure
++++ b/libobjc/configure
+@@ -6925,23 +6925,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -10743,7 +10745,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10746 "configure"
++#line 10748 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -10849,7 +10851,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10852 "configure"
++#line 10854 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/libobjc/encoding.c b/libobjc/encoding.c
 index ef34fc84707..cb8058292e8 100644
 --- a/libobjc/encoding.c
@@ -68996,10 +71309,16 @@ index ef34fc84707..cb8058292e8 100644
        case _C_ULNG_LNG:
  	return MAX (MAX (comp, spec), 64);
 diff --git a/libphobos/ChangeLog b/libphobos/ChangeLog
-index 569a3c91ab2..bdb8a46ab55 100644
+index 569a3c91ab2..67d91947971 100644
 --- a/libphobos/ChangeLog
 +++ b/libphobos/ChangeLog
-@@ -1,3 +1,40 @@
+@@ -1,3 +1,46 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
 +2021-01-24  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -69040,6 +71359,68 @@ index 569a3c91ab2..bdb8a46ab55 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/libphobos/configure b/libphobos/configure
+index e2977b3cc74..69ef5a843fb 100755
+--- a/libphobos/configure
++++ b/libphobos/configure
+@@ -8110,23 +8110,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -11635,7 +11637,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11638 "configure"
++#line 11640 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11741,7 +11743,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11744 "configure"
++#line 11746 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/libphobos/libdruntime/config/mips/switchcontext.S b/libphobos/libdruntime/config/mips/switchcontext.S
 index 7604ba1ebbd..43080b06b91 100644
 --- a/libphobos/libdruntime/config/mips/switchcontext.S
@@ -69131,11 +71512,102 @@ index 7f9036bf505..5fac3bf360f 100644
                      else
                          strtab = cast(const(char)*)dyn.d_un.d_ptr;
                  }
+diff --git a/libquadmath/ChangeLog b/libquadmath/ChangeLog
+index f5c5231071a..3ed964ed80c 100644
+--- a/libquadmath/ChangeLog
++++ b/libquadmath/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libquadmath/configure b/libquadmath/configure
+index 5283adbdd63..40325dce121 100755
+--- a/libquadmath/configure
++++ b/libquadmath/configure
+@@ -7252,23 +7252,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -10805,7 +10807,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10808 "configure"
++#line 10810 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -10911,7 +10913,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10914 "configure"
++#line 10916 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index 07a4952bc66..66c9d18e5cd 100644
+index 07a4952bc66..ed934fba47a 100644
 --- a/libsanitizer/ChangeLog
 +++ b/libsanitizer/ChangeLog
-@@ -1,3 +1,18 @@
+@@ -1,3 +1,33 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++
++	Backported from master:
++	2020-11-21  Iain Sandoe  <iain@sandoe.co.uk>
++
++	* configure.tgt: Allow x86_64 Darwin2x.
++
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure.tgt: Add dynamic_lookup to EXTRA_CXXFLAGS for
++	Darwin.
++	* configure: Regenerate.
++
 +2021-04-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -69154,6 +71626,83 @@ index 07a4952bc66..66c9d18e5cd 100644
  2020-03-12  Release Manager
  
  	* GCC 9.3.0 released.
+diff --git a/libsanitizer/configure b/libsanitizer/configure
+index 226da62cf5a..9faeb197bdc 100755
+--- a/libsanitizer/configure
++++ b/libsanitizer/configure
+@@ -8804,23 +8804,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -12329,7 +12331,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12332 "configure"
++#line 12334 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -12435,7 +12437,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12438 "configure"
++#line 12440 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+diff --git a/libsanitizer/configure.tgt b/libsanitizer/configure.tgt
+index 424fb17a45c..d8603c4d000 100644
+--- a/libsanitizer/configure.tgt
++++ b/libsanitizer/configure.tgt
+@@ -60,8 +60,9 @@ case "${target}" in
+ 		TSAN_TARGET_DEPENDENT_OBJECTS=tsan_rtl_aarch64.lo
+ 	fi
+ 	;;
+-  x86_64-*-darwin1[1-9]* | i?86-*-darwin1[1-9]*)
++  x86_64-*-darwin2* | x86_64-*-darwin1[2-9]* | i?86-*-darwin1[1-9]*)
+ 	TSAN_SUPPORTED=no
++	EXTRA_CXXFLAGS+="-Wl,-undefined,dynamic_lookup"
+ 	;;
+   x86_64-*-solaris2.11* | i?86-*-solaris2.11*)
+ 	;;
 diff --git a/libsanitizer/sanitizer_common/sanitizer_linux.cc b/libsanitizer/sanitizer_common/sanitizer_linux.cc
 index dc1e9849679..b798de7a820 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_linux.cc
@@ -69214,11 +71763,101 @@ index d2fd76a6d36..1917e29ced2 100644
    CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
    UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
  }
+diff --git a/libssp/ChangeLog b/libssp/ChangeLog
+index 73ccbe971ac..35665b7e34a 100644
+--- a/libssp/ChangeLog
++++ b/libssp/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libssp/configure b/libssp/configure
+index 2adbcc3fc22..dcb1013def8 100755
+--- a/libssp/configure
++++ b/libssp/configure
+@@ -7434,23 +7434,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -10987,7 +10989,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10990 "configure"
++#line 10992 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -11093,7 +11095,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 11096 "configure"
++#line 11098 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 45847172291..ea9d26142c0 100644
+index 45847172291..471c1f1b0a3 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,1356 @@
+@@ -1,3 +1,1370 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
++2021-04-30  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-30  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/basic_string.h (__cpp_lib_constexpr_string):
++	Only define for C++17 and later.
++
 +2021-04-29  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -72804,10 +75443,131 @@ index a403f4b660a..ab2e0951c31 100644
  OBJECT:56:_ZTVNSt7__cxx1114collate_bynameIwEE@@GLIBCXX_3.4.21
  OBJECT:56:_ZTVNSt7__cxx1115messages_bynameIcEE@@GLIBCXX_3.4.21
 diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
-index 1225edc596b..86db10fbe75 100755
+index 1225edc596b..ec6f7eb00b7 100755
 --- a/libstdc++-v3/configure
 +++ b/libstdc++-v3/configure
-@@ -80612,22 +80612,21 @@ $as_echo_n "checking whether to build Filesystem TS support... " >&6; }
+@@ -8367,23 +8367,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -12048,7 +12050,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12051 "configure"
++#line 12053 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -12154,7 +12156,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12157 "configure"
++#line 12159 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -15840,7 +15842,7 @@ $as_echo "$glibcxx_cv_atomic_long_long" >&6; }
+   # Fake what AC_TRY_COMPILE does.
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 15843 "configure"
++#line 15845 "configure"
+ int main()
+ {
+   typedef bool atomic_type;
+@@ -15875,7 +15877,7 @@ $as_echo "$glibcxx_cv_atomic_bool" >&6; }
+     rm -f conftest*
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 15878 "configure"
++#line 15880 "configure"
+ int main()
+ {
+   typedef short atomic_type;
+@@ -15910,7 +15912,7 @@ $as_echo "$glibcxx_cv_atomic_short" >&6; }
+     rm -f conftest*
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 15913 "configure"
++#line 15915 "configure"
+ int main()
+ {
+   // NB: _Atomic_word not necessarily int.
+@@ -15946,7 +15948,7 @@ $as_echo "$glibcxx_cv_atomic_int" >&6; }
+     rm -f conftest*
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 15949 "configure"
++#line 15951 "configure"
+ int main()
+ {
+   typedef long long atomic_type;
+@@ -16099,7 +16101,7 @@ $as_echo "mutex" >&6; }
+   # unnecessary for this test.
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 16102 "configure"
++#line 16104 "configure"
+ int main()
+ {
+   _Decimal32 d1;
+@@ -16141,7 +16143,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+   # unnecessary for this test.
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 16144 "configure"
++#line 16146 "configure"
+ template<typename T1, typename T2>
+   struct same
+   { typedef T2 type; };
+@@ -16175,7 +16177,7 @@ $as_echo "$enable_int128" >&6; }
+     rm -f conftest*
+ 
+     cat > conftest.$ac_ext << EOF
+-#line 16178 "configure"
++#line 16180 "configure"
+ template<typename T1, typename T2>
+   struct same
+   { typedef T2 type; };
+@@ -80612,22 +80614,21 @@ $as_echo_n "checking whether to build Filesystem TS support... " >&6; }
  $as_echo "$enable_libstdcxx_filesystem_ts" >&6; }
  
  
@@ -72836,7 +75596,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <dirent.h>
-@@ -80635,8 +80634,8 @@ int
+@@ -80635,8 +80636,8 @@ int
  main ()
  {
  
@@ -72847,7 +75607,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80659,8 +80658,8 @@ int
+@@ -80659,8 +80660,8 @@ int
  main ()
  {
  
@@ -72858,7 +75618,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80677,37 +80676,37 @@ fi
+@@ -80677,37 +80678,37 @@ fi
  
  fi
  
@@ -72912,7 +75672,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80726,21 +80725,21 @@ fi
+@@ -80726,21 +80727,21 @@ fi
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  
@@ -72944,7 +75704,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80757,31 +80756,31 @@ fi
+@@ -80757,31 +80758,31 @@ fi
  
  fi
  
@@ -72986,7 +75746,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80800,15 +80799,15 @@ fi
+@@ -80800,15 +80801,15 @@ fi
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  
@@ -73006,7 +75766,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80825,30 +80824,30 @@ fi
+@@ -80825,30 +80826,30 @@ fi
  
  fi
  
@@ -73046,7 +75806,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80867,14 +80866,14 @@ fi
+@@ -80867,14 +80868,14 @@ fi
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  
@@ -73064,7 +75824,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80891,19 +80890,19 @@ fi
+@@ -80891,19 +80892,19 @@ fi
  
  fi
  
@@ -73090,7 +75850,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
   #include <sys/stat.h>
-@@ -80911,8 +80910,8 @@ int
+@@ -80911,8 +80912,8 @@ int
  main ()
  {
  
@@ -73101,7 +75861,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80935,8 +80934,8 @@ int
+@@ -80935,8 +80936,8 @@ int
  main ()
  {
  
@@ -73112,7 +75872,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80953,19 +80952,19 @@ fi
+@@ -80953,19 +80954,19 @@ fi
  
  fi
  
@@ -73138,7 +75898,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
   #include <sys/stat.h>
-@@ -80973,8 +80972,8 @@ int
+@@ -80973,8 +80974,8 @@ int
  main ()
  {
  
@@ -73149,7 +75909,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -80997,8 +80996,8 @@ int
+@@ -80997,8 +80998,8 @@ int
  main ()
  {
  
@@ -73160,7 +75920,7 @@ index 1225edc596b..86db10fbe75 100755
  
    ;
    return 0;
-@@ -81015,19 +81014,19 @@ fi
+@@ -81015,19 +81016,19 @@ fi
  
  fi
  
@@ -73186,7 +75946,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <sys/stat.h>
-@@ -81071,24 +81070,24 @@ fi
+@@ -81071,24 +81072,24 @@ fi
  
  fi
  
@@ -73219,7 +75979,7 @@ index 1225edc596b..86db10fbe75 100755
  
  int
  main ()
-@@ -81111,8 +81110,8 @@ fi
+@@ -81111,8 +81112,8 @@ fi
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  
@@ -73230,7 +75990,7 @@ index 1225edc596b..86db10fbe75 100755
  
  int
  main ()
-@@ -81133,21 +81132,21 @@ fi
+@@ -81133,21 +81134,21 @@ fi
  
  fi
  
@@ -73260,7 +76020,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <sys/sendfile.h>
-@@ -81188,27 +81187,27 @@ fi
+@@ -81188,27 +81189,27 @@ fi
  rm -f core conftest.err conftest.$ac_objext \
      conftest$ac_exeext conftest.$ac_ext
  fi
@@ -73299,7 +76059,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <unistd.h>
-@@ -81252,19 +81251,19 @@ fi
+@@ -81252,19 +81253,19 @@ fi
  
  fi
  
@@ -73325,7 +76085,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <unistd.h>
-@@ -81308,19 +81307,19 @@ fi
+@@ -81308,19 +81309,19 @@ fi
  
  fi
  
@@ -73351,7 +76111,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <unistd.h>
-@@ -81364,19 +81363,19 @@ fi
+@@ -81364,19 +81365,19 @@ fi
  
  fi
  
@@ -73377,7 +76137,7 @@ index 1225edc596b..86db10fbe75 100755
    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
  #include <unistd.h>
-@@ -81420,21 +81419,20 @@ fi
+@@ -81420,21 +81421,20 @@ fi
  
  fi
  
@@ -76397,10 +79157,10 @@ index e203af1dd8b..7b72b0d55c0 100644
        /**
         *  @brief  Returns the error state of the stream buffer.
 diff --git a/libstdc++-v3/include/bits/basic_string.h b/libstdc++-v3/include/bits/basic_string.h
-index 40ef8758a51..fbca63bb3aa 100644
+index 40ef8758a51..6c11135fa8c 100644
 --- a/libstdc++-v3/include/bits/basic_string.h
 +++ b/libstdc++-v3/include/bits/basic_string.h
-@@ -48,11 +48,12 @@
+@@ -48,11 +48,15 @@
  # include <string_view>
  #endif
  
@@ -76409,12 +79169,15 @@ index 40ef8758a51..fbca63bb3aa 100644
  {
  _GLIBCXX_BEGIN_NAMESPACE_VERSION
  
-+#define __cpp_lib_constexpr_string 201611L
++#if __cplusplus >= 201703L
++// Support P0426R1 changes to char_traits in C++17.
++# define __cpp_lib_constexpr_string 201611L
++#endif
 +
  #if _GLIBCXX_USE_CXX11_ABI
  _GLIBCXX_BEGIN_NAMESPACE_CXX11
    /**
-@@ -4660,10 +4661,9 @@ _GLIBCXX_END_NAMESPACE_CXX11
+@@ -4660,10 +4664,9 @@ _GLIBCXX_END_NAMESPACE_CXX11
  
        /**
         *  @brief  Insert a string_view.
@@ -90170,6 +92933,135 @@ index ac646a59cb8..72945fb601c 100644
  	  this->ptr += n;
  	}
        return *this;
+diff --git a/libtool.m4 b/libtool.m4
+index 8966762881f..5563a32992c 100644
+--- a/libtool.m4
++++ b/libtool.m4
+@@ -994,23 +994,25 @@ _LT_EOF
+         rm -f conftest.err libconftest.a conftest conftest.c
+         rm -rf conftest.dSYM
+     ])
+-    case $host_os in
+-    rhapsody* | darwin1.[[012]])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[[012]])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[[91]]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[[89]]*|UNSET,*-darwin[[12]][[0123456789]]*)
++	  ;;
+ 	10.[[012]][[,.]]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -1033,7 +1035,7 @@ _LT_EOF
+ 
+ # _LT_DARWIN_LINKER_FEATURES
+ # --------------------------
+-# Checks for linker and compiler features on darwin
++# Checks for linker and compiler features on Darwin / macOS / iOS
+ m4_defun([_LT_DARWIN_LINKER_FEATURES],
+ [
+   m4_require([_LT_REQUIRED_DARWIN_CHECKS])
+diff --git a/libvtv/ChangeLog b/libvtv/ChangeLog
+index d3854a15726..50eddfe9f16 100644
+--- a/libvtv/ChangeLog
++++ b/libvtv/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/libvtv/configure b/libvtv/configure
+index bfdf34954e4..b0142a802b2 100755
+--- a/libvtv/configure
++++ b/libvtv/configure
+@@ -8705,23 +8705,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -12230,7 +12232,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12233 "configure"
++#line 12235 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -12336,7 +12338,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 12339 "configure"
++#line 12341 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
 diff --git a/ltmain.sh b/ltmain.sh
 index 79f9ba89af5..70990740b6c 100644
 --- a/ltmain.sh
@@ -90235,3 +93127,79 @@ index 74886356bc7..29572172761 100755
  eval `grep '^target=' config.log`
  make configure-target
  # If the following step fails with an error like
+diff --git a/zlib/ChangeLog b/zlib/ChangeLog
+index feae5b01fa5..eeb74b527b2 100644
+--- a/zlib/ChangeLog
++++ b/zlib/ChangeLog
+@@ -1,3 +1,9 @@
++2021-05-01  Iain Sandoe  <iain@sandoe.co.uk>
++	    Jakub Jelinek   <jakub@redhat.com>
++
++	PR target/97865
++	* configure: Regenerate.
++
+ 2020-03-12  Release Manager
+ 
+ 	* GCC 9.3.0 released.
+diff --git a/zlib/configure b/zlib/configure
+index 7a8b49b0b3e..844e02f3f02 100755
+--- a/zlib/configure
++++ b/zlib/configure
+@@ -6823,23 +6823,25 @@ _LT_EOF
+ fi
+ { $as_echo "$as_me:${as_lineno-$LINENO}: result: $lt_cv_ld_force_load" >&5
+ $as_echo "$lt_cv_ld_force_load" >&6; }
+-    case $host_os in
+-    rhapsody* | darwin1.[012])
++    # Allow for Darwin 4-7 (macOS 10.0-10.3) although these are not expect to
++    # build without first building modern cctools / linker.
++    case $host_cpu-$host_os in
++    *-rhapsody* | *-darwin1.[012])
+       _lt_dar_allow_undefined='${wl}-undefined ${wl}suppress' ;;
+-    darwin1.*)
++    *-darwin1.*)
+       _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-    darwin*) # darwin 5.x on
+-      # if running on 10.5 or later, the deployment target defaults
+-      # to the OS version, if on x86, and 10.4, the deployment
+-      # target defaults to 10.4. Don't you love it?
+-      case ${MACOSX_DEPLOYMENT_TARGET-10.0},$host in
+-	10.0,*86*-darwin8*|10.0,*-darwin[91]*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
++    *-darwin*)
++      # darwin 5.x (macOS 10.1) onwards we only need to adjust when the
++      # deployment target is forced to an earlier version.
++      case ${MACOSX_DEPLOYMENT_TARGET-UNSET},$host in
++	UNSET,*-darwin[89]*|UNSET,*-darwin[12][0123456789]*)
++	  ;;
+ 	10.[012][,.]*)
+-	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress' ;;
+-	10.*)
+-	  _lt_dar_allow_undefined='${wl}-undefined ${wl}dynamic_lookup' ;;
+-      esac
++	  _lt_dar_allow_undefined='${wl}-flat_namespace ${wl}-undefined ${wl}suppress'
++	  ;;
++	*)
++	  ;;
++     esac
+     ;;
+   esac
+     if test "$lt_cv_apple_cc_single_mod" = "yes"; then
+@@ -10643,7 +10645,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10646 "configure"
++#line 10648 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
+@@ -10749,7 +10751,7 @@ else
+   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
+   lt_status=$lt_dlunknown
+   cat > conftest.$ac_ext <<_LT_EOF
+-#line 10752 "configure"
++#line 10754 "configure"
+ #include "confdefs.h"
+ 
+ #if HAVE_DLFCN_H
