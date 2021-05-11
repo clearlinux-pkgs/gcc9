@@ -115,7 +115,7 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (419):
+GCC Administrator (423):
       Daily bump.
       Daily bump.
       Daily bump.
@@ -535,6 +535,13 @@ GCC Administrator (419):
       Daily bump.
       Daily bump.
       Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+
+Geng Qi (1):
+      RISC-V: For '-march' and '-mabi' options, add 'Negative' property mentions itself.
 
 Gerald Pfeifer (1):
       i386: Define __ILP32__ and _ILP32 for all 32-bit targets
@@ -650,7 +657,7 @@ Ian Lance Taylor (2):
       go.test: update issue4085b.go to version from Go 1.13
       runtime: cast SIGSTKSZ to uintptr
 
-Jakub Jelinek (150):
+Jakub Jelinek (151):
       Bump BASE-VER to 9.3.1.
       tailcall: Fix up process_assignment [PR94001]
       inliner: Copy DECL_BY_REFERENCE in copy_decl_to_var [PR93888]
@@ -801,6 +808,7 @@ Jakub Jelinek (150):
       cfgcleanup: Fix -fcompare-debug issue in outgoing_edges_match [PR100254]
       aarch64: Fix ICE in aarch64_add_offset_1_temporaries [PR100302]
       nvptx: Fix up nvptx build against latest libstdc++ [PR100375]
+      libcpp: Fix up pragma preprocessing [PR100450]
 
 James Clarke (1):
       bootstrap/87338 - gcc 8.2 fails to bootstrap on ia64
@@ -958,7 +966,7 @@ Kito Cheng (1):
 Kwok Cheung Yeung (1):
       libgomp_g.h: Include stdint.h instead of gstdint.h.
 
-Kyrylo Tkachov (32):
+Kyrylo Tkachov (34):
       aarch64: Extend %R for integer registers
       aarch64: Implement TImode compare-and-swap
       aarch64: Tidy aarch64_split_compare_and_swap
@@ -991,6 +999,8 @@ Kyrylo Tkachov (32):
       PR target/97349 AArch64: Incorrect types for some Neon vdupq_n_<...> intrinsics
       AArch64: Add Neoverse N2 tuning model
       aarch64: Fix status return logic in RNG intrinsics
+      aarch64: PR target/99037 Fix RTL represntation in move_lo_quad patterns
+      aarch64: Fix gcc.target/aarch64/pr99808.c for ILP32
 
 Maciej W. Rozycki (1):
       MIPS/libphobos: Fix switchcontext.S assembly for MIPS I ISA
@@ -6809,10 +6819,21 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..68039ba516d 100644
+index d8e53874e68..a07c350a2c7 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,3451 @@
+@@ -1,3 +1,3462 @@
++2021-05-07  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/99037
++	PR target/100441
++	* config/aarch64/aarch64-simd.md (move_lo_quad_internal_<mode>): Use
++	aarch64_simd_or_scalar_imm_zero to match zeroes.  Remove pattern
++	matching const_int 0.
++	(move_lo_quad_internal_be_<mode>): Likewise.
++	(move_lo_quad_<mode>): Update for the above.
++	* config/aarch64/iterators.md (VQ_2E): Delete.
++
 +2021-05-06  Roman Zhuykov  <zhroma@ispras.ru>
 +
 +	Backported from master:
@@ -13199,7 +13220,7 @@ index 17bb0c4869b..d8fb8484267 100644
 +  BUILTIN_VSFDF (UNOP, frint64z, 0)
 +  BUILTIN_VSFDF (UNOP, frint64x, 0)
 diff --git a/gcc/config/aarch64/aarch64-simd.md b/gcc/config/aarch64/aarch64-simd.md
-index e3852c5d182..eb473e01957 100644
+index e3852c5d182..932d4b17bbf 100644
 --- a/gcc/config/aarch64/aarch64-simd.md
 +++ b/gcc/config/aarch64/aarch64-simd.md
 @@ -1012,31 +1012,17 @@
@@ -13329,7 +13350,83 @@ index e3852c5d182..eb473e01957 100644
  
  (define_expand "vashl<mode>3"
   [(match_operand:VDQ_I 0 "register_operand" "")
-@@ -5214,6 +5176,26 @@
+@@ -1426,10 +1388,10 @@
+ ;; On big-endian this is { zeroes, operand }
+ 
+ (define_insn "move_lo_quad_internal_<mode>"
+-  [(set (match_operand:VQ_NO2E 0 "register_operand" "=w,w,w")
+-	(vec_concat:VQ_NO2E
++  [(set (match_operand:VQ 0 "register_operand" "=w,w,w")
++	(vec_concat:VQ
+ 	  (match_operand:<VHALF> 1 "register_operand" "w,r,r")
+-	  (vec_duplicate:<VHALF> (const_int 0))))]
++	  (match_operand:<VHALF> 2 "aarch64_simd_or_scalar_imm_zero")))]
+   "TARGET_SIMD && !BYTES_BIG_ENDIAN"
+   "@
+    dup\\t%d0, %1.d[0]
+@@ -1440,40 +1402,10 @@
+    (set_attr "arch" "simd,fp,simd")]
+ )
+ 
+-(define_insn "move_lo_quad_internal_<mode>"
+-  [(set (match_operand:VQ_2E 0 "register_operand" "=w,w,w")
+-	(vec_concat:VQ_2E
+-	  (match_operand:<VHALF> 1 "register_operand" "w,r,r")
+-	  (const_int 0)))]
+-  "TARGET_SIMD && !BYTES_BIG_ENDIAN"
+-  "@
+-   dup\\t%d0, %1.d[0]
+-   fmov\\t%d0, %1
+-   dup\\t%d0, %1"
+-  [(set_attr "type" "neon_dup<q>,f_mcr,neon_dup<q>")
+-   (set_attr "length" "4")
+-   (set_attr "arch" "simd,fp,simd")]
+-)
+-
+-(define_insn "move_lo_quad_internal_be_<mode>"
+-  [(set (match_operand:VQ_NO2E 0 "register_operand" "=w,w,w")
+-	(vec_concat:VQ_NO2E
+-	  (vec_duplicate:<VHALF> (const_int 0))
+-	  (match_operand:<VHALF> 1 "register_operand" "w,r,r")))]
+-  "TARGET_SIMD && BYTES_BIG_ENDIAN"
+-  "@
+-   dup\\t%d0, %1.d[0]
+-   fmov\\t%d0, %1
+-   dup\\t%d0, %1"
+-  [(set_attr "type" "neon_dup<q>,f_mcr,neon_dup<q>")
+-   (set_attr "length" "4")
+-   (set_attr "arch" "simd,fp,simd")]
+-)
+-
+ (define_insn "move_lo_quad_internal_be_<mode>"
+-  [(set (match_operand:VQ_2E 0 "register_operand" "=w,w,w")
+-	(vec_concat:VQ_2E
+-	  (const_int 0)
++  [(set (match_operand:VQ 0 "register_operand" "=w,w,w")
++	(vec_concat:VQ
++	  (match_operand:<VHALF> 2 "aarch64_simd_or_scalar_imm_zero")
+ 	  (match_operand:<VHALF> 1 "register_operand" "w,r,r")))]
+   "TARGET_SIMD && BYTES_BIG_ENDIAN"
+   "@
+@@ -1487,13 +1419,14 @@
+ 
+ (define_expand "move_lo_quad_<mode>"
+   [(match_operand:VQ 0 "register_operand")
+-   (match_operand:VQ 1 "register_operand")]
++   (match_operand:<VHALF> 1 "register_operand")]
+   "TARGET_SIMD"
+ {
++  rtx zs = CONST0_RTX (<VHALF>mode);
+   if (BYTES_BIG_ENDIAN)
+-    emit_insn (gen_move_lo_quad_internal_be_<mode> (operands[0], operands[1]));
++    emit_insn (gen_move_lo_quad_internal_be_<mode> (operands[0], operands[1], zs));
+   else
+-    emit_insn (gen_move_lo_quad_internal_<mode> (operands[0], operands[1]));
++    emit_insn (gen_move_lo_quad_internal_<mode> (operands[0], operands[1], zs));
+   DONE;
+ }
+ )
+@@ -5214,6 +5147,26 @@
        if (GET_CODE (operands[0]) != REG)
  	operands[1] = force_reg (<MODE>mode, operands[1]);
      }
@@ -13356,7 +13453,7 @@ index e3852c5d182..eb473e01957 100644
  })
  
  
-@@ -5238,6 +5220,28 @@
+@@ -5238,6 +5191,28 @@
    [(set_attr "type" "neon_load1_3reg<q>")]
  )
  
@@ -13385,7 +13482,7 @@ index e3852c5d182..eb473e01957 100644
  (define_expand "aarch64_st1x2<VALLDIF:mode>"
    [(match_operand:DI 0 "register_operand" "")
     (match_operand:OI 1 "register_operand" "")
-@@ -5280,6 +5284,28 @@
+@@ -5280,6 +5255,28 @@
    [(set_attr "type" "neon_store1_3reg<q>")]
  )
  
@@ -16990,7 +17087,7 @@ index 779dee81f7f..698d1595d0a 100644
    if (global_regs[regno] || fixed_regs[regno])
      return false;
 diff --git a/gcc/config/aarch64/iterators.md b/gcc/config/aarch64/iterators.md
-index 6caeeac8086..527e64c561a 100644
+index 6caeeac8086..4da4427e1b8 100644
 --- a/gcc/config/aarch64/iterators.md
 +++ b/gcc/config/aarch64/iterators.md
 @@ -29,6 +29,9 @@
@@ -17003,7 +17100,17 @@ index 6caeeac8086..527e64c561a 100644
  ;; Iterator for QI and HI modes
  (define_mode_iterator SHORT [QI HI])
  
-@@ -128,6 +131,9 @@
+@@ -96,9 +99,6 @@
+ ;; VQ without 2 element modes.
+ (define_mode_iterator VQ_NO2E [V16QI V8HI V4SI V8HF V4SF])
+ 
+-;; Quad vector with only 2 element modes.
+-(define_mode_iterator VQ_2E [V2DI V2DF])
+-
+ ;; This mode iterator allows :P to be used for patterns that operate on
+ ;; addresses in different modes.  In LP64, only DI will match, while in
+ ;; ILP32, either can match.
+@@ -128,6 +128,9 @@
  				  (HF "TARGET_SIMD_F16INST")
  				  SF DF])
  
@@ -17013,7 +17120,7 @@ index 6caeeac8086..527e64c561a 100644
  ;; Advanced SIMD single Float modes.
  (define_mode_iterator VDQSF [V2SF V4SF])
  
-@@ -1614,6 +1620,9 @@
+@@ -1614,6 +1617,9 @@
  			    UNSPEC_FCMLA180
  			    UNSPEC_FCMLA270])
  
@@ -17023,7 +17130,7 @@ index 6caeeac8086..527e64c561a 100644
  ;; Iterators for atomic operations.
  
  (define_int_iterator ATOMIC_LDOP
-@@ -1853,6 +1862,9 @@
+@@ -1853,6 +1859,9 @@
  (define_int_attr f16mac1 [(UNSPEC_FMLAL "a") (UNSPEC_FMLSL "s")
  			  (UNSPEC_FMLAL2 "a") (UNSPEC_FMLSL2 "s")])
  
@@ -21889,6 +21996,28 @@ index 5130dc826d7..701f5ea1544 100644
  #define MCOUNT_NAME "_mcount"
  
  #define NO_PROFILE_COUNTERS 1
+diff --git a/gcc/config/riscv/riscv.opt b/gcc/config/riscv/riscv.opt
+index 3b25f9a1014..8ed94a51ed9 100644
+--- a/gcc/config/riscv/riscv.opt
++++ b/gcc/config/riscv/riscv.opt
+@@ -30,7 +30,7 @@ Target Report Var(TARGET_PLT) Init(1)
+ When generating -fpic code, allow the use of PLTs. Ignored for fno-pic.
+ 
+ mabi=
+-Target Report RejectNegative Joined Enum(abi_type) Var(riscv_abi) Init(ABI_ILP32)
++Target Report RejectNegative Joined Enum(abi_type) Var(riscv_abi) Init(ABI_ILP32) Negative(mabi=)
+ Specify integer and floating-point calling convention.
+ 
+ mpreferred-stack-boundary=
+@@ -71,7 +71,7 @@ Target Report Mask(DIV)
+ Use hardware instructions for integer division.
+ 
+ march=
+-Target Report RejectNegative Joined
++Target Report RejectNegative Joined Negative(march=)
+ -march=	Generate code for given RISC-V ISA (e.g. RV64IM).  ISA strings must be
+ lower-case.
+ 
 diff --git a/gcc/config/rs6000/aix61.h b/gcc/config/rs6000/aix61.h
 index 57ea9ecfc47..8101d0b0c0a 100644
 --- a/gcc/config/rs6000/aix61.h
@@ -36081,10 +36210,28 @@ index 66cee075018..a9f1f195e7a 100644
     For now this is just a wrapper for ASM_GENERATE_INTERNAL_LABEL.  */
  DEFHOOK_UNDOC
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..8e376df995c 100644
+index e132f2657ef..1597456f806 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,3002 @@
+@@ -1,3 +1,3020 @@
++2021-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/100450
++	* c-c++-common/gomp/pr100450.c: New test.
++
++2021-05-07  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/99808
++	* gcc.target/aarch64/pr99808.c: Use ULL constant suffix.
++
++2021-05-07  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
++
++	PR target/99808
++	* gcc.target/aarch64/pr99808.c: New test.
++
 +2021-05-06  Roman Zhuykov  <zhroma@ispras.ru>
 +
 +	Backported from master:
@@ -39701,6 +39848,32 @@ index 101f4047b85..01fb4be869d 100644
  
  void
  foo (int *p, int (*q)[10], int r[10], int s[10][10])
+diff --git a/gcc/testsuite/c-c++-common/gomp/pr100450.c b/gcc/testsuite/c-c++-common/gomp/pr100450.c
+new file mode 100644
+index 00000000000..a6d2a2829ff
+--- /dev/null
++++ b/gcc/testsuite/c-c++-common/gomp/pr100450.c
+@@ -0,0 +1,20 @@
++/* PR c/100450 */
++/* { dg-do compile } */
++/* { dg-options "-fopenmp -save-temps -Wunknown-pragmas" } */
++
++#define TEST(T) { \
++     {T} \
++}
++#define CLAUSES reduction(+:red)
++#define PARALLEL_FOR(X) TEST({ \
++_Pragma("omp for CLAUSES") \
++X \
++})
++
++void foo()
++{
++  int red = 0;
++  int A[3] = {};
++  #pragma omp parallel shared(red)
++  PARALLEL_FOR( for(int i=0; i < 3; i++) red += A[i]; )
++}
 diff --git a/gcc/testsuite/c-c++-common/gomp/pr97958.c b/gcc/testsuite/c-c++-common/gomp/pr97958.c
 new file mode 100644
 index 00000000000..5a6de02f373
@@ -49313,6 +49486,26 @@ index 00000000000..5bbfcbdcd69
 +      int v = 1 / 0;	/* { dg-warning "division by zero" } */
 +    }
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr99808.c b/gcc/testsuite/gcc.target/aarch64/pr99808.c
+new file mode 100644
+index 00000000000..713360f69d4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr99808.c
+@@ -0,0 +1,14 @@
++/* PR target/99808 */
++/* PR target/99037 */
++/* { dg-do compile } */
++/* { dg-options "-Og -fweb -fno-forward-propagate -g" } */
++
++#include <arm_neon.h>
++
++float32x4_t
++foo (void)
++{
++  float64x2_t arg2 = vcombine_f64 ((float64x1_t) 0ULL, (float64x1_t) 1ULL);
++  return vcvt_high_f32_f64 ((float32x2_t) 1ULL, arg2);
++}
++
 diff --git a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c b/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
 index 0140bee194f..232ba67ade0 100644
 --- a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
@@ -61699,10 +61892,18 @@ index 78bd2087497..eee5235221c 100644
  # this plugin.
  GCC_ENABLE_PLUGINS
 diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
-index ee91cc18084..c040acd550c 100644
+index ee91cc18084..c73e35e66c6 100644
 --- a/libcpp/ChangeLog
 +++ b/libcpp/ChangeLog
-@@ -1,3 +1,18 @@
+@@ -1,3 +1,26 @@
++2021-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	Backported from master:
++	2021-05-07  Jakub Jelinek  <jakub@redhat.com>
++
++	PR c/100450
++	* lex.c (cpp_avoid_paste): Handle token1 CPP_PRAGMA like CPP_NAME.
++
 +2021-04-20  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -61756,7 +61957,7 @@ index 6c77c288855..51db65e5247 100644
  
  inline bool
 diff --git a/libcpp/lex.c b/libcpp/lex.c
-index eedfcbb3146..04a0c484375 100644
+index eedfcbb3146..5f8516e9fca 100644
 --- a/libcpp/lex.c
 +++ b/libcpp/lex.c
 @@ -531,11 +531,11 @@ init_vectorized_lexer (void)
@@ -61773,6 +61974,14 @@ index eedfcbb3146..04a0c484375 100644
  
  ATTRIBUTE_NO_SANITIZE_UNDEFINED
  static const uchar *
+@@ -3454,6 +3454,7 @@ cpp_avoid_paste (cpp_reader *pfile, const cpp_token *token1,
+     case CPP_DEREF:	return c == '*';
+     case CPP_DOT:	return c == '.' || c == '%' || b == CPP_NUMBER;
+     case CPP_HASH:	return c == '#' || c == '%'; /* Digraph form.  */
++    case CPP_PRAGMA:
+     case CPP_NAME:	return ((b == CPP_NUMBER
+ 				 && name_p (pfile, &token2->val.str))
+ 				|| b == CPP_NAME
 diff --git a/libcpp/line-map.c b/libcpp/line-map.c
 index b73f5067c24..6b5c36524ee 100644
 --- a/libcpp/line-map.c
