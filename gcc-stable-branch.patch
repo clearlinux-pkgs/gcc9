@@ -2,7 +2,7 @@ Alan Modra (2):
       [RS6000] PR94145, make PLT loads volatile
       [RS6000] ICE in decompose, at rtl.h:2282
 
-Alex Coplan (8):
+Alex Coplan (9):
       aarch64: PR target/94591: Don't generate invalid REV64 insns
       arm: Don't generate invalid LDRD insns
       aarch64: Add support for Neoverse V1 CPU
@@ -11,6 +11,7 @@ Alex Coplan (8):
       arm: Add support for Neoverse N2 CPU
       arm: Add missing part number for Neoverse V1
       early-remat.c: Fix new/delete mismatch [PR100230]
+      aarch64: Avoid duplicating bti j insns for jump tables [PR99988]
 
 Alexandre Oliva (2):
       [rs6000] fix mffsl emulation
@@ -115,7 +116,15 @@ Fritz Reese (2):
       Fix fortran/85982 ICE in resolve_component.
       Fix fortran/93686 -- ICE matching data statements with derived-type pointers.
 
-GCC Administrator (423):
+GCC Administrator (431):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -842,7 +851,7 @@ John David Anglin (2):
       Define __BIG_ENDIAN__
       Add mi_thunk support for vcalls on hppa.
 
-Jonathan Wakely (100):
+Jonathan Wakely (101):
       libstdc++: Ensure root-dir converted to forward slash (PR93244)
       libstdc++: Fix FS-dependent filesystem tests
       libstdc++: Fix test failure due to -Wnonnull warnings
@@ -943,6 +952,7 @@ Jonathan Wakely (100):
       libstdc++: Define __cpp_lib_constexpr_string macro
       libstdc++: Add missing 'inline' specifiers to net::ip functions [PR 100259]
       libstdc++: Fix inconsistent feature test macro
+      gcc-changelog: Remove use of non-strict mode
 
 Joseph Myers (1):
       Remove wrongly committed file.
@@ -1036,7 +1046,7 @@ Martin Jambor (4):
       ipa: Fix resolving speculations through cgraph_edge::set_call_stmt
       sra: Fix bug in grp_write propagation (PR 97009)
 
-Martin Liska (26):
+Martin Liska (28):
       Backport 314b91220a07bd63f13c58e37f1b5b9430a3702b
       Backport 55a7380213a5c16120d5c674fb42b38a3d796b57
       Backport e9f799d25973fc38022c5ea71ed5a2bca58a847f
@@ -1063,6 +1073,8 @@ Martin Liska (26):
       changelog: fix parsing of a revert commit
       Sync gcc-changelog scripts.
       Sync gcc-changelog scripts.
+      gcc-changelog: sync scripts.
+      Add missing vn_reference_t::punned initialization
 
 Martin Sebor (2):
       c++: reject scalar array initialization with nullptr [PR94510]
@@ -1145,7 +1157,7 @@ Rainer Orth (2):
       libstdc++: Update Solaris baselines for GCC 9.4
       libsanitizer: Fix GetPcSpBp determination of SP on 32-bit Solaris/x86
 
-Richard Biener (38):
+Richard Biener (42):
       tree-optimization/94163 constrain alignment set by PRE
       middle-end/94206 fix memset folding to avoid types with padding
       tree-optimization/94103 avoid CSE of loads with padding
@@ -1184,6 +1196,10 @@ Richard Biener (38):
       rtl-optimization/98144 - tame REE memory usage
       tree-optimization/100053 - fix predication in VN
       tree-optimization/98786 - fix issue with phiopt and abnormals
+      tree-optimization/100566 - fix another predication issue in VN
+      tree-optimization/88240 - stopgap for floating point code-hoisting issues
+      tree-optimization/96513 - rewrite hybrid SLP detection
+      rtl-optimization/80960 - avoid creating garbage RTL in DSE
 
 Richard Earnshaw (1):
       arm: correct constraints on movsi_compare0 [PR91913]
@@ -1418,10 +1434,27 @@ index 9db4fd14aa2..4aab1482e34 100644
        with_gmp=/usr/local
      fi
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index fde2d2b76eb..659147dbf33 100644
+index fde2d2b76eb..5e93172c33a 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,96 @@
+@@ -1,3 +1,113 @@
++2021-05-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-05-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	* gcc-changelog/git_email.py: Remove use of non-strict mode.
++
++2021-05-14  Martin Liska  <mliska@suse.cz>
++
++	* gcc-changelog/git_check_commit.py: Sync from master.
++	* gcc-changelog/git_commit.py: Likewise.
++	* gcc-changelog/git_email.py: Likewise.
++	* gcc-changelog/git_repository.py: Likewise.
++	* gcc-changelog/git_update_version.py: Likewise.
++	* gcc-changelog/test_email.py: Likewise.
++	* gcc-changelog/test_patches.txt: Likewise.
++
 +2021-04-14  Martin Liska  <mliska@suse.cz>
 +
 +	* gcc-changelog/git_commit.py: Sync with master.
@@ -1559,10 +1592,10 @@ index 17379e196a7..c0bb71c0765 100755
  
 diff --git a/contrib/gcc-changelog/git_check_commit.py b/contrib/gcc-changelog/git_check_commit.py
 new file mode 100755
-index 00000000000..935425ef813
+index 00000000000..9a4c5d448fb
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_check_commit.py
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,46 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -1588,19 +1621,16 @@ index 00000000000..935425ef813
 +parser = argparse.ArgumentParser(description='Check git ChangeLog format '
 +                                 'of a commit')
 +parser.add_argument('revisions', default='HEAD', nargs='?',
-+                    help='Git revisions (e.g. hash~5..hash or just hash)')
++                    help='Git revisions (e.g. hash~5..hash or just hash) - '
++                    'if not specified: HEAD')
 +parser.add_argument('-g', '--git-path', default='.',
 +                    help='Path to git repository')
 +parser.add_argument('-p', '--print-changelog', action='store_true',
 +                    help='Print final changelog entires')
-+parser.add_argument('-n', '--non-strict-mode', action='store_true',
-+                    help='Use non-strict mode (allow changes in ChangeLog and '
-+                    'other automatically updated files).')
 +args = parser.parse_args()
 +
 +retval = 0
-+for git_commit in parse_git_revisions(args.git_path, args.revisions,
-+                                      not args.non_strict_mode):
++for git_commit in parse_git_revisions(args.git_path, args.revisions):
 +    res = 'OK' if git_commit.success else 'FAILED'
 +    print('Checking %s: %s' % (git_commit.original_info.hexsha, res))
 +    if git_commit.success:
@@ -1614,10 +1644,10 @@ index 00000000000..935425ef813
 +exit(retval)
 diff --git a/contrib/gcc-changelog/git_commit.py b/contrib/gcc-changelog/git_commit.py
 new file mode 100755
-index 00000000000..b28f7deac23
+index 00000000000..4958ab9c159
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_commit.py
-@@ -0,0 +1,760 @@
+@@ -0,0 +1,777 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -1639,8 +1669,9 @@ index 00000000000..b28f7deac23
 +import difflib
 +import os
 +import re
++import sys
 +
-+changelog_locations = {
++default_changelog_locations = {
 +    'c++tools',
 +    'config',
 +    'contrib',
@@ -1820,7 +1851,7 @@ index 00000000000..b28f7deac23
 +    def __repr__(self):
 +        s = self.message
 +        if self.line:
-+            s += ':"%s"' % self.line
++            s += ': "%s"' % self.line
 +        return s
 +
 +
@@ -1907,7 +1938,7 @@ index 00000000000..b28f7deac23
 +
 +
 +class GitCommit:
-+    def __init__(self, info, strict=True, commit_to_info_hook=None):
++    def __init__(self, info, commit_to_info_hook=None, ref_name=None):
 +        self.original_info = info
 +        self.info = info
 +        self.message = None
@@ -1920,6 +1951,7 @@ index 00000000000..b28f7deac23
 +        self.cherry_pick_commit = None
 +        self.revert_commit = None
 +        self.commit_to_info_hook = commit_to_info_hook
++        self.init_changelog_locations(ref_name)
 +
 +        # Skip Update copyright years commits
 +        if self.info.lines and self.info.lines[0] == 'Update copyright years.':
@@ -1943,7 +1975,7 @@ index 00000000000..b28f7deac23
 +        if len(project_files) == len(self.info.modified_files):
 +            # All modified files are only MISC files
 +            return
-+        elif project_files and strict:
++        elif project_files:
 +            self.errors.append(Error('ChangeLog, DATESTAMP, BASE-VER and '
 +                                     'DEV-PHASE updates should be done '
 +                                     'separately from normal commits'))
@@ -1981,15 +2013,14 @@ index 00000000000..b28f7deac23
 +        else:
 +            return False
 +
-+    @classmethod
-+    def find_changelog_location(cls, name):
++    def find_changelog_location(self, name):
 +        if name.startswith('\t'):
 +            name = name[1:]
 +        if name.endswith(':'):
 +            name = name[:-1]
 +        if name.endswith('/'):
 +            name = name[:-1]
-+        return name if name in changelog_locations else None
++        return name if name in self.changelog_locations else None
 +
 +    @classmethod
 +    def format_git_author(cls, author):
@@ -2009,6 +2040,17 @@ index 00000000000..b28f7deac23
 +                modified_files.append((parts[2], 'A'))
 +        return modified_files
 +
++    def init_changelog_locations(self, ref_name):
++        self.changelog_locations = list(default_changelog_locations)
++        if ref_name:
++            version = sys.maxsize
++            if 'releases/gcc-' in ref_name:
++                version = int(ref_name.split('-')[-1])
++            if version >= 12:
++                # HSA and BRIG were removed in GCC 12
++                self.changelog_locations.remove('gcc/brig')
++                self.changelog_locations.remove('libhsail-rt')
++
 +    def parse_lines(self, all_are_ignored):
 +        body = self.info.lines
 +
@@ -2017,7 +2059,8 @@ index 00000000000..b28f7deac23
 +                continue
 +            if (changelog_regex.match(b) or self.find_changelog_location(b)
 +                    or star_prefix_regex.match(b) or pr_regex.match(b)
-+                    or dr_regex.match(b) or author_line_regex.match(b)):
++                    or dr_regex.match(b) or author_line_regex.match(b)
++                    or b.lower().startswith(CO_AUTHORED_BY_PREFIX)):
 +                self.changes = body[i:]
 +                return
 +        if not all_are_ignored:
@@ -2206,7 +2249,7 @@ index 00000000000..b28f7deac23
 +                for file in entry.files:
 +                    location = self.get_file_changelog_location(file)
 +                    if (location == ''
-+                       or (location and location in changelog_locations)):
++                       or (location and location in self.changelog_locations)):
 +                        if changelog and changelog != location:
 +                            msg = 'could not deduce ChangeLog file, ' \
 +                                  'not unique location'
@@ -2226,11 +2269,10 @@ index 00000000000..b28f7deac23
 +                return True
 +        return False
 +
-+    @classmethod
-+    def get_changelog_by_path(cls, path):
++    def get_changelog_by_path(self, path):
 +        components = path.split('/')
 +        while components:
-+            if '/'.join(components) in changelog_locations:
++            if '/'.join(components) in self.changelog_locations:
 +                break
 +            components = components[:-1]
 +        return '/'.join(components)
@@ -2249,7 +2291,12 @@ index 00000000000..b28f7deac23
 +            assert not entry.folder.endswith('/')
 +            for file in entry.files:
 +                if not self.is_changelog_filename(file):
-+                    mentioned_files.add(os.path.join(entry.folder, file))
++                    item = os.path.join(entry.folder, file)
++                    if item in mentioned_files:
++                        msg = 'same file specified multiple times'
++                        self.errors.append(Error(msg, file))
++                    else:
++                        mentioned_files.add(item)
 +            for pattern in entry.file_patterns:
 +                mentioned_patterns.append(os.path.join(entry.folder, pattern))
 +
@@ -2380,10 +2427,10 @@ index 00000000000..b28f7deac23
 +            print(error)
 diff --git a/contrib/gcc-changelog/git_email.py b/contrib/gcc-changelog/git_email.py
 new file mode 100755
-index 00000000000..b0547b363aa
+index 00000000000..fa62e3ad2f7
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_email.py
-@@ -0,0 +1,108 @@
+@@ -0,0 +1,121 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -2418,7 +2465,7 @@ index 00000000000..b0547b363aa
 +
 +
 +class GitEmail(GitCommit):
-+    def __init__(self, filename, strict=False):
++    def __init__(self, filename):
 +        self.filename = filename
 +        diff = PatchSet.from_filename(filename)
 +        date = None
@@ -2454,14 +2501,27 @@ index 00000000000..b0547b363aa
 +                t = 'M'
 +            modified_files.append((target if t != 'D' else source, t))
 +        git_info = GitInfo(None, date, author, body, modified_files)
-+        super().__init__(git_info, strict=strict,
++        super().__init__(git_info,
 +                         commit_to_info_hook=lambda x: None)
 +
 +
-+# With zero arguments, process every patch file in the ./patches directory.
-+# With one argument, process the named patch file.
-+# Patch files must be in 'git format-patch' format.
++def show_help():
++    print("""usage: git_email.py [--help] [patch file ...]
++
++Check git ChangeLog format of a patch
++
++With zero arguments, process every patch file in the
++./patches directory.
++With one argument, process the named patch file.
++
++Patch files must be in 'git format-patch' format.""")
++    sys.exit(0)
++
++
 +if __name__ == '__main__':
++    if len(sys.argv) == 2 and (sys.argv[1] == '-h' or sys.argv[1] == '--help'):
++        show_help()
++
 +    if len(sys.argv) == 1:
 +        allfiles = []
 +        for root, _dirs, files in os.walk('patches'):
@@ -2483,7 +2543,7 @@ index 00000000000..b0547b363aa
 +        print()
 +        print('Successfully parsed: %d/%d' % (success, len(allfiles)))
 +    else:
-+        email = GitEmail(sys.argv[1], False)
++        email = GitEmail(sys.argv[1])
 +        if email.success:
 +            print('OK')
 +            email.print_output()
@@ -2494,10 +2554,10 @@ index 00000000000..b0547b363aa
 +            sys.exit(1)
 diff --git a/contrib/gcc-changelog/git_repository.py b/contrib/gcc-changelog/git_repository.py
 new file mode 100755
-index 00000000000..a0e293d756d
+index 00000000000..2d688826ff8
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_repository.py
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,79 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -2529,7 +2589,7 @@ index 00000000000..a0e293d756d
 +from git_commit import GitCommit, GitInfo, decode_path
 +
 +
-+def parse_git_revisions(repo_path, revisions, strict=True):
++def parse_git_revisions(repo_path, revisions, ref_name=None):
 +    repo = Repo(repo_path)
 +
 +    def commit_to_info(commit):
@@ -2572,16 +2632,17 @@ index 00000000000..a0e293d756d
 +        commits = [repo.commit(revisions)]
 +
 +    for commit in commits:
-+        git_commit = GitCommit(commit_to_info(commit.hexsha), strict=strict,
-+                               commit_to_info_hook=commit_to_info)
++        git_commit = GitCommit(commit_to_info(commit.hexsha),
++                               commit_to_info_hook=commit_to_info,
++                               ref_name=ref_name)
 +        parsed_commits.append(git_commit)
 +    return parsed_commits
 diff --git a/contrib/gcc-changelog/git_update_version.py b/contrib/gcc-changelog/git_update_version.py
 new file mode 100755
-index 00000000000..1e2b22b008b
+index 00000000000..0508f194084
 --- /dev/null
 +++ b/contrib/gcc-changelog/git_update_version.py
-@@ -0,0 +1,149 @@
+@@ -0,0 +1,150 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -2641,7 +2702,8 @@ index 00000000000..1e2b22b008b
 +            repo.git.add(full_path)
 +
 +
-+active_refs = ['master', 'releases/gcc-8', 'releases/gcc-9', 'releases/gcc-10']
++active_refs = ['master', 'releases/gcc-9', 'releases/gcc-10',
++               'releases/gcc-11']
 +
 +parser = argparse.ArgumentParser(description='Update DATESTAMP and generate '
 +                                 'ChangeLog entries')
@@ -2661,7 +2723,7 @@ index 00000000000..1e2b22b008b
 +origin = repo.remotes['origin']
 +
 +
-+def update_current_branch():
++def update_current_branch(ref_name):
 +    commit = repo.head.commit
 +    commit_count = 1
 +    while commit:
@@ -2684,7 +2746,7 @@ index 00000000000..1e2b22b008b
 +        if len(head.parents) == 2:
 +            head = head.parents[1]
 +        commits = parse_git_revisions(args.git_path, '%s..%s'
-+                                      % (commit.hexsha, head.hexsha))
++                                      % (commit.hexsha, head.hexsha), ref_name)
 +        commits = [c for c in commits if c.info.hexsha not in IGNORED_COMMITS]
 +        for git_commit in reversed(commits):
 +            prepend_to_changelog_files(repo, args.git_path, git_commit,
@@ -2728,7 +2790,7 @@ index 00000000000..1e2b22b008b
 +            branch.checkout()
 +            origin.pull(rebase=True)
 +            print('branch pulled and checked out')
-+            update_current_branch()
++            update_current_branch(name)
 +            assert not repo.index.diff(None)
 +            print('branch is done\n', flush=True)
 diff --git a/contrib/gcc-changelog/setup.cfg b/contrib/gcc-changelog/setup.cfg
@@ -2744,10 +2806,10 @@ index 00000000000..efc313f6d52
 +addopts = -vv --flake8
 diff --git a/contrib/gcc-changelog/test_email.py b/contrib/gcc-changelog/test_email.py
 new file mode 100755
-index 00000000000..8abf5c37487
+index 00000000000..7472762e66d
 --- /dev/null
 +++ b/contrib/gcc-changelog/test_email.py
-@@ -0,0 +1,426 @@
+@@ -0,0 +1,429 @@
 +#!/usr/bin/env python3
 +#
 +# This file is part of GCC.
@@ -2812,17 +2874,17 @@ index 00000000000..8abf5c37487
 +            assert t.endswith('.patch')
 +            os.remove(t)
 +
-+    def get_git_email(self, filename, strict=False):
++    def get_git_email(self, filename):
 +        with tempfile.NamedTemporaryFile(mode='w+', suffix='.patch',
 +                                         delete=False) as f:
 +            f.write('\n'.join(self.patches[filename]))
 +            self.temps.append(f.name)
-+        return GitEmail(f.name, strict)
++        return GitEmail(f.name)
 +
-+    def from_patch_glob(self, name, strict=False):
++    def from_patch_glob(self, name):
 +        files = [f for f in self.patches.keys() if f.startswith(name)]
 +        assert len(files) == 1
-+        return self.get_git_email(files[0], strict)
++        return self.get_git_email(files[0])
 +
 +    def test_simple_patch_format(self):
 +        email = self.get_git_email('0577-aarch64-Add-an-and.patch')
@@ -2997,7 +3059,7 @@ index 00000000000..8abf5c37487
 +        assert email.changelog_entries[1].prs == []
 +
 +    def test_multiple_prs_not_added(self):
-+        email = self.from_patch_glob('0001-Add-patch_are')
++        email = self.from_patch_glob('0002-Add-patch_are')
 +        assert not email.errors
 +        assert email.changelog_entries[0].prs == ['PR target/93492']
 +        assert email.changelog_entries[1].prs == ['PR target/12345']
@@ -3005,18 +3067,17 @@ index 00000000000..8abf5c37487
 +        assert email.changelog_entries[2].folder == 'gcc/testsuite'
 +
 +    def test_strict_mode(self):
-+        email = self.from_patch_glob('0001-Add-patch_are',
-+                                     True)
++        email = self.from_patch_glob('0001-Add-patch_are')
 +        msg = 'ChangeLog, DATESTAMP, BASE-VER and DEV-PHASE updates should ' \
 +              'be done separately from normal commits'
 +        assert email.errors[0].message == msg
 +
 +    def test_strict_mode_normal_patch(self):
-+        email = self.get_git_email('0001-Just-test-it.patch', True)
++        email = self.get_git_email('0001-Just-test-it.patch')
 +        assert not email.errors
 +
 +    def test_strict_mode_datestamp_only(self):
-+        email = self.get_git_email('0002-Bump-date.patch', True)
++        email = self.get_git_email('0002-Bump-date.patch')
 +        assert not email.errors
 +
 +    def test_wrong_changelog_entry(self):
@@ -3168,18 +3229,22 @@ index 00000000000..8abf5c37487
 +        assert email.errors[0].message == 'bad parentheses wrapping'
 +
 +    def test_changelog_removal(self):
-+        email = self.from_patch_glob('0001-ChangeLog-removal.patch', strict=True)
++        email = self.from_patch_glob('0001-ChangeLog-removal.patch')
 +        assert not email.errors
 +
 +    def test_long_filenames(self):
 +        email = self.from_patch_glob('0001-long-filenames')
 +        assert not email.errors
++
++    def test_multi_same_file(self):
++        email = self.from_patch_glob('0001-OpenMP-Fix-SIMT')
++        assert email.errors[0].message == 'same file specified multiple times'
 diff --git a/contrib/gcc-changelog/test_patches.txt b/contrib/gcc-changelog/test_patches.txt
 new file mode 100644
-index 00000000000..3f9806dc076
+index 00000000000..39d40b88618
 --- /dev/null
 +++ b/contrib/gcc-changelog/test_patches.txt
-@@ -0,0 +1,3548 @@
+@@ -0,0 +1,3408 @@
 +=== 0342-ARC-Propagate-uncached-type-attribute-to-each-member.patch ===
 +From 62a715c706d8482560dadfa9ead0766f3c20e434 Mon Sep 17 00:00:00 2001
 +From: Claudiu Zissulescu <claziss@gmail.com>
@@ -3250,13 +3315,6 @@ index 00000000000..3f9806dc076
 + create mode 100644 gcc/testsuite/gcc.target/arc/uncached-7.c
 + create mode 100644 gcc/testsuite/gcc.target/arc/uncached-8.c
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 91dfcd71a4b..2cc61d68cf3 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config/arc/arc.c b/gcc/config/arc/arc.c
 +index 22475f2732e..e1a865f02e6 100644
 +--- a/gcc/config/arc/arc.c
@@ -3268,13 +3326,6 @@ index 00000000000..3f9806dc076
 +index cf7aa8d83c9..46cb254ed28 100644
 +--- a/gcc/config/arc/arc.md
 ++++ b/gcc/config/arc/arc.md
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 16ddef07516..991934272e0 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -3381,20 +3432,6 @@ index 00000000000..3f9806dc076
 + 4 files changed, 36 insertions(+)
 + create mode 100644 gcc/testsuite/g++.dg/tree-ssa/pr93667.C
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 77c2a9ad810..6b53f9a2f07 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 9b4fe11a6f6..8033fa0a3bb 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/testsuite/g++.dg/tree-ssa/pr93667.C b/gcc/testsuite/g++.dg/tree-ssa/pr93667.C
 +new file mode 100644
 +index 00000000000..d875f53d9ec
@@ -3457,20 +3494,6 @@ index 00000000000..3f9806dc076
 + 5 files changed, 537 insertions(+), 184 deletions(-)
 + create mode 100644 gcc/testsuite/gcc.dg/tree-ssa/pr92706-2.c
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 16247a59304..61da54df346 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 05518848829..38758207989 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/testsuite/gcc.dg/guality/pr59776.c b/gcc/testsuite/gcc.dg/guality/pr59776.c
 +index 382abb622bb..6c1c8165b70 100644
 +--- a/gcc/testsuite/gcc.dg/guality/pr59776.c
@@ -3515,24 +3538,10 @@ index 00000000000..3f9806dc076
 + gcc/testsuite/gcc.target/i386/pr81213.c |  4 ++--
 + 4 files changed, 19 insertions(+), 17 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 45075840824..59806baa757 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config/i386/i386-features.c b/gcc/config/i386/i386-features.c
 +index e580b26b995..b49e6f8d408 100644
 +--- a/gcc/config/i386/i386-features.c
 ++++ b/gcc/config/i386/i386-features.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 2de060843d9..22a37dd1ab2 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -3578,24 +3587,10 @@ index 00000000000..3f9806dc076
 + 8 files changed, 142 insertions(+), 22 deletions(-)
 + create mode 100644 gcc/testsuite/g++.dg/pr94314-4.C
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 74dbeeb44c6..9e499ec9c86 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cgraphclones.c b/gcc/cgraphclones.c
 +index c73b8f810f0..8f541a28b6e 100644
 +--- a/gcc/cgraphclones.c
 ++++ b/gcc/cgraphclones.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 756f1d759e6..94d2312022d 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -3674,13 +3669,6 @@ index 00000000000..3f9806dc076
 + 3 files changed, 24 insertions(+), 5 deletions(-)
 + create mode 100644 gcc/testsuite/g++.dg/template/pr90916.C
 +
-+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-+index 004ce0fdcdf..3cc7c48b490 100644
-+--- a/gcc/cp/ChangeLog
-++++ b/gcc/cp/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
 +index fa82ecad233..4fdc74f9ca8 100644
 +--- a/gcc/cp/pt.c
@@ -3721,13 +3709,6 @@ index 00000000000..3f9806dc076
 + libgomp/plugin/plugin-gcn.c | 8 ++++++++
 + 2 files changed, 17 insertions(+)
 +
-+diff --git a/libgomp/ChangeLog b/libgomp/ChangeLog
-+index c524abbbfb6..ee1764d4ae3 100644
-+--- a/libgomp/ChangeLog
-++++ b/libgomp/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/libgomp/plugin/plugin-gcn.c b/libgomp/plugin/plugin-gcn.c
 +index dc72c90962c..4c6a4c03b6e 100644
 +--- a/libgomp/plugin/plugin-gcn.c
@@ -3760,13 +3741,6 @@ index 00000000000..3f9806dc076
 + gcc/tree-into-ssa.c | 59 ++++++++++++++++++++++++++++++++++++---------
 + 2 files changed, 55 insertions(+), 12 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 8c17e5992d2..262f0d6506f 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/tree-into-ssa.c b/gcc/tree-into-ssa.c
 +index c27bf2ce121..6528acac31a 100644
 +--- a/gcc/tree-into-ssa.c
@@ -3865,24 +3839,10 @@ index 00000000000..3f9806dc076
 + 17 files changed, 146 insertions(+), 95 deletions(-)
 + create mode 100644 gcc/testsuite/g++.dg/cpp/pr80005.C
 +
-+diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
-+index 09ba2c8b40f..fdddb98a74d 100644
-+--- a/gcc/c-family/ChangeLog
-++++ b/gcc/c-family/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/c-family/c-cppbuiltin.c b/gcc/c-family/c-cppbuiltin.c
 +index a6308921dc9..70a12055e27 100644
 +--- a/gcc/c-family/c-cppbuiltin.c
 ++++ b/gcc/c-family/c-cppbuiltin.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index a526e32ac89..67d5f2e9e28 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -3911,13 +3871,6 @@ index 00000000000..3f9806dc076
 +index dd15cd6af3c..82fd602f9f1 100644
 +--- a/gcc/testsuite/g++.dg/cpp2a/feat-cxx2a.C
 ++++ b/gcc/testsuite/g++.dg/cpp2a/feat-cxx2a.C
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/libcpp/ChangeLog b/libcpp/ChangeLog
-+index 3249b93fe88..27a841bbdce 100644
-+--- a/libcpp/ChangeLog
-++++ b/libcpp/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -4007,13 +3960,6 @@ index 00000000000..3f9806dc076
 + gcc/tree-ssa-forwprop.c | 6 +++---
 + 2 files changed, 12 insertions(+), 3 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index a195863212e..f7df07343d1 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
 +index aac31d02b6c..56c470f6ecf 100644
 +--- a/gcc/tree-ssa-forwprop.c
@@ -4080,13 +4026,6 @@ index 00000000000..3f9806dc076
 + gcc/pretty-print.h     |   5 +-
 + 11 files changed, 328 insertions(+), 26 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index e6eb6ab4c21..22f990a3088 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config.in b/gcc/config.in
 +index 48292861842..01fb18dbbb5 100644
 +--- a/gcc/config.in
@@ -4182,13 +4121,6 @@ index 00000000000..3f9806dc076
 + gcc/cfgloopanal.c | 5 ++++-
 + 2 files changed, 9 insertions(+), 1 deletion(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 07e5bebe909..f3301b16464 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cfgloopanal.c b/gcc/cfgloopanal.c
 +index 392b1c337c4..0b33e8272a7 100644
 +--- a/gcc/cfgloopanal.c
@@ -4255,13 +4187,6 @@ index 00000000000..3f9806dc076
 + gcc/pretty-print.h     |   5 +-
 + 11 files changed, 328 insertions(+), 26 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index e6eb6ab4c21..22f990a3088 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config.in b/gcc/config.in
 +index 48292861842..01fb18dbbb5 100644
 +--- a/gcc/config.in
@@ -4369,24 +4294,10 @@ index 00000000000..3f9806dc076
 + 8 files changed, 142 insertions(+), 22 deletions(-)
 + create mode 100644 gcc/testsuite/g++.dg/pr94314-4.C
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 74dbeeb44c6..9e499ec9c86 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cgraphclones.c b/gcc/cgraphclones.c
 +index c73b8f810f0..8f541a28b6e 100644
 +--- a/gcc/cgraphclones.c
 ++++ b/gcc/cgraphclones.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 756f1d759e6..94d2312022d 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -4481,24 +4392,10 @@ index 00000000000..3f9806dc076
 + 4 files changed, 51 insertions(+), 19 deletions(-)
 + create mode 100644 gcc/testsuite/gcc.dg/pr94291.c
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index a1ab9fb4ef3..12803e90b0a 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/combine.c b/gcc/combine.c
 +index 58366a6d331..cff76cd3303 100644
 +--- a/gcc/combine.c
 ++++ b/gcc/combine.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 71b5a14bcbe..3cbf891d58d 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -4572,13 +4469,6 @@ index 00000000000..3f9806dc076
 +@@ -1 +1,2 @@
 +
 ++
-+diff --git a/gcc/c-family/ChangeLog b/gcc/c-family/ChangeLog
-+index c429b49e68c..69ea1fdc4f3 100644
-+--- a/gcc/c-family/ChangeLog
-++++ b/gcc/c-family/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/c-family/c-attribs.c b/gcc/c-family/c-attribs.c
 +index ac936d5bbbb..a101312c581 100644
 +--- a/gcc/c-family/c-attribs.c
@@ -4614,10 +4504,122 @@ index 00000000000..3f9806dc076
 +@@ -1 +1,2 @@
 +
 ++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 176aa117904..185f9ea725e 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
++diff --git a/gcc/testsuite/c-c++-common/patchable_function_entry-error-1.c b/gcc/testsuite/c-c++-common/patchable_function_entry-error-1.c
++new file mode 100644
++index 00000000000..f60bf46cfe3
++--- /dev/null
+++++ b/gcc/testsuite/c-c++-common/patchable_function_entry-error-1.c
++@@ -0,0 +1 @@
+++
++diff --git a/gcc/testsuite/c-c++-common/patchable_function_entry-error-2.c b/gcc/testsuite/c-c++-common/patchable_function_entry-error-2.c
++new file mode 100644
++index 00000000000..90f88c78be7
++--- /dev/null
+++++ b/gcc/testsuite/c-c++-common/patchable_function_entry-error-2.c
++@@ -0,0 +1 @@
+++
++diff --git a/gcc/testsuite/c-c++-common/patchable_function_entry-error-3.c b/gcc/testsuite/c-c++-common/patchable_function_entry-error-3.c
++new file mode 100644
++index 00000000000..4490e5c15ca
++--- /dev/null
+++++ b/gcc/testsuite/c-c++-common/patchable_function_entry-error-3.c
++@@ -0,0 +1 @@
+++
++diff --git a/gcc/varasm.c b/gcc/varasm.c
++index 271a67abf56..f062e48071f 100644
++--- a/gcc/varasm.c
+++++ b/gcc/varasm.c
++@@ -1 +1,2 @@
++
+++
++-- 
++2.26.2
++
++=== 0002-Add-patch_area_size-and-patch_area_entry-to-crtl.patch ===
++From 6607bdd99994c834f92fce924abdaea3405f62dc Mon Sep 17 00:00:00 2001
++From: "H.J. Lu" <hjl.tools@gmail.com>
++Date: Fri, 1 May 2020 21:03:10 -0700
++Subject: [PATCH] Add patch_area_size and patch_area_entry to crtl
++
++Currently patchable area is at the wrong place.  It is placed immediately
++after function label and before .cfi_startproc.  A backend should be able
++to add a pseudo patchable area instruction durectly into RTL.  This patch
++adds patch_area_size and patch_area_entry to crtl so that the patchable
++area info is available in RTL passes.
++
++It also limits patch_area_size and patch_area_entry to 65535, which is
++a reasonable maximum size for patchable area.
++
++gcc/
++
++	PR target/93492
++	* cfgexpand.c (pass_expand::execute): Set crtl->patch_area_size
++	and crtl->patch_area_entry.
++	* emit-rtl.h (rtl_data): Add patch_area_size and patch_area_entry.
++	* opts.c (common_handle_option): Limit
++	function_entry_patch_area_size and function_entry_patch_area_start
++	to USHRT_MAX.  Fix a typo in error message.
++	* varasm.c (assemble_start_function): Use crtl->patch_area_size
++	and crtl->patch_area_entry.
++	* doc/invoke.texi: Document the maximum value for
++	-fpatchable-function-entry.
++
++gcc/c-family/
++
++	PR target/12345
++	* c-attribs.c (handle_patchable_function_entry_attribute): Limit
++	value to USHRT_MAX (65535).
++
++---
++ gcc/ChangeLog                                 | 14 ++++++++
++ gcc/c-family/ChangeLog                        |  6 ++++
++ gcc/c-family/c-attribs.c                      |  9 +++++
++ gcc/cfgexpand.c                               | 33 +++++++++++++++++++
++ gcc/doc/invoke.texi                           |  1 +
++ gcc/emit-rtl.h                                |  6 ++++
++ gcc/opts.c                                    |  4 ++-
++ gcc/testsuite/ChangeLog                       |  7 ++++
++ .../patchable_function_entry-error-1.c        |  9 +++++
++ .../patchable_function_entry-error-2.c        |  9 +++++
++ .../patchable_function_entry-error-3.c        | 17 ++++++++++
++ gcc/varasm.c                                  | 30 ++---------------
++ 12 files changed, 116 insertions(+), 29 deletions(-)
++ create mode 100644 gcc/testsuite/c-c++-common/patchable_function_entry-error-1.c
++ create mode 100644 gcc/testsuite/c-c++-common/patchable_function_entry-error-2.c
++ create mode 100644 gcc/testsuite/c-c++-common/patchable_function_entry-error-3.c
++
++diff --git a/gcc/c-family/c-attribs.c b/gcc/c-family/c-attribs.c
++index ac936d5bbbb..a101312c581 100644
++--- a/gcc/c-family/c-attribs.c
+++++ b/gcc/c-family/c-attribs.c
++@@ -1 +1,2 @@
++
+++
++diff --git a/gcc/cfgexpand.c b/gcc/cfgexpand.c
++index a7ec77d5c85..86efa22bf60 100644
++--- a/gcc/cfgexpand.c
+++++ b/gcc/cfgexpand.c
++@@ -1 +1,2 @@
++
+++
++diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
++index 527d362533a..767d1f07801 100644
++--- a/gcc/doc/invoke.texi
+++++ b/gcc/doc/invoke.texi
++@@ -1 +1,2 @@
++
+++
++diff --git a/gcc/emit-rtl.h b/gcc/emit-rtl.h
++index a878efe3cf7..3d6565c8a30 100644
++--- a/gcc/emit-rtl.h
+++++ b/gcc/emit-rtl.h
++@@ -1 +1,2 @@
++
+++
++diff --git a/gcc/opts.c b/gcc/opts.c
++index c212a1a57dc..3dccef39701 100644
++--- a/gcc/opts.c
+++++ b/gcc/opts.c
 +@@ -1 +1,2 @@
 +
 ++
@@ -4679,13 +4681,6 @@ index 00000000000..3f9806dc076
 + 3 files changed, 40 insertions(+), 18 deletions(-)
 + create mode 100644 gcc/testsuite/g++.dg/cpp2a/lambda-generic-variadic20.C
 +
-+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-+index 640e4948130..4b6691a77f0 100644
-+--- a/gcc/cp/ChangeLog
-++++ b/gcc/cp/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
 +index 7bf249cee5c..2fe7b66707c 100644
 +--- a/gcc/cp/pt.c
@@ -4721,13 +4716,6 @@ index 00000000000..3f9806dc076
 + 3 files changed, 11 insertions(+)
 + create mode 100644 gcc/testsuite/g++.dg/concepts/fn-concept3.C
 +
-+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-+index 59646c70fa4..4729e3d331d 100644
-+--- a/gcc/cp/ChangeLog
-++++ b/gcc/cp/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cp/except.c b/gcc/cp/except.c
 +index e073bd4d2bc..55b4b6af442 100644
 +--- a/gcc/cp/except.c
@@ -4755,13 +4743,6 @@ index 00000000000..3f9806dc076
 + gcc/ChangeLog | 1 +
 + 1 file changed, 1 insertion(+)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 6c6d586ca75..49ca5f92dec 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +-- 
 +2.26.1
 +
@@ -4798,13 +4779,6 @@ index 00000000000..3f9806dc076
 + 6 files changed, 132 insertions(+)
 + create mode 100644 gcc/testsuite/gcc.target/aarch64/movk_2.c
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index efbbbf08225..cea8ffee99c 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
 +index 24cc65a383a..d29975a8921 100644
 +--- a/gcc/config/aarch64/aarch64-protos.h
@@ -4823,13 +4797,6 @@ index 00000000000..3f9806dc076
 +index 90eebce85c0..9c1f17d0f85 100644
 +--- a/gcc/config/aarch64/aarch64.md
 ++++ b/gcc/config/aarch64/aarch64.md
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 601bc336290..cdb26581b9c 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -5018,24 +4985,10 @@ index 00000000000..3f9806dc076
 + gcc/testsuite/g++.dg/tree-ssa/pr27830.C |  2 ++
 + 4 files changed, 47 insertions(+), 5 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 06f7eda0033..93c3076eb86 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config/rs6000/rs6000-call.c b/gcc/config/rs6000/rs6000-call.c
 +index e08621ace27..a9ae7ab70ca 100644
 +--- a/gcc/config/rs6000/rs6000-call.c
 ++++ b/gcc/config/rs6000/rs6000-call.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 684e408c1a5..245c1512c76 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -5151,13 +5104,6 @@ index 00000000000..3f9806dc076
 +@@ -1 +1,2 @@
 +
 ++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 176aa117904..185f9ea725e 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/testsuite/c-c++-common/patchable_function_entry-error-1.c b/gcc/testsuite/c-c++-common/patchable_function_entry-error-1.c
 +new file mode 100644
 +index 00000000000..f60bf46cfe3
@@ -5264,13 +5210,6 @@ index 00000000000..3f9806dc076
 + gcc/tree-ssa-forwprop.c | 6 +++---
 + 2 files changed, 12 insertions(+), 3 deletions(-)
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index a195863212e..f7df07343d1 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/tree-ssa-forwprop.c b/gcc/tree-ssa-forwprop.c
 +index aac31d02b6c..56c470f6ecf 100644
 +--- a/gcc/tree-ssa-forwprop.c
@@ -5307,13 +5246,6 @@ index 00000000000..3f9806dc076
 + 3 files changed, 89 insertions(+), 7 deletions(-)
 + create mode 100644 gcc/testsuite/g++.dg/ext/is_constructible4.C
 +
-+diff --git a/gcc/cp/ChangeLog b/gcc/cp/ChangeLog
-+index 3ca5d7a11b4..c37e461bcc5 100644
-+--- a/gcc/cp/ChangeLog
-++++ b/gcc/cp/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/cp/pt.c b/gcc/cp/pt.c
 +index 9bb8cc13e5f..872f8ff8f52 100644
 +--- a/gcc/cp/pt.c
@@ -5392,24 +5324,10 @@ index 00000000000..3f9806dc076
 + create mode 100644 gcc/testsuite/g++.dg/lto/odr-8_0.C
 + create mode 100644 gcc/testsuite/g++.dg/lto/odr-8_1.C
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 38165123654..33ca91a6467 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/ipa-devirt.c b/gcc/ipa-devirt.c
 +index f0031957375..b609a77701d 100644
 +--- a/gcc/ipa-devirt.c
 ++++ b/gcc/ipa-devirt.c
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 8e3b9105188..dc42601794b 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -5484,13 +5402,6 @@ index 00000000000..3f9806dc076
 + create mode 100755 gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vdot-3-3.c
 + create mode 100755 gcc/testsuite/gcc.target/aarch64/advsimd-intrinsics/vdot-3-4.c
 +
-+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-+index 9a949980699..49dcecb6777 100644
-+--- a/gcc/ChangeLog
-++++ b/gcc/ChangeLog
-+@@ -1 +1,2 @@
-+
-++
 +diff --git a/gcc/config/aarch64/aarch64-builtins.c b/gcc/config/aarch64/aarch64-builtins.c
 +index f0e0461b7f0..f50c4857e1c 100644
 +--- a/gcc/config/aarch64/aarch64-builtins.c
@@ -5523,13 +5434,6 @@ index 00000000000..3f9806dc076
 +index b9843b83c5f..83720d9802a 100644
 +--- a/gcc/config/aarch64/iterators.md
 ++++ b/gcc/config/aarch64/iterators.md
-+@@ -1 +1,2 @@
-+
-++
-+diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-+index 0d8aa6063a7..8b01aa06a40 100644
-+--- a/gcc/testsuite/ChangeLog
-++++ b/gcc/testsuite/ChangeLog
 +@@ -1 +1,2 @@
 +
 ++
@@ -6590,14 +6494,6 @@ index 00000000000..3f9806dc076
 + gcc/ChangeLog-2020 | 1 +
 + 1 file changed, 1 insertion(+)
 +
-+diff --git a/gcc/ChangeLog-2020 b/gcc/ChangeLog-2020
-+index 6553720acad..2c170ef014a 100644
-+--- a/gcc/ChangeLog-2020
-++++ b/gcc/ChangeLog-2020
-+@@ -1 +1,2 @@
-+ 
-++
-+ 
 +-- 
 +2.29.2
 +=== 0001-Add-macro.patch ===
@@ -6728,6 +6624,35 @@ index 00000000000..3f9806dc076
 +@@ -1 +1,2 @@
 + 
 ++
++
++=== 0001-OpenMP-Fix-SIMT ===
++From 33b647956caa977d1ae489f9baed9cef70b4f382 Mon Sep 17 00:00:00 2001
++From: Tobias Burnus <tobias@codesourcery.com>
++Date: Fri, 7 May 2021 12:11:51 +0200
++Subject: [PATCH] OpenMP: Fix SIMT for complex/float reduction with && and ||
++
++libgomp/ChangeLog:
++
++	* testsuite/libgomp.c-c++-common/reduction-5.c: New test, testing
++	complex/floating-point || + && reduction with 'omp target'.
++	* testsuite/libgomp.c-c++-common/reduction-5.c: Likewise.
++---
++diff --git a/libgomp/testsuite/libgomp.c-c++-common/reduction-5.c b/libgomp/testsuite/libgomp.c-c++-common/reduction-5.c
++new file mode 100644
++index 00000000000..21540512e23
++--- /dev/null
+++++ b/libgomp/testsuite/libgomp.c-c++-common/reduction-5.c
++@@ -0,0 +1,1 @@
+++
++diff --git a/libgomp/testsuite/libgomp.c-c++-common/reduction-6.c b/libgomp/testsuite/libgomp.c-c++-common/reduction-6.c
++new file mode 100644
++index 00000000000..21540512e23
++--- /dev/null
+++++ b/libgomp/testsuite/libgomp.c-c++-common/reduction-6.c
++@@ -0,0 +1,1 @@
+++
++-- 
++2.25.1
 diff --git a/contrib/git-backport.py b/contrib/git-backport.py
 new file mode 100755
 index 00000000000..2b8e4686719
@@ -6819,10 +6744,71 @@ index b13d146a7b0..3b74042132a 100644
 -9.3.0
 +9.3.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index d8e53874e68..a07c350a2c7 100644
+index d8e53874e68..3e9bf96cd02 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,3462 @@
+@@ -1,3 +1,3523 @@
++2021-05-18  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-01-28  Richard Biener  <rguenther@suse.de>
++
++	PR rtl-optimization/80960
++	* dse.c (check_mem_read_rtx): Call get_addr on the
++	offsetted address.
++
++2021-05-18  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/96513
++	* tree-vect-slp.c (struct vdhs_data): New.
++	(vect_detect_hybrid_slp): New walker.
++	(vect_detect_hybrid_slp): Rewrite.
++
++2021-05-18  Martin Liska  <mliska@suse.cz>
++
++	PR tree-optimization/96597
++	* tree-ssa-sccvn.c (vn_reference_lookup_call): Add missing
++	initialization of ::punned.
++	(vn_reference_insert): Use consistently false instead of 0.
++	(vn_reference_insert_pieces): Likewise.
++
++2021-05-18  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/88240
++	* tree-ssa-sccvn.h (vn_reference_s::punned): New flag.
++	* tree-ssa-sccvn.c (vn_reference_insert): Initialize punned.
++	(vn_reference_insert_pieces): Likewise.
++	(visit_reference_op_call): Likewise.
++	(visit_reference_op_load): Track whether a ref was punned.
++	* tree-ssa-pre.c (do_hoist_insertion): Refuse to perform hoist
++	insertion on punned floating point loads.
++
++2021-05-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-05-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100566
++	* tree-ssa-sccvn.c (dominated_by_p_w_unex): Properly handle
++	allow_back for all edge queries.
++
++2021-05-12  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2021-05-11  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99988
++	* config/aarch64/aarch64-bti-insert.c (aarch64_bti_j_insn_p): New.
++	(rest_of_insert_bti): Avoid inserting duplicate bti j insns for
++	jump table targets.
++
++2021-05-11  Geng Qi  <gengqi@linux.alibaba.com>
++
++	Backported from master:
++	2021-04-30  Geng Qi  <gengqi@linux.alibaba.com>
++
++	* config/riscv/riscv.opt (march=,mabi=): Negative itself.
++
 +2021-05-07  Kyrylo Tkachov  <kyrylo.tkachov@arm.com>
 +
 +	PR target/99037
@@ -12718,10 +12704,28 @@ index a718ceaf3da..bfef2340339 100644
  #ifndef USED_FOR_TARGET
  #undef HAVE_AS_VSX
 diff --git a/gcc/config/aarch64/aarch64-bti-insert.c b/gcc/config/aarch64/aarch64-bti-insert.c
-index e519a0f0ac1..7da89074ce0 100644
+index e519a0f0ac1..c5b2be47b91 100644
 --- a/gcc/config/aarch64/aarch64-bti-insert.c
 +++ b/gcc/config/aarch64/aarch64-bti-insert.c
-@@ -130,22 +130,6 @@ rest_of_insert_bti (void)
+@@ -118,6 +118,17 @@ aarch64_pac_insn_p (rtx x)
+   return false;
+ }
+ 
++/* Check if INSN is a BTI J insn.  */
++static bool
++aarch64_bti_j_insn_p (rtx_insn *insn)
++{
++  if (!insn || !INSN_P (insn))
++    return false;
++
++  rtx pat = PATTERN (insn);
++  return GET_CODE (pat) == UNSPEC_VOLATILE && XINT (pat, 1) == UNSPECV_BTI_J;
++}
++
+ /* Insert the BTI instruction.  */
+ /* This is implemented as a late RTL pass that runs before branch
+    shortening and does the following.  */
+@@ -130,22 +141,6 @@ rest_of_insert_bti (void)
    rtx_insn *insn;
    basic_block bb;
  
@@ -12744,7 +12748,7 @@ index e519a0f0ac1..7da89074ce0 100644
    bb = 0;
    FOR_EACH_BB_FN (bb, cfun)
      {
-@@ -153,14 +137,10 @@ rest_of_insert_bti (void)
+@@ -153,14 +148,10 @@ rest_of_insert_bti (void)
  	   insn = NEXT_INSN (insn))
  	{
  	  /* If a label is marked to be preserved or can be a non-local goto
@@ -12761,7 +12765,18 @@ index e519a0f0ac1..7da89074ce0 100644
  	    {
  	      bti_insn = gen_bti_j ();
  	      emit_insn_after (bti_insn, insn);
-@@ -201,6 +181,22 @@ rest_of_insert_bti (void)
+@@ -183,6 +174,10 @@ rest_of_insert_bti (void)
+ 		  for (j = GET_NUM_ELEM (vec) - 1; j >= 0; --j)
+ 		    {
+ 		      label = as_a <rtx_insn *> (XEXP (RTVEC_ELT (vec, j), 0));
++		      rtx_insn *next = next_nonnote_nondebug_insn (label);
++		      if (aarch64_bti_j_insn_p (next))
++			continue;
++
+ 		      bti_insn = gen_bti_j ();
+ 		      emit_insn_after (bti_insn, label);
+ 		    }
+@@ -201,6 +196,22 @@ rest_of_insert_bti (void)
  	}
      }
  
@@ -29120,7 +29135,7 @@ index fe1194ef91a..397c7dc9047 100644
  @subsection Assembler Commands for Exception Regions
  
 diff --git a/gcc/dse.c b/gcc/dse.c
-index 4becdcf1cbb..a63890d8f60 100644
+index 4becdcf1cbb..0a84b751c2a 100644
 --- a/gcc/dse.c
 +++ b/gcc/dse.c
 @@ -1922,8 +1922,7 @@ get_stored_val (store_info *store_info, machine_mode read_mode,
@@ -29143,7 +29158,19 @@ index 4becdcf1cbb..a63890d8f60 100644
        if (!bitmap_empty_p (regs_set))
  	{
  	  if (dump_file && (dump_flags & TDF_DETAILS))
-@@ -2206,7 +2206,7 @@ check_mem_read_rtx (rtx *loc, bb_info_t bb_info)
+@@ -2144,6 +2144,11 @@ check_mem_read_rtx (rtx *loc, bb_info_t bb_info)
+     }
+   if (maybe_ne (offset, 0))
+     mem_addr = plus_constant (get_address_mode (mem), mem_addr, offset);
++  /* Avoid passing VALUE RTXen as mem_addr to canon_true_dependence
++     which will over and over re-create proper RTL and re-apply the
++     offset above.  See PR80960 where we almost allocate 1.6GB of PLUS
++     RTXen that way.  */
++  mem_addr = get_addr (mem_addr);
+ 
+   if (group_id >= 0)
+     {
+@@ -2206,7 +2211,7 @@ check_mem_read_rtx (rtx *loc, bb_info_t bb_info)
  						 offset - store_info->offset,
  						 width)
  		      && replace_read (store_info, i_ptr, read_info,
@@ -29152,7 +29179,7 @@ index 4becdcf1cbb..a63890d8f60 100644
  		    return;
  
  		  /* The bases are the same, just see if the offsets
-@@ -2272,8 +2272,7 @@ check_mem_read_rtx (rtx *loc, bb_info_t bb_info)
+@@ -2272,8 +2277,7 @@ check_mem_read_rtx (rtx *loc, bb_info_t bb_info)
  				   store_info->width)
  	      && all_positions_needed_p (store_info,
  					 offset - store_info->offset, width)
@@ -36210,10 +36237,36 @@ index 66cee075018..a9f1f195e7a 100644
     For now this is just a wrapper for ASM_GENERATE_INTERNAL_LABEL.  */
  DEFHOOK_UNDOC
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index e132f2657ef..1597456f806 100644
+index e132f2657ef..a5b1c5f2556 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,3020 @@
+@@ -1,3 +1,3046 @@
++2021-05-18  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/96513
++	* gcc.dg/torture/pr96513.c: New testcase.
++
++2021-05-18  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/88240
++	* gcc.target/i386/pr88240.c: New testcase.
++
++2021-05-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-05-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100566
++	* gcc.dg/torture/pr100566.c: New testcase.
++
++2021-05-12  Alex Coplan  <alex.coplan@arm.com>
++
++	Backported from master:
++	2021-05-11  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99988
++	* gcc.target/aarch64/pr99988.c: New test.
++
 +2021-05-07  Jakub Jelinek  <jakub@redhat.com>
 +
 +	Backported from master:
@@ -46521,6 +46574,48 @@ index 00000000000..3d1767513f3
 +  v(1);
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100566.c b/gcc/testsuite/gcc.dg/torture/pr100566.c
+new file mode 100644
+index 00000000000..ed856913639
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr100566.c
+@@ -0,0 +1,36 @@
++/* { dg-do run } */
++
++volatile int s, c;
++
++__attribute__((noipa)) void
++foo (void)
++{
++  if (c++ > 1)
++    __builtin_abort ();
++}
++
++__attribute__((noipa)) int
++bar (void)
++{
++  int i = 0, j = s;
++  if (j == 0)
++    goto lab;
++  for (i = 0; i < j; i++)
++    {
++    lab:
++      foo ();
++      if (!j)
++        goto lab;
++    }
++  return 0;
++}
++
++int
++main ()
++{
++  s = 1;
++  bar ();
++  if (c != 1)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr92608.c b/gcc/testsuite/gcc.dg/torture/pr92608.c
 new file mode 100644
 index 00000000000..3a6beaba441
@@ -46689,6 +46784,38 @@ index 00000000000..164bfdbdcfc
 +{
 +  for (int b; b; b = !b)
 +    ;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr96513.c b/gcc/testsuite/gcc.dg/torture/pr96513.c
+new file mode 100644
+index 00000000000..5ee040e96c8
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr96513.c
+@@ -0,0 +1,26 @@
++/* { dg-do compile } */
++
++typedef struct {
++  short a;
++  short b;
++} c;
++c *d;
++int e, f, i, j, k, l, m, n, o, p;
++c g, h;
++void q() {
++  do {
++    if (o) {
++      (*d).a = (*d).b = d[e].a = d[e].a * 3 + 1 >> 15;
++      d[e].b = d[e].b * 3 + 1 >> 15;
++    }
++    n = -(d[e].b * g.b) >> 5;
++    m = d[e].b * g.a + 1 >> 5;
++    l = d[f].a * -d[f].b * h.b + 1 >> 5;
++    k = d[f].a * h.b + d[f].b * h.a + 1 >> 5;
++    j = n + l;
++    i = m - k;
++    (*d).a += j;
++    d[e].a -= i;
++    ++d;
++  } while (--p);
 +}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr97812.c b/gcc/testsuite/gcc.dg/torture/pr97812.c
 new file mode 100644
@@ -49506,6 +49633,78 @@ index 00000000000..713360f69d4
 +  return vcvt_high_f32_f64 ((float32x2_t) 1ULL, arg2);
 +}
 +
+diff --git a/gcc/testsuite/gcc.target/aarch64/pr99988.c b/gcc/testsuite/gcc.target/aarch64/pr99988.c
+new file mode 100644
+index 00000000000..7cca4962944
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/pr99988.c
+@@ -0,0 +1,66 @@
++/* { dg-do compile { target lp64 } } */
++/* { dg-options "-O2 -mbranch-protection=standard" } */
++/* { dg-final { scan-assembler-times {bti j} 13 } } */
++int a;
++int c();
++int d();
++int e();
++int f();
++int g();
++void h() {
++  switch (a) {
++  case 0:
++  case 56:
++  case 57:
++    break;
++  case 58:
++  case 59:
++  case 61:
++  case 62:
++    c();
++  case 64:
++  case 63:
++    d();
++  case 66:
++  case 65:
++    d();
++  case 68:
++  case 67:
++    d();
++  case 69:
++  case 70:
++    d();
++  case 71:
++  case 72:
++  case 88:
++  case 87:
++    d();
++  case 90:
++  case 89:
++    d();
++  case 92:
++  case 1:
++    d();
++  case 93:
++  case 73:
++  case 4:
++    e();
++  case 76:
++  case 5:
++    f();
++  case 7:
++  case 8:
++  case 84:
++  case 85:
++    break;
++  case 6:
++  case 299:
++  case 9:
++  case 80:
++  case 2:
++  case 3:
++    e();
++  default:
++    g();
++  }
++}
 diff --git a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c b/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
 index 0140bee194f..232ba67ade0 100644
 --- a/gcc/testsuite/gcc.target/aarch64/return_address_sign_1.c
@@ -51277,6 +51476,38 @@ index 65c139849d5..bf37a8cbb71 100644
  
 -/* { dg-final { scan-assembler-not "movlps" } } */
 +/* { dg-final { scan-assembler-not "movlps" { xfail *-*-* } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr88240.c b/gcc/testsuite/gcc.target/i386/pr88240.c
+new file mode 100644
+index 00000000000..5ee02f3193c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr88240.c
+@@ -0,0 +1,26 @@
++/* { dg-do run } */
++/* { dg-options "-O2 -mno-sse" } */
++
++int flag;
++union { double f; unsigned long long i; } u;
++void __attribute__((noinline))
++init ()
++{
++  flag = 1;
++  u.i = 18442936822990639076ULL;
++}
++unsigned long long __attribute__((noinline))
++test ()
++{
++  if (flag)
++    return u.i;
++  else
++    return u.f;
++}
++int main()
++{
++  init ();
++  if (test () != 18442936822990639076ULL)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr93654.c b/gcc/testsuite/gcc.target/i386/pr93654.c
 new file mode 100644
 index 00000000000..ec5bdce86a6
@@ -60374,7 +60605,7 @@ index 19b37b43b8e..e5a47c6614b 100644
      return 0;
  
 diff --git a/gcc/tree-ssa-pre.c b/gcc/tree-ssa-pre.c
-index 8bd17b82368..7b171bc4e8f 100644
+index 8bd17b82368..c163c3823c2 100644
 --- a/gcc/tree-ssa-pre.c
 +++ b/gcc/tree-ssa-pre.c
 @@ -2810,7 +2810,8 @@ create_expression_by_pieces (basic_block block, pre_expr expr,
@@ -60387,6 +60618,23 @@ index 8bd17b82368..7b171bc4e8f 100644
  		set_ptr_info_alignment (get_ptr_info (forcedname),
  					halign, hmisalign);
  	    }
+@@ -3562,6 +3563,16 @@ do_hoist_insertion (basic_block block)
+ 	  continue;
+ 	}
+ 
++      /* If we end up with a punned expression representation and this
++	 happens to be a float typed one give up - we can't know for
++	 sure whether all paths perform the floating-point load we are
++	 about to insert and on some targets this can cause correctness
++	 issues.  See PR88240.  */
++      if (expr->kind == REFERENCE
++	  && PRE_EXPR_REFERENCE (expr)->punned
++	  && FLOAT_TYPE_P (get_expr_type (expr)))
++	continue;
++
+       /* OK, we should hoist this value.  Perform the transformation.  */
+       pre_stats.hoist_insert++;
+       if (dump_file && (dump_flags & TDF_DETAILS))
 diff --git a/gcc/tree-ssa-reassoc.c b/gcc/tree-ssa-reassoc.c
 index 6794fbde29e..4bc691d5797 100644
 --- a/gcc/tree-ssa-reassoc.c
@@ -60501,7 +60749,7 @@ index 6794fbde29e..4bc691d5797 100644
  						   || negate_result,
  						   len != orig_len);
 diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
-index 32f45c95cdf..15420df87bb 100644
+index 32f45c95cdf..066a0559b71 100644
 --- a/gcc/tree-ssa-sccvn.c
 +++ b/gcc/tree-ssa-sccvn.c
 @@ -535,7 +535,8 @@ vn_get_stmt_kind (gimple *stmt)
@@ -60514,7 +60762,31 @@ index 32f45c95cdf..15420df87bb 100644
  		  return VN_NARY;
  
  		/* Fallthrough.  */
-@@ -3331,7 +3332,7 @@ vn_nary_op_insert_pieces_predicated (unsigned int length, enum tree_code code,
+@@ -2790,6 +2791,7 @@ vn_reference_lookup_call (gcall *call, vn_reference_t *vnresult,
+   vr->vuse = vuse ? SSA_VAL (vuse) : NULL_TREE;
+   vr->operands = valueize_shared_reference_ops_from_call (call);
+   vr->type = gimple_expr_type (call);
++  vr->punned = false;
+   vr->set = 0;
+   vr->hashcode = vn_reference_compute_hash (vr);
+   vn_reference_lookup_1 (vr, vnresult);
+@@ -2812,6 +2814,7 @@ vn_reference_insert (tree op, tree result, tree vuse, tree vdef)
+   vr1->vuse = vuse_ssa_val (vuse);
+   vr1->operands = valueize_shared_reference_ops_from_ref (op, &tem).copy ();
+   vr1->type = TREE_TYPE (op);
++  vr1->punned = false;
+   vr1->set = get_alias_set (op);
+   vr1->hashcode = vn_reference_compute_hash (vr1);
+   vr1->result = TREE_CODE (result) == SSA_NAME ? SSA_VAL (result) : result;
+@@ -2867,6 +2870,7 @@ vn_reference_insert_pieces (tree vuse, alias_set_type set, tree type,
+   vr1->vuse = vuse_ssa_val (vuse);
+   vr1->operands = valueize_refs (operands);
+   vr1->type = type;
++  vr1->punned = false;
+   vr1->set = set;
+   vr1->hashcode = vn_reference_compute_hash (vr1);
+   if (result && TREE_CODE (result) == SSA_NAME)
+@@ -3331,7 +3335,7 @@ vn_nary_op_insert_pieces_predicated (unsigned int length, enum tree_code code,
  }
  
  static bool
@@ -60523,7 +60795,7 @@ index 32f45c95cdf..15420df87bb 100644
  
  static tree
  vn_nary_op_get_predicated_value (vn_nary_op_t vno, basic_block bb)
-@@ -3340,9 +3341,12 @@ vn_nary_op_get_predicated_value (vn_nary_op_t vno, basic_block bb)
+@@ -3340,9 +3344,12 @@ vn_nary_op_get_predicated_value (vn_nary_op_t vno, basic_block bb)
      return vno->u.result;
    for (vn_pval *val = vno->u.values; val; val = val->next)
      for (unsigned i = 0; i < val->n; ++i)
@@ -60539,7 +60811,7 @@ index 32f45c95cdf..15420df87bb 100644
  	return val->result;
    return NULL_TREE;
  }
-@@ -3642,10 +3646,11 @@ vn_phi_insert (gimple *phi, tree result, bool backedges_varying_p)
+@@ -3642,10 +3649,11 @@ vn_phi_insert (gimple *phi, tree result, bool backedges_varying_p)
  
  
  /* Return true if BB1 is dominated by BB2 taking into account edges
@@ -60553,7 +60825,7 @@ index 32f45c95cdf..15420df87bb 100644
  {
    edge_iterator ei;
    edge e;
-@@ -3662,7 +3667,8 @@ dominated_by_p_w_unex (basic_block bb1, basic_block bb2)
+@@ -3662,7 +3670,8 @@ dominated_by_p_w_unex (basic_block bb1, basic_block bb2)
      {
        edge prede = NULL;
        FOR_EACH_EDGE (e, ei, bb1->preds)
@@ -60563,7 +60835,27 @@ index 32f45c95cdf..15420df87bb 100644
  	  {
  	    if (prede)
  	      {
-@@ -3731,6 +3737,8 @@ set_ssa_val_to (tree from, tree to)
+@@ -3684,7 +3693,8 @@ dominated_by_p_w_unex (basic_block bb1, basic_block bb2)
+   /* Iterate to the single executable bb2 successor.  */
+   edge succe = NULL;
+   FOR_EACH_EDGE (e, ei, bb2->succs)
+-    if (e->flags & EDGE_EXECUTABLE)
++    if ((e->flags & EDGE_EXECUTABLE)
++	|| (!allow_back && (e->flags & EDGE_DFS_BACK)))
+       {
+ 	if (succe)
+ 	  {
+@@ -3702,7 +3712,8 @@ dominated_by_p_w_unex (basic_block bb1, basic_block bb2)
+ 	{
+ 	  FOR_EACH_EDGE (e, ei, succe->dest->preds)
+ 	    if (e != succe
+-		&& (e->flags & EDGE_EXECUTABLE))
++		&& ((e->flags & EDGE_EXECUTABLE)
++		    || (!allow_back && (e->flags & EDGE_DFS_BACK))))
+ 	      {
+ 		succe = NULL;
+ 		break;
+@@ -3731,6 +3742,8 @@ set_ssa_val_to (tree from, tree to)
    vn_ssa_aux_t from_info = VN_INFO (from);
    tree currval = from_info->valnum; // SSA_VAL (from)
    poly_int64 toff, coff;
@@ -60572,7 +60864,7 @@ index 32f45c95cdf..15420df87bb 100644
  
    /* The only thing we allow as value numbers are ssa_names
       and invariants.  So assert that here.  We don't allow VN_TOP
-@@ -3773,9 +3781,9 @@ set_ssa_val_to (tree from, tree to)
+@@ -3773,9 +3786,9 @@ set_ssa_val_to (tree from, tree to)
  	    }
  	  return false;
  	}
@@ -60585,7 +60877,7 @@ index 32f45c95cdf..15420df87bb 100644
        if (currval != VN_TOP
  	  && !curr_invariant
  	  && !curr_undefined
-@@ -3830,9 +3838,8 @@ set_and_exit:
+@@ -3830,9 +3843,8 @@ set_and_exit:
        && !operand_equal_p (currval, to, 0)
        /* Different undefined SSA names are not actually different.  See
           PR82320 for a testcase were we'd otherwise not terminate iteration.  */
@@ -60596,7 +60888,7 @@ index 32f45c95cdf..15420df87bb 100644
  	   && ssa_undefined_value_p (to, false))
        /* ???  For addresses involving volatile objects or types operand_equal_p
           does not reliably detect ADDR_EXPRs as equal.  We know we are only
-@@ -3844,6 +3851,22 @@ set_and_exit:
+@@ -3844,6 +3856,22 @@ set_and_exit:
  	       == get_addr_base_and_unit_offset (TREE_OPERAND (to, 0), &toff))
  	   && known_eq (coff, toff)))
      {
@@ -60619,7 +60911,28 @@ index 32f45c95cdf..15420df87bb 100644
        if (dump_file && (dump_flags & TDF_DETAILS))
  	fprintf (dump_file, " (changed)\n");
        from_info->valnum = to;
-@@ -4124,13 +4147,22 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
+@@ -4088,6 +4116,7 @@ visit_reference_op_call (tree lhs, gcall *stmt)
+ 	 them here.  */
+       vr2->operands = vr1.operands.copy ();
+       vr2->type = vr1.type;
++      vr2->punned = vr1.punned;
+       vr2->set = vr1.set;
+       vr2->hashcode = vr1.hashcode;
+       vr2->result = lhs;
+@@ -4113,10 +4142,11 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
+   bool changed = false;
+   tree last_vuse;
+   tree result;
++  vn_reference_t res;
+ 
+   last_vuse = gimple_vuse (stmt);
+   result = vn_reference_lookup (op, gimple_vuse (stmt),
+-				default_vn_walk_kind, NULL, true, &last_vuse);
++				default_vn_walk_kind, &res, true, &last_vuse);
+ 
+   /* We handle type-punning through unions by value-numbering based
+      on offset and size of the access.  Be prepared to handle a
+@@ -4124,13 +4154,29 @@ visit_reference_op_load (tree lhs, tree op, gimple *stmt)
    if (result
        && !useless_type_conversion_p (TREE_TYPE (result), TREE_TYPE (op)))
      {
@@ -60644,12 +60957,19 @@ index 32f45c95cdf..15420df87bb 100644
 +	  gimple_match_op res_op (gimple_match_cond::UNCOND,
 +				  VIEW_CONVERT_EXPR, TREE_TYPE (op), result);
 +	  result = vn_nary_build_or_lookup (&res_op);
++	  if (result
++	      && TREE_CODE (result) == SSA_NAME
++	      && VN_INFO (result)->needs_insertion)
++	    /* Track whether this is the canonical expression for different
++	       typed loads.  We use that as a stopgap measure for code
++	       hoisting when dealing with floating point loads.  */
++	    res->punned = true;
 +	}
 +
        /* When building the conversion fails avoid inserting the reference
           again.  */
        if (!result)
-@@ -4293,6 +4325,8 @@ visit_phi (gimple *phi, bool *inserted, bool backedges_varying_p)
+@@ -4293,6 +4339,8 @@ visit_phi (gimple *phi, bool *inserted, bool backedges_varying_p)
        {
  	tree def = PHI_ARG_DEF_FROM_EDGE (phi, e);
  
@@ -60658,7 +60978,7 @@ index 32f45c95cdf..15420df87bb 100644
  	++n_executable;
  	if (TREE_CODE (def) == SSA_NAME)
  	  {
-@@ -5871,7 +5905,7 @@ rpo_elim::eliminate_avail (basic_block bb, tree op)
+@@ -5871,7 +5919,7 @@ rpo_elim::eliminate_avail (basic_block bb, tree op)
  	     may also be able to "pre-compute" (bits of) the next immediate
  	     (non-)dominator during the RPO walk when marking edges as
  	     executable.  */
@@ -60667,6 +60987,18 @@ index 32f45c95cdf..15420df87bb 100644
  	    {
  	      tree leader = ssa_name ((*av)[i].second);
  	      /* Prevent eliminations that break loop-closed SSA.  */
+diff --git a/gcc/tree-ssa-sccvn.h b/gcc/tree-ssa-sccvn.h
+index 93718b2848f..8f8462ee69a 100644
+--- a/gcc/tree-ssa-sccvn.h
++++ b/gcc/tree-ssa-sccvn.h
+@@ -144,6 +144,7 @@ typedef struct vn_reference_s
+   tree vuse;
+   alias_set_type set;
+   tree type;
++  unsigned punned : 1;
+   vec<vn_reference_op_s> operands;
+   tree result;
+   tree result_vdef;
 diff --git a/gcc/tree-ssa-structalias.c b/gcc/tree-ssa-structalias.c
 index 0ea0b461d2b..4396bcd8f20 100644
 --- a/gcc/tree-ssa-structalias.c
@@ -61058,6 +61390,240 @@ index badf4e7104e..2af7f90f61c 100644
  	  }
  	else
  	  {
+diff --git a/gcc/tree-vect-slp.c b/gcc/tree-vect-slp.c
+index 2abf480270c..394c6ec39cd 100644
+--- a/gcc/tree-vect-slp.c
++++ b/gcc/tree-vect-slp.c
+@@ -2259,143 +2259,62 @@ vect_make_slp_decision (loop_vec_info loop_vinfo)
+ }
+ 
+ 
+-/* Find stmts that must be both vectorized and SLPed (since they feed stmts that
+-   can't be SLPed) in the tree rooted at NODE.  Mark such stmts as HYBRID.  */
+-
+-static void
+-vect_detect_hybrid_slp_stmts (slp_tree node, unsigned i, slp_vect_type stype,
+-			      hash_map<slp_tree, unsigned> &visited)
+-{
+-  stmt_vec_info stmt_vinfo = SLP_TREE_SCALAR_STMTS (node)[i];
+-  imm_use_iterator imm_iter;
+-  gimple *use_stmt;
+-  stmt_vec_info use_vinfo;
+-  slp_tree child;
+-  loop_vec_info loop_vinfo = STMT_VINFO_LOOP_VINFO (stmt_vinfo);
+-  int j;
+-
+-  /* We need to union stype over the incoming graph edges but we still
+-     want to limit recursion to stay O(N+E).  */
+-  bool only_edge = (++visited.get_or_insert (node) < node->refcnt);
+-
+-  /* Propagate hybrid down the SLP tree.  */
+-  if (stype == hybrid)
+-    ;
+-  else if (HYBRID_SLP_STMT (stmt_vinfo))
+-    stype = hybrid;
+-  else if (!only_edge)
+-    {
+-      /* Check if a pure SLP stmt has uses in non-SLP stmts.  */
+-      gcc_checking_assert (PURE_SLP_STMT (stmt_vinfo));
+-      /* If we get a pattern stmt here we have to use the LHS of the
+-         original stmt for immediate uses.  */
+-      gimple *stmt = vect_orig_stmt (stmt_vinfo)->stmt;
+-      tree def;
+-      if (gimple_code (stmt) == GIMPLE_PHI)
+-	def = gimple_phi_result (stmt);
+-      else
+-	def = SINGLE_SSA_TREE_OPERAND (stmt, SSA_OP_DEF);
+-      if (def)
+-	FOR_EACH_IMM_USE_STMT (use_stmt, imm_iter, def)
+-	  {
+-	    use_vinfo = loop_vinfo->lookup_stmt (use_stmt);
+-	    if (!use_vinfo)
+-	      continue;
+-	    use_vinfo = vect_stmt_to_vectorize (use_vinfo);
+-	    if (!STMT_SLP_TYPE (use_vinfo)
+-		&& (STMT_VINFO_RELEVANT (use_vinfo)
+-		    || VECTORIZABLE_CYCLE_DEF (STMT_VINFO_DEF_TYPE (use_vinfo)))
+-		&& !(gimple_code (use_stmt) == GIMPLE_PHI
+-		     && STMT_VINFO_DEF_TYPE (use_vinfo) == vect_reduction_def))
+-	      {
+-		if (dump_enabled_p ())
+-		  dump_printf_loc (MSG_NOTE, vect_location, "use of SLP "
+-				   "def in non-SLP stmt: %G", use_stmt);
+-		stype = hybrid;
+-	      }
+-	  }
+-    }
+-
+-  if (stype == hybrid
+-      && !HYBRID_SLP_STMT (stmt_vinfo))
+-    {
+-      if (dump_enabled_p ())
+-	dump_printf_loc (MSG_NOTE, vect_location, "marking hybrid: %G",
+-			 stmt_vinfo->stmt);
+-      STMT_SLP_TYPE (stmt_vinfo) = hybrid;
+-    }
+-
+-  if (!only_edge)
+-    FOR_EACH_VEC_ELT (SLP_TREE_CHILDREN (node), j, child)
+-      if (SLP_TREE_DEF_TYPE (child) != vect_external_def)
+-	vect_detect_hybrid_slp_stmts (child, i, stype, visited);
+-}
+-
+-static void
+-vect_detect_hybrid_slp_stmts (slp_tree node, unsigned i, slp_vect_type stype)
++/* Private data for vect_detect_hybrid_slp.  */
++struct vdhs_data
+ {
+-  hash_map<slp_tree, unsigned> visited;
+-  vect_detect_hybrid_slp_stmts (node, i, stype, visited);
+-}
++  loop_vec_info loop_vinfo;
++  vec<stmt_vec_info> *worklist;
++};
+ 
+-/* Helpers for vect_detect_hybrid_slp walking pattern stmt uses.  */
++/* Walker for walk_gimple_op.  */
+ 
+ static tree
+-vect_detect_hybrid_slp_1 (tree *tp, int *, void *data)
++vect_detect_hybrid_slp (tree *tp, int *, void *data)
+ {
+   walk_stmt_info *wi = (walk_stmt_info *)data;
+-  loop_vec_info loop_vinfo = (loop_vec_info) wi->info;
++  vdhs_data *dat = (vdhs_data *)wi->info;
+ 
+   if (wi->is_lhs)
+     return NULL_TREE;
+ 
+-  stmt_vec_info def_stmt_info = loop_vinfo->lookup_def (*tp);
+-  if (def_stmt_info && PURE_SLP_STMT (def_stmt_info))
++  stmt_vec_info def_stmt_info = dat->loop_vinfo->lookup_def (*tp);
++  if (!def_stmt_info)
++    return NULL_TREE;
++  def_stmt_info = vect_stmt_to_vectorize (def_stmt_info);
++  if (PURE_SLP_STMT (def_stmt_info))
+     {
+       if (dump_enabled_p ())
+ 	dump_printf_loc (MSG_NOTE, vect_location, "marking hybrid: %G",
+ 			 def_stmt_info->stmt);
+       STMT_SLP_TYPE (def_stmt_info) = hybrid;
++      dat->worklist->safe_push (def_stmt_info);
+     }
+ 
+   return NULL_TREE;
+ }
+ 
+-static tree
+-vect_detect_hybrid_slp_2 (gimple_stmt_iterator *gsi, bool *handled,
+-			  walk_stmt_info *wi)
+-{
+-  loop_vec_info loop_vinfo = (loop_vec_info) wi->info;
+-  stmt_vec_info use_vinfo = loop_vinfo->lookup_stmt (gsi_stmt (*gsi));
+-  /* If the stmt is in a SLP instance then this isn't a reason
+-     to mark use definitions in other SLP instances as hybrid.  */
+-  if (! STMT_SLP_TYPE (use_vinfo)
+-      && (STMT_VINFO_RELEVANT (use_vinfo)
+-	  || VECTORIZABLE_CYCLE_DEF (STMT_VINFO_DEF_TYPE (use_vinfo)))
+-      && ! (gimple_code (gsi_stmt (*gsi)) == GIMPLE_PHI
+-	    && STMT_VINFO_DEF_TYPE (use_vinfo) == vect_reduction_def))
+-    ;
+-  else
+-    *handled = true;
+-  return NULL_TREE;
+-}
+-
+ /* Find stmts that must be both vectorized and SLPed.  */
+ 
+ void
+ vect_detect_hybrid_slp (loop_vec_info loop_vinfo)
+ {
+-  unsigned int i;
+-  vec<slp_instance> slp_instances = LOOP_VINFO_SLP_INSTANCES (loop_vinfo);
+-  slp_instance instance;
+-
+   DUMP_VECT_SCOPE ("vect_detect_hybrid_slp");
+ 
+-  /* First walk all pattern stmt in the loop and mark defs of uses as
+-     hybrid because immediate uses in them are not recorded.  */
+-  for (i = 0; i < LOOP_VINFO_LOOP (loop_vinfo)->num_nodes; ++i)
++  /* All stmts participating in SLP are marked pure_slp, all other
++     stmts are loop_vect.
++     First collect all loop_vect stmts into a worklist.  */
++  auto_vec<stmt_vec_info> worklist;
++  for (unsigned i = 0; i < LOOP_VINFO_LOOP (loop_vinfo)->num_nodes; ++i)
+     {
+       basic_block bb = LOOP_VINFO_BBS (loop_vinfo)[i];
++      for (gphi_iterator gsi = gsi_start_phis (bb); !gsi_end_p (gsi);
++	   gsi_next (&gsi))
++	{
++	  gphi *phi = gsi.phi ();
++	  stmt_vec_info stmt_info = loop_vinfo->lookup_stmt (phi);
++	  if (!STMT_SLP_TYPE (stmt_info) && STMT_VINFO_RELEVANT (stmt_info))
++	    worklist.safe_push (stmt_info);
++	}
+       for (gimple_stmt_iterator gsi = gsi_start_bb (bb); !gsi_end_p (gsi);
+ 	   gsi_next (&gsi))
+ 	{
+@@ -2403,28 +2322,40 @@ vect_detect_hybrid_slp (loop_vec_info loop_vinfo)
+ 	  stmt_vec_info stmt_info = loop_vinfo->lookup_stmt (stmt);
+ 	  if (STMT_VINFO_IN_PATTERN_P (stmt_info))
+ 	    {
+-	      walk_stmt_info wi;
+-	      memset (&wi, 0, sizeof (wi));
+-	      wi.info = loop_vinfo;
+-	      gimple_stmt_iterator gsi2
+-		= gsi_for_stmt (STMT_VINFO_RELATED_STMT (stmt_info)->stmt);
+-	      walk_gimple_stmt (&gsi2, vect_detect_hybrid_slp_2,
+-				vect_detect_hybrid_slp_1, &wi);
+-	      walk_gimple_seq (STMT_VINFO_PATTERN_DEF_SEQ (stmt_info),
+-			       vect_detect_hybrid_slp_2,
+-			       vect_detect_hybrid_slp_1, &wi);
++	      for (gimple_stmt_iterator gsi2
++		     = gsi_start (STMT_VINFO_PATTERN_DEF_SEQ (stmt_info));
++		   !gsi_end_p (gsi2); gsi_next (&gsi2))
++		{
++		  stmt_vec_info patt_info
++		    = loop_vinfo->lookup_stmt (gsi_stmt (gsi2));
++		  if (!STMT_SLP_TYPE (patt_info)
++		      && STMT_VINFO_RELEVANT (patt_info))
++		    worklist.safe_push (patt_info);
++		}
++	      stmt_info = STMT_VINFO_RELATED_STMT (stmt_info);
+ 	    }
++	  if (!STMT_SLP_TYPE (stmt_info) && STMT_VINFO_RELEVANT (stmt_info))
++	    worklist.safe_push (stmt_info);
+ 	}
+     }
+ 
+-  /* Then walk the SLP instance trees marking stmts with uses in
+-     non-SLP stmts as hybrid, also propagating hybrid down the
+-     SLP tree, collecting the above info on-the-fly.  */
+-  FOR_EACH_VEC_ELT (slp_instances, i, instance)
+-    {
+-      for (unsigned i = 0; i < SLP_INSTANCE_GROUP_SIZE (instance); ++i)
+-	vect_detect_hybrid_slp_stmts (SLP_INSTANCE_TREE (instance),
+-				      i, pure_slp);
++  /* Now we have a worklist of non-SLP stmts, follow use->def chains and
++     mark any SLP vectorized stmt as hybrid.
++     ???  We're visiting def stmts N times (once for each non-SLP and
++     once for each hybrid-SLP use).  */
++  walk_stmt_info wi;
++  vdhs_data dat;
++  dat.worklist = &worklist;
++  dat.loop_vinfo = loop_vinfo;
++  memset (&wi, 0, sizeof (wi));
++  wi.info = (void *)&dat;
++  while (!worklist.is_empty ())
++    {
++      stmt_vec_info stmt_info = worklist.pop ();
++      /* Since SSA operands are not set up for pattern stmts we need
++	 to use walk_gimple_op.  */
++      wi.is_lhs = 0;
++      walk_gimple_op (stmt_info->stmt, vect_detect_hybrid_slp, &wi);
+     }
+ }
+ 
 diff --git a/gcc/tree-vect-stmts.c b/gcc/tree-vect-stmts.c
 index 507f81b0a0e..ffbba3441de 100644
 --- a/gcc/tree-vect-stmts.c
