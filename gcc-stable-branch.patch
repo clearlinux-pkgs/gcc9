@@ -1,4 +1,12 @@
-GCC Administrator (13):
+GCC Administrator (21):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -23,6 +31,17 @@ Iain Buclaw (5):
       PR d/90651 (ICE in FuncDeclaration::semantic3, at d/dmd/func.c:1524)
       d: Fix ICE in TypeInfoDeclaration, at dmd/declaration.c (PR100967)
 
+Jonathan Wakely (6):
+      libstdc++: Fix find_type helper to work consistently
+      libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
+      libstdc++: Reject std::make_shared<T[]> [PR 99006]
+      libstdc++: Do not use deduced return type for std::visit [PR 100384]
+      libstdc++: Fix filesystem::path constraints for volatile [PR 100630]
+      libstdc++: Replace incorrect static assertion in std::reduce [PR95833]
+
+Marius Hillenbrand (1):
+      IBM Z: Fix vector intrinsics vec_double and vec_floate
+
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
 
@@ -33,6 +52,39 @@ index 8148c559489..ccfb75e5120 100644
 @@ -1 +1 @@
 -9.4.0
 +9.4.1
+diff --git a/gcc/ChangeLog b/gcc/ChangeLog
+index 7558c0a369e..65ec0c4d2ef 100644
+--- a/gcc/ChangeLog
++++ b/gcc/ChangeLog
+@@ -1,3 +1,13 @@
++2021-06-17  Marius Hillenbrand  <mhillen@linux.ibm.com>
++
++	Backported from master:
++	2021-06-17  Marius Hillenbrand  <mhillen@linux.ibm.com>
++
++	PR target/100871
++	* config/s390/vecintrin.h (vec_doublee): Fix to use
++	  __builtin_s390_vflls.
++	(vec_floate): Fix to use __builtin_s390_vflrd.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
+diff --git a/gcc/config/s390/vecintrin.h b/gcc/config/s390/vecintrin.h
+index d7a4ae64c36..788175e1543 100644
+--- a/gcc/config/s390/vecintrin.h
++++ b/gcc/config/s390/vecintrin.h
+@@ -109,8 +109,8 @@ __lcbb(const void *ptr, int bndry)
+ #define vec_rint(X)   __builtin_s390_vfi((X), 0, 0)
+ #define vec_roundc(X) __builtin_s390_vfi((X), 4, 0)
+ #define vec_round(X)  __builtin_s390_vfi((X), 4, 4)
+-#define vec_doublee(X) __builtin_s390_vfll((X))
+-#define vec_floate(X) __builtin_s390_vflr((X), 0, 0)
++#define vec_doublee(X) __builtin_s390_vflls((X))
++#define vec_floate(X) __builtin_s390_vflrd((X), 0, 0)
+ #define vec_load_len_r(X,L)				\
+   (__vector unsigned char)__builtin_s390_vlrlr((L),(X))
+ #define vec_store_len_r(X,Y,L) \
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index b0e68a99a73..809827945f2 100644
 --- a/gcc/d/ChangeLog
@@ -1042,3 +1094,364 @@ index 00000000000..df8ad06c123
 +  class(*), allocatable :: z(:, :)
 +  z = matmul(x, x)
 +end
+diff --git a/libitm/ChangeLog b/libitm/ChangeLog
+index 22d7711bb98..156378b7f0b 100644
+--- a/libitm/ChangeLog
++++ b/libitm/ChangeLog
+@@ -1,3 +1,11 @@
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-06-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/91488
++	* testsuite/libitm.c++/libstdc++-pr91488.C: New test.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
+diff --git a/libitm/testsuite/libitm.c++/libstdc++-pr91488.C b/libitm/testsuite/libitm.c++/libstdc++-pr91488.C
+new file mode 100644
+index 00000000000..e9e82bd1ce2
+--- /dev/null
++++ b/libitm/testsuite/libitm.c++/libstdc++-pr91488.C
+@@ -0,0 +1,9 @@
++// PR libstdc++/91488 "inlining failed in call to always_inline"
++// { dg-do run }
++// { dg-additional-options "-O1" }
++
++#include <string>
++
++int main() {
++    return std::char_traits<char>::length("");
++}
+diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
+index 4a898cd27d7..953926f507d 100644
+--- a/libstdc++-v3/ChangeLog
++++ b/libstdc++-v3/ChangeLog
+@@ -1,3 +1,70 @@
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/95833
++	* include/std/numeric (reduce(Iter, Iter, T, BinaryOp)): Replace
++	incorrect static_assert with ones matching the 'Mandates'
++	conditions in the standard.
++	* testsuite/26_numerics/reduce/95833.cc: New test.
++
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-05-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/100630
++	* include/bits/fs_path.h (__is_constructible_from): Test
++	construction from a const lvalue, not an rvalue.
++	* include/experimental/bits/fs_path.h (__is_constructible_from):
++	Likewise.
++	* testsuite/27_io/filesystem/path/construct/100630.cc: New test.
++	* testsuite/experimental/filesystem/path/construct/100630.cc:
++	New test.
++
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-05-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/100384
++	* include/std/variant (__get_t): New alias template yielding the
++	return type of std::get<N> on a variant.
++	(__visit_result_t): New alias template yielding the result of
++	std::visit.
++	(__do_visit): Use __get_t.
++	(visit): Use __visit_result_t for return type.
++	* testsuite/20_util/variant/100384.cc: New test.
++
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/99006
++	* include/bits/shared_ptr.h (allocate_shared): Assert that _Tp
++	is not an array type.
++	* include/bits/shared_ptr_base.h (__allocate_shared): Likewise.
++	* testsuite/20_util/shared_ptr/creation/99006.cc: New test.
++
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-06-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/91488
++	* include/bits/char_traits.h (__constant_string_p)
++	(__constant_array_p): Give external linkage.
++
++2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-03-11  Jonathan Wakely  <jwakely@redhat.com>
++
++	* python/libstdcxx/v6/printers.py (find_type): Use tag attribute
++	instead of unqualified() method.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
+diff --git a/libstdc++-v3/include/bits/char_traits.h b/libstdc++-v3/include/bits/char_traits.h
+index 50bd25eb2df..4c7b84e357f 100644
+--- a/libstdc++-v3/include/bits/char_traits.h
++++ b/libstdc++-v3/include/bits/char_traits.h
+@@ -227,7 +227,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  Assumes that _CharT is a built-in character type.
+    */
+   template<typename _CharT>
+-    static _GLIBCXX_ALWAYS_INLINE constexpr bool
++    _GLIBCXX_ALWAYS_INLINE constexpr bool
+     __constant_string_p(const _CharT* __s)
+     {
+ #ifdef _GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED
+@@ -250,7 +250,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+    *  Assumes that _CharT is a built-in character type.
+    */
+   template<typename _CharT>
+-    static _GLIBCXX_ALWAYS_INLINE constexpr bool
++    _GLIBCXX_ALWAYS_INLINE constexpr bool
+     __constant_char_array_p(const _CharT* __a, size_t __n)
+     {
+ #ifdef _GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED
+diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
+index 13eb18c0652..8b801c6787c 100644
+--- a/libstdc++-v3/include/bits/fs_path.h
++++ b/libstdc++-v3/include/bits/fs_path.h
+@@ -110,7 +110,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ 
+     template<typename _Source>
+       struct __constructible_from<_Source, void>
+-      : decltype(__is_path_src(std::declval<_Source>(), 0))
++      : decltype(__is_path_src(std::declval<const _Source&>(), 0))
+       { };
+ 
+     template<typename _Tp1, typename _Tp2 = void>
+diff --git a/libstdc++-v3/include/bits/shared_ptr.h b/libstdc++-v3/include/bits/shared_ptr.h
+index 281600b2901..4ddc52ae723 100644
+--- a/libstdc++-v3/include/bits/shared_ptr.h
++++ b/libstdc++-v3/include/bits/shared_ptr.h
+@@ -698,6 +698,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     inline shared_ptr<_Tp>
+     allocate_shared(const _Alloc& __a, _Args&&... __args)
+     {
++      static_assert(!is_array<_Tp>::value, "make_shared<T[]> not supported");
++
+       return shared_ptr<_Tp>(_Sp_alloc_shared_tag<_Alloc>{__a},
+ 			     std::forward<_Args>(__args)...);
+     }
+diff --git a/libstdc++-v3/include/bits/shared_ptr_base.h b/libstdc++-v3/include/bits/shared_ptr_base.h
+index 0367c2d51a5..8af6e9fb11c 100644
+--- a/libstdc++-v3/include/bits/shared_ptr_base.h
++++ b/libstdc++-v3/include/bits/shared_ptr_base.h
+@@ -1822,6 +1822,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     inline __shared_ptr<_Tp, _Lp>
+     __allocate_shared(const _Alloc& __a, _Args&&... __args)
+     {
++      static_assert(!is_array<_Tp>::value, "make_shared<T[]> not supported");
++
+       return __shared_ptr<_Tp, _Lp>(_Sp_alloc_shared_tag<_Alloc>{__a},
+ 				    std::forward<_Args>(__args)...);
+     }
+diff --git a/libstdc++-v3/include/experimental/bits/fs_path.h b/libstdc++-v3/include/experimental/bits/fs_path.h
+index 33a415645d9..ba12b2f1734 100644
+--- a/libstdc++-v3/include/experimental/bits/fs_path.h
++++ b/libstdc++-v3/include/experimental/bits/fs_path.h
+@@ -125,7 +125,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ 
+     template<typename _Source>
+       struct __constructible_from<_Source, void>
+-      : decltype(__is_path_src(std::declval<_Source>(), 0))
++      : decltype(__is_path_src(std::declval<const _Source&>(), 0))
+       { };
+ 
+     template<typename _Tp1, typename _Tp2 = void,
+diff --git a/libstdc++-v3/include/std/numeric b/libstdc++-v3/include/std/numeric
+index 7f80d06cfbc..25fdfaf735f 100644
+--- a/libstdc++-v3/include/std/numeric
++++ b/libstdc++-v3/include/std/numeric
+@@ -261,9 +261,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     reduce(_InputIterator __first, _InputIterator __last, _Tp __init,
+ 	   _BinaryOperation __binary_op)
+     {
+-      using value_type = typename iterator_traits<_InputIterator>::value_type;
++      using __ref = typename iterator_traits<_InputIterator>::reference;
++      static_assert(is_invocable_r_v<_Tp, _BinaryOperation&, _Tp&, __ref>);
++      static_assert(is_invocable_r_v<_Tp, _BinaryOperation&, __ref, _Tp&>);
+       static_assert(is_invocable_r_v<_Tp, _BinaryOperation&, _Tp&, _Tp&>);
+-      static_assert(is_convertible_v<value_type, _Tp>);
++      static_assert(is_invocable_r_v<_Tp, _BinaryOperation&, __ref, __ref>);
+       if constexpr (__is_random_access_iter<_InputIterator>::value)
+ 	{
+ 	  while ((__last - __first) >= 4)
+diff --git a/libstdc++-v3/include/std/variant b/libstdc++-v3/include/std/variant
+index 321228753cd..99a35cc5915 100644
+--- a/libstdc++-v3/include/std/variant
++++ b/libstdc++-v3/include/std/variant
+@@ -1039,6 +1039,14 @@ namespace __variant
+ 			      std::index_sequence<__indices...>>
+     : _Base_dedup<__indices, __poison_hash<remove_const_t<_Types>>>... { };
+ 
++  template<size_t _Np, typename _Variant>
++    using __get_t = decltype(std::get<_Np>(std::declval<_Variant>()));
++
++  // Return type of std::visit.
++  template<typename _Visitor, typename... _Variants>
++    using __visit_result_t
++      = invoke_result_t<_Visitor, __get_t<0, _Variants>...>;
++
+ } // namespace __variant
+ } // namespace __detail
+ 
+@@ -1191,7 +1199,8 @@ namespace __variant
+ #undef _VARIANT_RELATION_FUNCTION_TEMPLATE
+ 
+   template<typename _Visitor, typename... _Variants>
+-    constexpr decltype(auto) visit(_Visitor&&, _Variants&&...);
++    constexpr __detail::__variant::__visit_result_t<_Visitor, _Variants...>
++    visit(_Visitor&&, _Variants&&...);
+ 
+   template<typename... _Types>
+     inline enable_if_t<(is_move_constructible_v<_Types> && ...)
+@@ -1638,7 +1647,7 @@ namespace __variant
+     __do_visit(_Visitor&& __visitor, _Variants&&... __variants)
+     {
+       using _Deduced_type = std::invoke_result<_Visitor,
+-	decltype(std::get<0>(std::declval<_Variants>()))...>;
++	__detail::__variant::__get_t<0, _Variants>...>;
+ 
+       using _Result_type = typename std::conditional_t<__use_index,
+ 	__detail::__variant::__variant_idx_cookie,
+@@ -1654,14 +1663,14 @@ namespace __variant
+     }
+ 
+   template<typename _Visitor, typename... _Variants>
+-    constexpr decltype(auto)
++    constexpr __detail::__variant::__visit_result_t<_Visitor, _Variants...>
+     visit(_Visitor&& __visitor, _Variants&&... __variants)
+     {
+       if ((__variants.valueless_by_exception() || ...))
+ 	__throw_bad_variant_access("Unexpected index");
+ 
+-      return __do_visit(std::forward<_Visitor>(__visitor),
+-			std::forward<_Variants>(__variants)...);
++      return std::__do_visit(std::forward<_Visitor>(__visitor),
++			     std::forward<_Variants>(__variants)...);
+     }
+ 
+ #if __cplusplus > 201703L
+diff --git a/libstdc++-v3/python/libstdcxx/v6/printers.py b/libstdc++-v3/python/libstdcxx/v6/printers.py
+index 32b8210414a..0c94a038437 100644
+--- a/libstdc++-v3/python/libstdcxx/v6/printers.py
++++ b/libstdc++-v3/python/libstdcxx/v6/printers.py
+@@ -85,8 +85,8 @@ except ImportError:
+ def find_type(orig, name):
+     typ = orig.strip_typedefs()
+     while True:
+-        # Strip cv-qualifiers.  PR 67440.
+-        search = '%s::%s' % (typ.unqualified(), name)
++        # Use Type.tag to ignore cv-qualifiers.  PR 67440.
++        search = '%s::%s' % (typ.tag, name)
+         try:
+             return gdb.lookup_type(search)
+         except RuntimeError:
+diff --git a/libstdc++-v3/testsuite/20_util/shared_ptr/creation/99006.cc b/libstdc++-v3/testsuite/20_util/shared_ptr/creation/99006.cc
+new file mode 100644
+index 00000000000..d5f7a5da5e9
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/shared_ptr/creation/99006.cc
+@@ -0,0 +1,9 @@
++// FIXME: This should use { target { ! c++20 } }
++// { dg-do compile }
++
++#include <memory>
++
++auto p = std::make_shared<int[]>(2); // { dg-error "here" }
++auto q = std::make_shared<int[2]>(1, 2); // { dg-error "here" }
++
++// { dg-prune-output "static assertion failed" }
+diff --git a/libstdc++-v3/testsuite/20_util/variant/100384.cc b/libstdc++-v3/testsuite/20_util/variant/100384.cc
+new file mode 100644
+index 00000000000..4866aa017ff
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/variant/100384.cc
+@@ -0,0 +1,9 @@
++// { dg-do compile { target c++17 } }
++
++#include <variant>
++
++int visit(int*, std::true_type) { return 0; }
++
++const std::true_type dat;
++
++int i = visit(nullptr, dat);
+diff --git a/libstdc++-v3/testsuite/26_numerics/reduce/95833.cc b/libstdc++-v3/testsuite/26_numerics/reduce/95833.cc
+new file mode 100644
+index 00000000000..cf4644f53c9
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/reduce/95833.cc
+@@ -0,0 +1,16 @@
++// { dg-do compile { target c++17 } }
++// PR libstdc++/95833 - Incorrect static_assert in std::reduce overload
++
++#include <numeric>
++
++struct A { };
++struct B { };
++
++struct binop
++{
++  template<typename T, typename U>
++    A operator()(T&&, U&&) const { return A{}; }
++};
++
++B b;
++A a = std::reduce(&b, &b + 1, A{}, binop{});
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/construct/100630.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/construct/100630.cc
+new file mode 100644
+index 00000000000..eb8473e600e
+--- /dev/null
++++ b/libstdc++-v3/testsuite/27_io/filesystem/path/construct/100630.cc
+@@ -0,0 +1,14 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do compile { target c++17 } }
++
++#include <filesystem>
++
++void f(bool) { }
++void f(const std::filesystem::path&) { }
++
++void
++test_100630()
++{
++  volatile bool b = true;
++  f(b);
++}
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/path/construct/100630.cc b/libstdc++-v3/testsuite/experimental/filesystem/path/construct/100630.cc
+new file mode 100644
+index 00000000000..b2428ff74cf
+--- /dev/null
++++ b/libstdc++-v3/testsuite/experimental/filesystem/path/construct/100630.cc
+@@ -0,0 +1,14 @@
++// { dg-do compile { target c++11 } }
++// { dg-require-filesystem-ts "" }
++
++#include <experimental/filesystem>
++
++void f(bool) { }
++void f(const std::experimental::filesystem::path&) { }
++
++void
++test_100630()
++{
++  volatile bool b = true;
++  f(b);
++}
