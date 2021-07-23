@@ -1,4 +1,35 @@
-GCC Administrator (24):
+Bill Schmidt (1):
+      rs6000: Don't let swaps pass break multiply low-part (PR101129)
+
+GCC Administrator (52):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -24,8 +55,9 @@ GCC Administrator (24):
       Daily bump.
       Daily bump.
 
-Harald Anlauf (1):
+Harald Anlauf (2):
       Fortran - ICE in inline_matmul_assign
+      Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
 
 Iain Buclaw (5):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -34,13 +66,18 @@ Iain Buclaw (5):
       PR d/90651 (ICE in FuncDeclaration::semantic3, at d/dmd/func.c:1524)
       d: Fix ICE in TypeInfoDeclaration, at dmd/declaration.c (PR100967)
 
-Jonathan Wakely (6):
+Jonathan Wakely (11):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
       libstdc++: Do not use deduced return type for std::visit [PR 100384]
       libstdc++: Fix filesystem::path constraints for volatile [PR 100630]
       libstdc++: Replace incorrect static assertion in std::reduce [PR95833]
+      libstdc++: Fix constraint on std::optional assignment [PR 100982]
+      libstdc++: Fix constructor constraints for std::any  (PR 90415)
+      libstdc++: Fix std::any constraints [PR101034]
+      libstdc++: Move atomic functions to libsupc++ [PR 96657]
+      libstdc++: Fix test failure in C++20 mode
 
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
@@ -52,8 +89,15 @@ Martin Liska (2):
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
 
-Uros Bizjak (1):
+Segher Boessenkool (1):
+      combine: Don't create REG_UNUSED notes if the reg already died (PR99927)
+
+Thomas Koenig (1):
+      Do not replace variable op variable in I/O implied DO loop replacement.
+
+Uros Bizjak (2):
       i386: Prevent unwanted combine from LZCNT to BSR [PR101175]
+      i386: Remove atomic_storedi_fpu and atomic_loaddi_fpu peepholes [PR100182]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 7ab95a2466e..fdaf498c25f 100644
@@ -994,10 +1038,33 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..adf4d69a829 100644
+index 7558c0a369e..0ef611050e1 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,24 @@
+@@ -1,3 +1,47 @@
++2021-07-20  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/100182
++	* config/i386/sync.md (define_peephole2 atomic_storedi_fpu):
++	Remove.
++	(define_peephole2 atomic_loaddi_fpu): Ditto.
++
++2021-07-19  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/101129
++	* config/rs6000/rs6000-p8swap.c (has_part_mult): New.
++	(rs6000_analyze_swaps): Insns containing a subreg of a mult are
++	not swappable.
++
++2021-07-19  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	Backported from master:
++	2021-04-18  Segher Boessenkool  <segher@kernel.crashing.org>
++
++	PR rtl-optimization/99927
++	* combine.c (distribute_notes) [REG_UNUSED]: If the register already
++	is dead, just drop it.
++
 +2021-06-24  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	Backported from master:
@@ -1022,6 +1089,22 @@ index 7558c0a369e..adf4d69a829 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/combine.c b/gcc/combine.c
+index d82161e5161..fe31bb59c82 100644
+--- a/gcc/combine.c
++++ b/gcc/combine.c
+@@ -14392,6 +14392,11 @@ distribute_notes (rtx notes, rtx_insn *from_insn, rtx_insn *i3, rtx_insn *i2,
+ 	     we keep notes from i2 or i1 if they will turn into REG_DEAD
+ 	     notes.  */
+ 
++	  /* If this register is set or clobbered between FROM_INSN and I3,
++	     we should not create a note for it.  */
++	  if (reg_set_between_p (XEXP (note, 0), from_insn, i3))
++	    break;
++
+ 	  /* If this register is set or clobbered in I3, put the note there
+ 	     unless there is one already.  */
+ 	  if (reg_set_p (XEXP (note, 0), PATTERN (i3)))
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
 index 8ae7ea68c16..5d76d36e1c0 100644
 --- a/gcc/config/i386/i386.md
@@ -1089,6 +1172,213 @@ index 8ae7ea68c16..5d76d36e1c0 100644
     (parallel
       [(set (match_dup 0) (xor:SWI48 (match_dup 0) (match_dup 2)))
        (clobber (reg:CC FLAGS_REG))])]
+diff --git a/gcc/config/i386/sync.md b/gcc/config/i386/sync.md
+index 08149006876..bbf91c46c4d 100644
+--- a/gcc/config/i386/sync.md
++++ b/gcc/config/i386/sync.md
+@@ -212,82 +212,6 @@
+   DONE;
+ })
+ 
+-(define_peephole2
+-  [(set (match_operand:DF 0 "fp_register_operand")
+-	(unspec:DF [(match_operand:DI 1 "memory_operand")]
+-		   UNSPEC_FILD_ATOMIC))
+-   (set (match_operand:DI 2 "memory_operand")
+-	(unspec:DI [(match_dup 0)]
+-		   UNSPEC_FIST_ATOMIC))
+-   (set (match_operand:DF 3 "sse_reg_operand")
+-	(match_operand:DF 4 "memory_operand"))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (2, operands[0])
+-   && rtx_equal_p (XEXP (operands[4], 0), XEXP (operands[2], 0))"
+-  [(set (match_dup 3) (match_dup 5))
+-   (set (match_dup 4) (match_dup 3))]
+-  "operands[5] = gen_lowpart (DFmode, operands[1]);")
+-
+-(define_peephole2
+-  [(set (match_operand:DF 0 "fp_register_operand")
+-	(unspec:DF [(match_operand:DI 1 "memory_operand")]
+-		   UNSPEC_FILD_ATOMIC))
+-   (set (match_operand:DI 2 "memory_operand")
+-	(unspec:DI [(match_dup 0)]
+-		   UNSPEC_FIST_ATOMIC))
+-   (set (mem:BLK (scratch:SI))
+-	(unspec:BLK [(mem:BLK (scratch:SI))] UNSPEC_MEMORY_BLOCKAGE))
+-   (set (match_operand:DF 3 "sse_reg_operand")
+-	(match_operand:DF 4 "memory_operand"))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (2, operands[0])
+-   && rtx_equal_p (XEXP (operands[4], 0), XEXP (operands[2], 0))"
+-  [(const_int 0)]
+-{
+-  emit_move_insn (operands[3], gen_lowpart (DFmode, operands[1]));
+-  emit_move_insn (operands[4], operands[3]);
+-  emit_insn (gen_memory_blockage ());
+-  DONE;
+-})
+-
+-(define_peephole2
+-  [(set (match_operand:DF 0 "sse_reg_operand")
+-	(unspec:DF [(match_operand:DI 1 "memory_operand")]
+-		   UNSPEC_LDX_ATOMIC))
+-   (set (match_operand:DI 2 "memory_operand")
+-	(unspec:DI [(match_dup 0)]
+-		   UNSPEC_STX_ATOMIC))
+-   (set (match_operand:DF 3 "sse_reg_operand")
+-	(match_operand:DF 4 "memory_operand"))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (2, operands[0])
+-   && rtx_equal_p (XEXP (operands[4], 0), XEXP (operands[2], 0))"
+-  [(set (match_dup 3) (match_dup 5))
+-   (set (match_dup 4) (match_dup 3))]
+-  "operands[5] = gen_lowpart (DFmode, operands[1]);")
+-
+-(define_peephole2
+-  [(set (match_operand:DF 0 "sse_reg_operand")
+-	(unspec:DF [(match_operand:DI 1 "memory_operand")]
+-		   UNSPEC_LDX_ATOMIC))
+-   (set (match_operand:DI 2 "memory_operand")
+-	(unspec:DI [(match_dup 0)]
+-		   UNSPEC_STX_ATOMIC))
+-   (set (mem:BLK (scratch:SI))
+-	(unspec:BLK [(mem:BLK (scratch:SI))] UNSPEC_MEMORY_BLOCKAGE))
+-   (set (match_operand:DF 3 "sse_reg_operand")
+-	(match_operand:DF 4 "memory_operand"))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (2, operands[0])
+-   && rtx_equal_p (XEXP (operands[4], 0), XEXP (operands[2], 0))"
+-  [(const_int 0)]
+-{
+-  emit_move_insn (operands[3], gen_lowpart (DFmode, operands[1]));
+-  emit_move_insn (operands[4], operands[3]);
+-  emit_insn (gen_memory_blockage ());
+-  DONE;
+-})
+-
+ (define_expand "atomic_store<mode>"
+   [(set (match_operand:ATOMIC 0 "memory_operand")
+ 	(unspec:ATOMIC [(match_operand:ATOMIC 1 "nonimmediate_operand")
+@@ -375,82 +299,6 @@
+   DONE;
+ })
+ 
+-(define_peephole2
+-  [(set (match_operand:DF 0 "memory_operand")
+-	(match_operand:DF 1 "any_fp_register_operand"))
+-   (set (match_operand:DF 2 "fp_register_operand")
+-	(unspec:DF [(match_operand:DI 3 "memory_operand")]
+-		   UNSPEC_FILD_ATOMIC))
+-   (set (match_operand:DI 4 "memory_operand")
+-	(unspec:DI [(match_dup 2)]
+-		   UNSPEC_FIST_ATOMIC))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (3, operands[2])
+-   && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+-  [(set (match_dup 0) (match_dup 1))
+-   (set (match_dup 5) (match_dup 1))]
+-  "operands[5] = gen_lowpart (DFmode, operands[4]);")
+-
+-(define_peephole2
+-  [(set (match_operand:DF 0 "memory_operand")
+-	(match_operand:DF 1 "any_fp_register_operand"))
+-   (set (mem:BLK (scratch:SI))
+-	(unspec:BLK [(mem:BLK (scratch:SI))] UNSPEC_MEMORY_BLOCKAGE))
+-   (set (match_operand:DF 2 "fp_register_operand")
+-	(unspec:DF [(match_operand:DI 3 "memory_operand")]
+-		   UNSPEC_FILD_ATOMIC))
+-   (set (match_operand:DI 4 "memory_operand")
+-	(unspec:DI [(match_dup 2)]
+-		   UNSPEC_FIST_ATOMIC))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (4, operands[2])
+-   && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+-  [(const_int 0)]
+-{
+-  emit_move_insn (operands[0], operands[1]);
+-  emit_insn (gen_memory_blockage ());
+-  emit_move_insn (gen_lowpart (DFmode, operands[4]), operands[1]);
+-  DONE;
+-})
+-
+-(define_peephole2
+-  [(set (match_operand:DF 0 "memory_operand")
+-	(match_operand:DF 1 "any_fp_register_operand"))
+-   (set (match_operand:DF 2 "sse_reg_operand")
+-	(unspec:DF [(match_operand:DI 3 "memory_operand")]
+-		   UNSPEC_LDX_ATOMIC))
+-   (set (match_operand:DI 4 "memory_operand")
+-	(unspec:DI [(match_dup 2)]
+-		   UNSPEC_STX_ATOMIC))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (3, operands[2])
+-   && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+-  [(set (match_dup 0) (match_dup 1))
+-   (set (match_dup 5) (match_dup 1))]
+-  "operands[5] = gen_lowpart (DFmode, operands[4]);")
+-
+-(define_peephole2
+-  [(set (match_operand:DF 0 "memory_operand")
+-	(match_operand:DF 1 "any_fp_register_operand"))
+-   (set (mem:BLK (scratch:SI))
+-	(unspec:BLK [(mem:BLK (scratch:SI))] UNSPEC_MEMORY_BLOCKAGE))
+-   (set (match_operand:DF 2 "sse_reg_operand")
+-	(unspec:DF [(match_operand:DI 3 "memory_operand")]
+-		   UNSPEC_LDX_ATOMIC))
+-   (set (match_operand:DI 4 "memory_operand")
+-	(unspec:DI [(match_dup 2)]
+-		   UNSPEC_STX_ATOMIC))]
+-  "!TARGET_64BIT
+-   && peep2_reg_dead_p (4, operands[2])
+-   && rtx_equal_p (XEXP (operands[0], 0), XEXP (operands[3], 0))"
+-  [(const_int 0)]
+-{
+-  emit_move_insn (operands[0], operands[1]);
+-  emit_insn (gen_memory_blockage ());
+-  emit_move_insn (gen_lowpart (DFmode, operands[4]), operands[1]);
+-  DONE;
+-})
+-
+ ;; ??? You'd think that we'd be able to perform this via FLOAT + FIX_TRUNC
+ ;; operations.  But the fix_trunc patterns want way more setup than we want
+ ;; to provide.  Note that the scratch is DFmode instead of XFmode in order
+diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
+index d30e5dec980..d8fc8a74e77 100644
+--- a/gcc/config/rs6000/rs6000-p8swap.c
++++ b/gcc/config/rs6000/rs6000-p8swap.c
+@@ -1501,6 +1501,22 @@ replace_swap_with_copy (swap_web_entry *insn_entry, unsigned i)
+   insn->set_deleted ();
+ }
+ 
++/* INSN is known to contain a SUBREG, which we can normally handle,
++   but if the SUBREG itself contains a MULT then we need to leave it alone
++   to avoid turning a mult_hipart into a mult_lopart, for example.  */
++static bool
++has_part_mult (rtx_insn *insn)
++{
++  rtx body = PATTERN (insn);
++  if (GET_CODE (body) != SET)
++    return false;
++  rtx src = SET_SRC (body);
++  if (GET_CODE (src) != SUBREG)
++    return false;
++  rtx inner = XEXP (src, 0);
++  return (GET_CODE (inner) == MULT);
++}
++
+ /* Make NEW_MEM_EXP's attributes and flags resemble those of
+    ORIGINAL_MEM_EXP.  */
+ static void
+@@ -2437,6 +2453,9 @@ rs6000_analyze_swaps (function *fun)
+ 		    insn_entry[uid].is_swappable = 0;
+ 		  else if (special != SH_NONE)
+ 		    insn_entry[uid].special_handling = special;
++		  else if (insn_entry[uid].contains_subreg
++			   && has_part_mult (insn))
++		    insn_entry[uid].is_swappable = 0;
+ 		  else if (insn_entry[uid].contains_subreg)
+ 		    insn_entry[uid].special_handling = SH_SUBREG;
+ 		}
 diff --git a/gcc/config/s390/vecintrin.h b/gcc/config/s390/vecintrin.h
 index d7a4ae64c36..788175e1543 100644
 --- a/gcc/config/s390/vecintrin.h
@@ -1689,10 +1979,29 @@ index 0b19bcf7f34..117a5bd1592 100644
    Type *t = type->merge2 ();
    Identifier *ident;
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..98fd3a01286 100644
+index f1d66e38980..f1dec2b1bec 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,13 @@
+@@ -1,3 +1,32 @@
++2021-07-16  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-07-14  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/100949
++	* trans-expr.c (gfc_trans_class_init_assign): Call
++	gfc_conv_expr_present only for dummy variables.
++
++2021-07-12  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backported from master:
++	2021-07-06  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/100227
++	* frontend-passes.c (traverse_io_block): Adjust test for
++	when a variable is eligible for the transformation to
++	array slice.
++
 +2021-06-04  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -1707,9 +2016,20 @@ index f1d66e38980..98fd3a01286 100644
  
  	* GCC 9.4.0 released.
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
-index ff71b44b409..7a733cc016c 100644
+index ff71b44b409..46be96c1a22 100644
 --- a/gcc/fortran/frontend-passes.c
 +++ b/gcc/fortran/frontend-passes.c
+@@ -1301,8 +1301,8 @@ traverse_io_block (gfc_code *code, bool *has_reached, gfc_code *prev)
+ 		std::swap (start->value.op.op1, start->value.op.op2);
+ 	      gcc_fallthrough ();
+ 	    case INTRINSIC_MINUS:
+-	      if ((start->value.op.op1->expr_type!= EXPR_VARIABLE
+-		   && start->value.op.op2->expr_type != EXPR_CONSTANT)
++	      if (start->value.op.op1->expr_type!= EXPR_VARIABLE
++		  || start->value.op.op2->expr_type != EXPR_CONSTANT
+ 		  || start->value.op.op1->ref)
+ 		return false;
+ 	      if (!stack_top || !stack_top->iter
 @@ -3921,6 +3921,19 @@ inline_matmul_assign (gfc_code **c, int *walk_subtrees,
    if (m_case == none)
      return 0;
@@ -1730,11 +2050,54 @@ index ff71b44b409..7a733cc016c 100644
    ns = insert_block ();
  
    /* Assign the type of the zero expression for initializing the resulting
+diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
+index 9be8dd185bf..59ffd071430 100644
+--- a/gcc/fortran/trans-expr.c
++++ b/gcc/fortran/trans-expr.c
+@@ -1655,8 +1655,9 @@ gfc_trans_class_init_assign (gfc_code *code)
+ 	}
+     }
+ 
+-  if (code->expr1->symtree->n.sym->attr.optional
+-      || code->expr1->symtree->n.sym->ns->proc_name->attr.entry_master)
++  if (code->expr1->symtree->n.sym->attr.dummy
++      && (code->expr1->symtree->n.sym->attr.optional
++	  || code->expr1->symtree->n.sym->ns->proc_name->attr.entry_master))
+     {
+       tree present = gfc_conv_expr_present (code->expr1->symtree->n.sym);
+       tmp = build3_loc (input_location, COND_EXPR, TREE_TYPE (tmp),
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..18d909473eb 100644
+index 47eac19a1f6..641d1b1b685 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,67 @@
+@@ -1,3 +1,94 @@
++2021-07-20  Uroš Bizjak  <ubizjak@gmail.com>
++
++	PR target/100182
++	* gcc.target/i386/pr71245-1.c: Remove.
++	* gcc.target/i386/pr71245-2.c: Ditto.
++
++2021-07-19  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/101129
++	* gcc.target/powerpc/pr101129.c: New.
++
++2021-07-16  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-07-14  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/100949
++	* gfortran.dg/pr100949.f90: New test.
++
++2021-07-12  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	Backported from master:
++	2021-07-06  Thomas Koenig  <tkoenig@gcc.gnu.org>
++
++	PR fortran/100227
++	* gfortran.dg/implied_do_io_7.f90: New test.
++
 +2021-06-24  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	Backported from master:
@@ -1835,6 +2198,103 @@ index 00000000000..ed7a08110a5
 +
 +  if (r != -1)
 +    abort ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr71245-1.c b/gcc/testsuite/gcc.target/i386/pr71245-1.c
+deleted file mode 100644
+index 02c0dcb80b6..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr71245-1.c
++++ /dev/null
+@@ -1,22 +0,0 @@
+-/* PR target/71245 */
+-/* { dg-do compile { target ia32 } } */
+-/* { dg-options "-O2 -march=pentium -mno-sse -mfpmath=387" } */
+-
+-typedef union
+-{
+-  unsigned long long ll;
+-  double d;
+-} u_t;
+-
+-u_t d = { .d = 5.0 };
+-
+-void foo_d (void)
+-{
+-  u_t tmp;
+-  
+-  tmp.ll = __atomic_load_n (&d.ll, __ATOMIC_SEQ_CST);
+-  tmp.d += 1.0;
+-  __atomic_store_n (&d.ll, tmp.ll, __ATOMIC_SEQ_CST);
+-}
+-
+-/* { dg-final { scan-assembler-not "(fistp|fild)" { xfail *-*-* } } } */
+diff --git a/gcc/testsuite/gcc.target/i386/pr71245-2.c b/gcc/testsuite/gcc.target/i386/pr71245-2.c
+deleted file mode 100644
+index bf37a8cbb71..00000000000
+--- a/gcc/testsuite/gcc.target/i386/pr71245-2.c
++++ /dev/null
+@@ -1,22 +0,0 @@
+-/* PR target/71245 */
+-/* { dg-do compile { target ia32 } } */
+-/* { dg-options "-O2 -march=pentium -msse -mno-sse2 -mfpmath=387" } */
+-
+-typedef union
+-{
+-  unsigned long long ll;
+-  double d;
+-} u_t;
+-
+-u_t d = { .d = 5.0 };
+-
+-void foo_d (void)
+-{
+-  u_t tmp;
+-  
+-  tmp.ll = __atomic_load_n (&d.ll, __ATOMIC_SEQ_CST);
+-  tmp.d += 1.0;
+-  __atomic_store_n (&d.ll, tmp.ll, __ATOMIC_SEQ_CST);
+-}
+-
+-/* { dg-final { scan-assembler-not "movlps" { xfail *-*-* } } } */
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr101129.c b/gcc/testsuite/gcc.target/powerpc/pr101129.c
+new file mode 100644
+index 00000000000..1abc12480e4
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr101129.c
+@@ -0,0 +1,35 @@
++/* { dg-do run } */
++/* { dg-require-effective-target p8vector_hw } */
++/* { dg-options "-mdejagnu-cpu=power8 -O " } */
++
++/* PR101129: The swaps pass was turning a mult-lopart into a mult-hipart.
++   Make sure we aren't doing that anymore.  */
++
++typedef unsigned char u8;
++typedef unsigned char __attribute__((__vector_size__ (8))) U;
++typedef unsigned char __attribute__((__vector_size__ (16))) V;
++typedef unsigned int u32;
++typedef unsigned long long u64;
++typedef __int128 u128;
++
++u8 g;
++U u;
++
++void
++foo0 (u32 u32_0, U *ret)
++{
++  u128 u128_2 = u32_0 * (u128)((V){ 5 } > (u32_0 & 4));
++  u64 u64_r = u128_2 >> 64;
++  u8 u8_r = u64_r + g;
++  *ret = u + u8_r;
++}
++
++int
++main (void)
++{
++  U x;
++  foo0 (7, &x);
++  for (unsigned i = 0; i < sizeof (x); i++)
++    if (x[i] != 0) __builtin_abort();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gdc.dg/pr100882a.d b/gcc/testsuite/gdc.dg/pr100882a.d
 new file mode 100644
@@ -2140,6 +2600,28 @@ index 00000000000..042cf8af11a
 +    auto ti = o.classinfo;
 +}
 +
+diff --git a/gcc/testsuite/gfortran.dg/implied_do_io_7.f90 b/gcc/testsuite/gfortran.dg/implied_do_io_7.f90
+new file mode 100644
+index 00000000000..63927aafea9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/implied_do_io_7.f90
+@@ -0,0 +1,16 @@
++! { dg-do run }
++! PR 100227 - this was falsely optimized, leading to nonsense  results.
++! Original test case by "Mathieu".
++
++program p
++  implicit none
++  integer, parameter :: nbmode = 3
++  integer :: k
++  real    :: mass(nbmode*2)
++  character (len=80) :: line
++  do k = 1, nbmode*2
++     mass(k) = k
++  end do
++  write (unit=line,fmt='(*(F6.2))') (mass(k+k), k=1,nbmode)
++  if (line /= '  2.00  4.00  6.00') stop 1
++end program
 diff --git a/gcc/testsuite/gfortran.dg/inline_matmul_25.f90 b/gcc/testsuite/gfortran.dg/inline_matmul_25.f90
 new file mode 100644
 index 00000000000..df8ad06c123
@@ -2154,6 +2636,22 @@ index 00000000000..df8ad06c123
 +  real :: x(3, 3) = 1.0
 +  class(*), allocatable :: z(:, :)
 +  z = matmul(x, x)
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr100949.f90 b/gcc/testsuite/gfortran.dg/pr100949.f90
+new file mode 100644
+index 00000000000..6c736fd7f72
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr100949.f90
+@@ -0,0 +1,10 @@
++! { dg-do compile }
++! PR fortran/100949 - ICE in gfc_conv_expr_present, at fortran/trans-expr.c:1975
++
++subroutine s
++entry f
++  type t
++  end type
++  class(t), allocatable :: y, z
++  allocate (z, mold=y)
 +end
 diff --git a/libitm/ChangeLog b/libitm/ChangeLog
 index 22d7711bb98..156378b7f0b 100644
@@ -2187,10 +2685,72 @@ index 00000000000..e9e82bd1ce2
 +    return std::char_traits<char>::length("");
 +}
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 4a898cd27d7..953926f507d 100644
+index 4a898cd27d7..d6182b2727d 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,70 @@
+@@ -1,3 +1,132 @@
++2021-07-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/ext/profile/mutex_extensions_neg.cc: Prune
++	additional errors in C++20 mode.
++
++2021-07-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-04-15  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/96657
++	* libsupc++/Makefile.am: Add atomicity.cc here.
++	* src/c++98/Makefile.am: Remove it from here.
++	* libsupc++/Makefile.in: Regenerate.
++	* src/c++98/Makefile.in: Regenerate.
++	* testsuite/18_support/exception_ptr/96657.cc: New test.
++
++2021-07-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-06-14  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/101034
++	* include/std/any (any(in_place_t<T>, initializer_list<U>, A&&...))
++	(any::emplace<T>(initializer_list<U>, A&&...)): Fix constraint
++	to use lvalue.
++	* testsuite/20_util/any/cons/101034.cc: New test.
++
++2021-07-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-04-23  Kamlesh Kumar  <kamleshbhalui@gmail.com>
++		    Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/90415
++	PR libstdc++/92156
++	* include/std/any (any): Rename template parameters for consistency
++	with the standard.
++	(any::_Decay): Rename to _Decay_if_not_any.
++	(any::any(T&&)): Remove is_constructible from constraints. Remove
++	non-standard overload.
++	(any::any(in_place_type_t<T>, Args&&...))
++	(any::any(in_place_type_t<T>, initializer_list<U>, Args&&...))
++	(any::emplace(Args&&...))
++	(any::emplace(initializer_list<U>, Args&&...)):
++	Use decay_t instead of _Decay.
++	* testsuite/20_util/any/cons/90415.cc: New test.
++	* testsuite/20_util/any/cons/92156.cc: New Test.
++	* testsuite/20_util/any/misc/any_cast_neg.cc: Make dg-error directives
++	more robust.
++	* testsuite/20_util/any/modifiers/92156.cc: New test.
++
++2021-07-22  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-06-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/100982
++	* include/std/optional (optional::operator=(const optional<U>&)):
++	Fix value category used in is_assignable check.
++	* testsuite/20_util/optional/assignment/100982.cc: New test.
++
 +2021-06-18  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -2335,6 +2895,204 @@ index 33a415645d9..ba12b2f1734 100644
        { };
  
      template<typename _Tp1, typename _Tp2 = void,
+diff --git a/libstdc++-v3/include/std/any b/libstdc++-v3/include/std/any
+index 91c4c1a7cf1..4957144342c 100644
+--- a/libstdc++-v3/include/std/any
++++ b/libstdc++-v3/include/std/any
+@@ -105,8 +105,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 				     _Manager_internal<_Tp>,
+ 				     _Manager_external<_Tp>>;
+ 
+-    template<typename _Tp, typename _Decayed = decay_t<_Tp>>
+-      using _Decay = enable_if_t<!is_same<_Decayed, any>::value, _Decayed>;
++    template<typename _Tp, typename _VTp = decay_t<_Tp>>
++      using _Decay_if_not_any = enable_if_t<!is_same_v<_VTp, any>, _VTp>;
+ 
+     /// Emplace with an object created from @p __args as the contained object.
+     template <typename _Tp, typename... _Args,
+@@ -125,10 +125,24 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       void __do_emplace(initializer_list<_Up> __il, _Args&&... __args)
+       {
+ 	reset();
+-        _Mgr::_S_create(_M_storage, __il, std::forward<_Args>(__args)...);
++	_Mgr::_S_create(_M_storage, __il, std::forward<_Args>(__args)...);
+ 	_M_manager = &_Mgr::_S_manage;
+       }
+ 
++    template <typename _Res, typename _Tp, typename... _Args>
++      using __any_constructible
++	= enable_if<__and_<is_copy_constructible<_Tp>,
++			   is_constructible<_Tp, _Args...>>::value,
++		    _Res>;
++
++    template <typename _Tp, typename... _Args>
++      using __any_constructible_t
++	= typename __any_constructible<bool, _Tp, _Args...>::type;
++
++    template<typename _VTp, typename... _Args>
++      using __emplace_t
++	= typename __any_constructible<_VTp&, _VTp, _Args...>::type;
++
+   public:
+     // construct/destruct
+ 
+@@ -165,65 +179,39 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ 	}
+     }
+ 
+-    template <typename _Res, typename _Tp, typename... _Args>
+-    using __any_constructible =
+-      enable_if<__and_<is_copy_constructible<_Tp>,
+-			 is_constructible<_Tp, _Args...>>::value,
+-		  _Res>;
+-
+-    template <typename _Tp, typename... _Args>
+-    using __any_constructible_t =
+-      typename __any_constructible<bool, _Tp, _Args...>::type;
+-
+     /// Construct with a copy of @p __value as the contained object.
+-    template <typename _ValueType, typename _Tp = _Decay<_ValueType>,
+-	      typename _Mgr = _Manager<_Tp>,
+-              __any_constructible_t<_Tp, _ValueType&&> = true,
+-	      enable_if_t<!__is_in_place_type<_Tp>::value, bool> = true>
+-      any(_ValueType&& __value)
++    template <typename _Tp, typename _VTp = _Decay_if_not_any<_Tp>,
++	      typename _Mgr = _Manager<_VTp>,
++	      enable_if_t<is_copy_constructible<_VTp>::value
++			  && !__is_in_place_type<_VTp>::value, bool> = true>
++      any(_Tp&& __value)
+       : _M_manager(&_Mgr::_S_manage)
+       {
+-        _Mgr::_S_create(_M_storage, std::forward<_ValueType>(__value));
+-      }
+-
+-    /// Construct with a copy of @p __value as the contained object.
+-    template <typename _ValueType, typename _Tp = _Decay<_ValueType>,
+-	      typename _Mgr = _Manager<_Tp>,
+-              enable_if_t<__and_v<is_copy_constructible<_Tp>,
+-				  __not_<is_constructible<_Tp, _ValueType&&>>,
+-				  __not_<__is_in_place_type<_Tp>>>,
+-			  bool> = false>
+-      any(_ValueType&& __value)
+-      : _M_manager(&_Mgr::_S_manage)
+-      {
+-        _Mgr::_S_create(_M_storage, __value);
++	_Mgr::_S_create(_M_storage, std::forward<_Tp>(__value));
+       }
+ 
+     /// Construct with an object created from @p __args as the contained object.
+-    template <typename _ValueType, typename... _Args,
+-	      typename _Tp = _Decay<_ValueType>,
+-	      typename _Mgr = _Manager<_Tp>,
+-              __any_constructible_t<_Tp, _Args&&...> = false>
++    template <typename _Tp, typename... _Args, typename _VTp = decay_t<_Tp>,
++	      typename _Mgr = _Manager<_VTp>,
++	      __any_constructible_t<_VTp, _Args&&...> = false>
+       explicit
+-      any(in_place_type_t<_ValueType>, _Args&&... __args)
++      any(in_place_type_t<_Tp>, _Args&&... __args)
+       : _M_manager(&_Mgr::_S_manage)
+       {
+-        _Mgr::_S_create(_M_storage, std::forward<_Args>(__args)...);
++	_Mgr::_S_create(_M_storage, std::forward<_Args>(__args)...);
+       }
+ 
+     /// Construct with an object created from @p __il and @p __args as
+     /// the contained object.
+-    template <typename _ValueType, typename _Up, typename... _Args,
+-	      typename _Tp = _Decay<_ValueType>,
+-	      typename _Mgr = _Manager<_Tp>,
+-              __any_constructible_t<_Tp, initializer_list<_Up>,
++    template <typename _Tp, typename _Up, typename... _Args,
++	      typename _VTp = decay_t<_Tp>, typename _Mgr = _Manager<_VTp>,
++	      __any_constructible_t<_VTp, initializer_list<_Up>&,
+ 				    _Args&&...> = false>
+       explicit
+-      any(in_place_type_t<_ValueType>,
+-	  initializer_list<_Up> __il, _Args&&... __args)
++      any(in_place_type_t<_Tp>, initializer_list<_Up> __il, _Args&&... __args)
+       : _M_manager(&_Mgr::_S_manage)
+       {
+-        _Mgr::_S_create(_M_storage, __il, std::forward<_Args>(__args)...);
++	_Mgr::_S_create(_M_storage, __il, std::forward<_Args>(__args)...);
+       }
+ 
+     /// Destructor, calls @c reset()
+@@ -232,7 +220,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     // assignments
+ 
+     /// Copy the state of another object.
+-    any& operator=(const any& __rhs)
++    any&
++    operator=(const any& __rhs)
+     {
+       *this = any(__rhs);
+       return *this;
+@@ -243,7 +232,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+      *
+      * @post @c !__rhs.has_value() (not guaranteed for other implementations)
+      */
+-    any& operator=(any&& __rhs) noexcept
++    any&
++    operator=(any&& __rhs) noexcept
+     {
+       if (!__rhs.has_value())
+ 	reset();
+@@ -258,40 +248,37 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     }
+ 
+     /// Store a copy of @p __rhs as the contained object.
+-    template<typename _ValueType>
+-      enable_if_t<is_copy_constructible<_Decay<_ValueType>>::value, any&>
+-      operator=(_ValueType&& __rhs)
++    template<typename _Tp>
++      enable_if_t<is_copy_constructible<_Decay_if_not_any<_Tp>>::value, any&>
++      operator=(_Tp&& __rhs)
+       {
+-	*this = any(std::forward<_ValueType>(__rhs));
++	*this = any(std::forward<_Tp>(__rhs));
+ 	return *this;
+       }
+ 
+     /// Emplace with an object created from @p __args as the contained object.
+-    template <typename _ValueType, typename... _Args>
+-      typename __any_constructible<_Decay<_ValueType>&,
+-				   _Decay<_ValueType>, _Args&&...>::type
++    template <typename _Tp, typename... _Args>
++      __emplace_t<decay_t<_Tp>, _Args...>
+       emplace(_Args&&... __args)
+       {
+-	__do_emplace<_Decay<_ValueType>>(std::forward<_Args>(__args)...);
++	using _VTp = decay_t<_Tp>;
++	__do_emplace<_VTp>(std::forward<_Args>(__args)...);
+ 	any::_Arg __arg;
+ 	this->_M_manager(any::_Op_access, this, &__arg);
+-	return *static_cast<_Decay<_ValueType>*>(__arg._M_obj);
++	return *static_cast<_VTp*>(__arg._M_obj);
+       }
+ 
+     /// Emplace with an object created from @p __il and @p __args as
+     /// the contained object.
+-    template <typename _ValueType, typename _Up, typename... _Args>
+-      typename __any_constructible<_Decay<_ValueType>&,
+-				   _Decay<_ValueType>,
+-				   initializer_list<_Up>,
+-				   _Args&&...>::type
++    template <typename _Tp, typename _Up, typename... _Args>
++      __emplace_t<decay_t<_Tp>, initializer_list<_Up>&, _Args&&...>
+       emplace(initializer_list<_Up> __il, _Args&&... __args)
+       {
+-	__do_emplace<_Decay<_ValueType>, _Up>(__il,
+-					      std::forward<_Args>(__args)...);
++	using _VTp = decay_t<_Tp>;
++	__do_emplace<_VTp, _Up>(__il, std::forward<_Args>(__args)...);
+ 	any::_Arg __arg;
+ 	this->_M_manager(any::_Op_access, this, &__arg);
+-	return *static_cast<_Decay<_ValueType>*>(__arg._M_obj);
++	return *static_cast<_VTp*>(__arg._M_obj);
+       }
+ 
+     // modifiers
 diff --git a/libstdc++-v3/include/std/numeric b/libstdc++-v3/include/std/numeric
 index 7f80d06cfbc..25fdfaf735f 100644
 --- a/libstdc++-v3/include/std/numeric
@@ -2353,6 +3111,19 @@ index 7f80d06cfbc..25fdfaf735f 100644
        if constexpr (__is_random_access_iter<_InputIterator>::value)
  	{
  	  while ((__last - __first) >= 4)
+diff --git a/libstdc++-v3/include/std/optional b/libstdc++-v3/include/std/optional
+index 503d859bee6..0b264f49a2a 100644
+--- a/libstdc++-v3/include/std/optional
++++ b/libstdc++-v3/include/std/optional
+@@ -796,7 +796,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       template<typename _Up>
+ 	enable_if_t<__and_v<__not_<is_same<_Tp, _Up>>,
+ 			    is_constructible<_Tp, const _Up&>,
+-			    is_assignable<_Tp&, _Up>,
++			    is_assignable<_Tp&, const _Up&>,
+ 			    __not_<__converts_from_optional<_Tp, _Up>>,
+ 			    __not_<__assigns_from_optional<_Tp, _Up>>>,
+ 		    optional&>
 diff --git a/libstdc++-v3/include/std/variant b/libstdc++-v3/include/std/variant
 index 321228753cd..99a35cc5915 100644
 --- a/libstdc++-v3/include/std/variant
@@ -2409,6 +3180,78 @@ index 321228753cd..99a35cc5915 100644
      }
  
  #if __cplusplus > 201703L
+diff --git a/libstdc++-v3/libsupc++/Makefile.am b/libstdc++-v3/libsupc++/Makefile.am
+index eec7b953514..efffc014847 100644
+--- a/libstdc++-v3/libsupc++/Makefile.am
++++ b/libstdc++-v3/libsupc++/Makefile.am
+@@ -48,6 +48,7 @@ sources = \
+ 	array_type_info.cc \
+ 	atexit_arm.cc \
+ 	atexit_thread.cc \
++	atomicity.cc \
+ 	bad_alloc.cc \
+ 	bad_array_length.cc \
+ 	bad_array_new.cc \
+@@ -127,6 +128,9 @@ cp-demangle.lo: cp-demangle.c
+ cp-demangle.o: cp-demangle.c
+ 	$(C_COMPILE) -DIN_GLIBCPP_V3 -Wno-error -c $<
+ 
++atomicity_file = ${glibcxx_srcdir}/$(ATOMICITY_SRCDIR)/atomicity.h
++atomicity.cc: ${atomicity_file}
++	$(LN_S) ${atomicity_file} ./atomicity.cc || true
+ 
+ # Use special rules for the C++17 sources so that the proper flags are passed.
+ new_opa.lo: new_opa.cc
+diff --git a/libstdc++-v3/libsupc++/Makefile.in b/libstdc++-v3/libsupc++/Makefile.in
+index 5d8ac5ca0ba..b469f62a43d 100644
+--- a/libstdc++-v3/libsupc++/Makefile.in
++++ b/libstdc++-v3/libsupc++/Makefile.in
+@@ -152,13 +152,13 @@ am__installdirs = "$(DESTDIR)$(toolexeclibdir)" "$(DESTDIR)$(bitsdir)" \
+ LTLIBRARIES = $(noinst_LTLIBRARIES) $(toolexeclib_LTLIBRARIES)
+ libsupc___la_LIBADD =
+ am__objects_1 = array_type_info.lo atexit_arm.lo atexit_thread.lo \
+-	bad_alloc.lo bad_array_length.lo bad_array_new.lo bad_cast.lo \
+-	bad_typeid.lo class_type_info.lo del_op.lo del_ops.lo \
+-	del_opnt.lo del_opv.lo del_opvs.lo del_opvnt.lo dyncast.lo \
+-	eh_alloc.lo eh_arm.lo eh_aux_runtime.lo eh_call.lo eh_catch.lo \
+-	eh_exception.lo eh_globals.lo eh_personality.lo eh_ptr.lo \
+-	eh_term_handler.lo eh_terminate.lo eh_tm.lo eh_throw.lo \
+-	eh_type.lo eh_unex_handler.lo enum_type_info.lo \
++	atomicity.lo bad_alloc.lo bad_array_length.lo bad_array_new.lo \
++	bad_cast.lo bad_typeid.lo class_type_info.lo del_op.lo \
++	del_ops.lo del_opnt.lo del_opv.lo del_opvs.lo del_opvnt.lo \
++	dyncast.lo eh_alloc.lo eh_arm.lo eh_aux_runtime.lo eh_call.lo \
++	eh_catch.lo eh_exception.lo eh_globals.lo eh_personality.lo \
++	eh_ptr.lo eh_term_handler.lo eh_terminate.lo eh_tm.lo \
++	eh_throw.lo eh_type.lo eh_unex_handler.lo enum_type_info.lo \
+ 	function_type_info.lo fundamental_type_info.lo guard.lo \
+ 	guard_error.lo hash_bytes.lo nested_exception.lo \
+ 	new_handler.lo new_op.lo new_opnt.lo new_opv.lo new_opvnt.lo \
+@@ -497,6 +497,7 @@ sources = \
+ 	array_type_info.cc \
+ 	atexit_arm.cc \
+ 	atexit_thread.cc \
++	atomicity.cc \
+ 	bad_alloc.cc \
+ 	bad_array_length.cc \
+ 	bad_array_new.cc \
+@@ -563,6 +564,7 @@ sources = \
+ 
+ libsupc___la_SOURCES = $(sources) $(c_sources) $(vtv_sources)
+ libsupc__convenience_la_SOURCES = $(sources) $(c_sources) $(vtv_sources)
++atomicity_file = ${glibcxx_srcdir}/$(ATOMICITY_SRCDIR)/atomicity.h
+ 
+ # AM_CXXFLAGS needs to be in each subdirectory so that it can be
+ # modified in a per-library or per-sub-library way.  Need to manually
+@@ -954,6 +956,8 @@ cp-demangle.lo: cp-demangle.c
+ 	$(LTCOMPILE) -DIN_GLIBCPP_V3 -Wno-error -c $<
+ cp-demangle.o: cp-demangle.c
+ 	$(C_COMPILE) -DIN_GLIBCPP_V3 -Wno-error -c $<
++atomicity.cc: ${atomicity_file}
++	$(LN_S) ${atomicity_file} ./atomicity.cc || true
+ 
+ # Use special rules for the C++17 sources so that the proper flags are passed.
+ new_opa.lo: new_opa.cc
 diff --git a/libstdc++-v3/python/libstdcxx/v6/printers.py b/libstdc++-v3/python/libstdcxx/v6/printers.py
 index 32b8210414a..0c94a038437 100644
 --- a/libstdc++-v3/python/libstdcxx/v6/printers.py
@@ -2424,6 +3267,366 @@ index 32b8210414a..0c94a038437 100644
          try:
              return gdb.lookup_type(search)
          except RuntimeError:
+diff --git a/libstdc++-v3/src/c++98/Makefile.am b/libstdc++-v3/src/c++98/Makefile.am
+index ba88f002389..c215cf2376e 100644
+--- a/libstdc++-v3/src/c++98/Makefile.am
++++ b/libstdc++-v3/src/c++98/Makefile.am
+@@ -39,7 +39,6 @@ endif
+ # particular host.
+ host_sources = \
+ 	$(cow_string_host_sources) \
+-	atomicity.cc \
+ 	codecvt_members.cc \
+ 	collate_members.cc \
+ 	messages_members.cc \
+@@ -65,10 +64,6 @@ numeric_members.cc: ${glibcxx_srcdir}/$(CNUMERIC_CC)
+ time_members.cc: ${glibcxx_srcdir}/$(CTIME_CC)
+ 	$(LN_S) ${glibcxx_srcdir}/$(CTIME_CC) . || true
+ 
+-atomicity_file = ${glibcxx_srcdir}/$(ATOMICITY_SRCDIR)/atomicity.h
+-atomicity.cc: ${atomicity_file}
+-	$(LN_S) ${atomicity_file} ./atomicity.cc || true
+-
+ if ENABLE_DUAL_ABI
+ collate_members_cow.cc: ${glibcxx_srcdir}/$(CCOLLATE_CC)
+ 	$(LN_S) ${glibcxx_srcdir}/$(CCOLLATE_CC) ./$@ || true
+diff --git a/libstdc++-v3/src/c++98/Makefile.in b/libstdc++-v3/src/c++98/Makefile.in
+index 7825b94b0ad..45a32ac7579 100644
+--- a/libstdc++-v3/src/c++98/Makefile.in
++++ b/libstdc++-v3/src/c++98/Makefile.in
+@@ -126,9 +126,9 @@ libc__98convenience_la_LIBADD =
+ @ENABLE_DUAL_ABI_TRUE@	messages_members_cow.lo \
+ @ENABLE_DUAL_ABI_TRUE@	monetary_members_cow.lo \
+ @ENABLE_DUAL_ABI_TRUE@	numeric_members_cow.lo
+-am__objects_3 = $(am__objects_2) atomicity.lo codecvt_members.lo \
+-	collate_members.lo messages_members.lo monetary_members.lo \
+-	numeric_members.lo time_members.lo
++am__objects_3 = $(am__objects_2) codecvt_members.lo collate_members.lo \
++	messages_members.lo monetary_members.lo numeric_members.lo \
++	time_members.lo
+ @ENABLE_EXTERN_TEMPLATE_TRUE@am__objects_4 = allocator-inst.lo \
+ @ENABLE_EXTERN_TEMPLATE_TRUE@	concept-inst.lo ext-inst.lo \
+ @ENABLE_EXTERN_TEMPLATE_TRUE@	misc-inst.lo
+@@ -442,7 +442,6 @@ headers =
+ # particular host.
+ host_sources = \
+ 	$(cow_string_host_sources) \
+-	atomicity.cc \
+ 	codecvt_members.cc \
+ 	collate_members.cc \
+ 	messages_members.cc \
+@@ -450,7 +449,6 @@ host_sources = \
+ 	numeric_members.cc \
+ 	time_members.cc
+ 
+-atomicity_file = ${glibcxx_srcdir}/$(ATOMICITY_SRCDIR)/atomicity.h
+ 
+ # Source files linked in via configuration/make substitution for a
+ # particular host, but with ad hoc naming rules.
+@@ -841,8 +839,6 @@ numeric_members.cc: ${glibcxx_srcdir}/$(CNUMERIC_CC)
+ 
+ time_members.cc: ${glibcxx_srcdir}/$(CTIME_CC)
+ 	$(LN_S) ${glibcxx_srcdir}/$(CTIME_CC) . || true
+-atomicity.cc: ${atomicity_file}
+-	$(LN_S) ${atomicity_file} ./atomicity.cc || true
+ 
+ @ENABLE_DUAL_ABI_TRUE@collate_members_cow.cc: ${glibcxx_srcdir}/$(CCOLLATE_CC)
+ @ENABLE_DUAL_ABI_TRUE@	$(LN_S) ${glibcxx_srcdir}/$(CCOLLATE_CC) ./$@ || true
+diff --git a/libstdc++-v3/testsuite/18_support/exception_ptr/96657.cc b/libstdc++-v3/testsuite/18_support/exception_ptr/96657.cc
+new file mode 100644
+index 00000000000..61572668385
+--- /dev/null
++++ b/libstdc++-v3/testsuite/18_support/exception_ptr/96657.cc
+@@ -0,0 +1,17 @@
++// { dg-options "-nodefaultlibs -lsupc++ -lgcc_s -lc" { target sparc*-*-linux-gnu } }
++// { dg-do link { target c++11 } }
++
++#include <exception>
++
++void
++test01()
++{
++  // PR libstdc++/96657 undefined references in libsupc++
++  std::make_exception_ptr(1);
++}
++
++int
++main()
++{
++  test01();
++}
+diff --git a/libstdc++-v3/testsuite/20_util/any/cons/101034.cc b/libstdc++-v3/testsuite/20_util/any/cons/101034.cc
+new file mode 100644
+index 00000000000..55f550a839e
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/any/cons/101034.cc
+@@ -0,0 +1,11 @@
++// { dg-do compile { target c++17 } }
++// PR libstdc++/101034 - wrong constraint in std::any's constructor
++
++#include <any>
++
++struct S {
++  S(std::initializer_list<int>&, int) {}
++};
++
++std::any a(std::in_place_type<S>, {0}, 0);
++S& s = a.emplace<S>({0}, 0);
+diff --git a/libstdc++-v3/testsuite/20_util/any/cons/90415.cc b/libstdc++-v3/testsuite/20_util/any/cons/90415.cc
+new file mode 100644
+index 00000000000..122262386d3
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/any/cons/90415.cc
+@@ -0,0 +1,64 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <any>
++#include <utility>
++#include <tuple>
++#include <testsuite_hooks.h>
++
++void
++test01()
++{
++  // PR libstdc++/90415
++  static_assert( std::is_copy_constructible<std::tuple<std::any>>::value );
++}
++
++struct wrapper
++{
++  wrapper() = default;
++
++  wrapper(const std::any& t);
++
++  wrapper(const wrapper& w);
++
++  auto& operator=(const std::any& t);
++
++  auto& operator=(const wrapper& w)
++  {
++    value = w.value;
++    return *this;
++  }
++
++  std::any value;
++};
++
++void
++test02()
++{
++  // PR libstdc++/91630
++  wrapper a, b;
++  a = b;
++}
++
++int main()
++{
++  test01();
++  test02();
++}
+diff --git a/libstdc++-v3/testsuite/20_util/any/cons/92156.cc b/libstdc++-v3/testsuite/20_util/any/cons/92156.cc
+new file mode 100644
+index 00000000000..d797473716d
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/any/cons/92156.cc
+@@ -0,0 +1,53 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <any>
++#include <utility>
++#include <tuple>
++#include <testsuite_hooks.h>
++
++void
++test01()
++{
++  auto a = std::any(std::in_place_type<std::any>, 5);
++  VERIFY( std::any_cast<int>(std::any_cast<std::any>(a)) == 5 );
++
++  auto b = std::any(std::in_place_type<std::any>, {1});
++  (void) std::any_cast<std::initializer_list<int>>(std::any_cast<std::any>(b));
++}
++
++void
++test02()
++{
++  std::any p = std::pair<std::any, std::any>(1, 1);
++  auto pt = std::any_cast<std::pair<std::any, std::any>>(p);
++  VERIFY( std::any_cast<int>(pt.first) == 1 );
++  VERIFY( std::any_cast<int>(pt.second) == 1 );
++
++  std::any t = std::tuple<std::any>(1);
++  auto tt = std::any_cast<std::tuple<std::any>>(t);
++  VERIFY( std::any_cast<int>(std::get<0>(tt)) == 1 );
++}
++
++int main()
++{
++  test01();
++  test02();
++}
+diff --git a/libstdc++-v3/testsuite/20_util/any/misc/any_cast_neg.cc b/libstdc++-v3/testsuite/20_util/any/misc/any_cast_neg.cc
+index d8a52d719db..0c56fce963f 100644
+--- a/libstdc++-v3/testsuite/20_util/any/misc/any_cast_neg.cc
++++ b/libstdc++-v3/testsuite/20_util/any/misc/any_cast_neg.cc
+@@ -1,5 +1,5 @@
+ // { dg-options "-std=gnu++17" }
+-// { dg-do compile }
++// { dg-do compile { target c++17 } }
+ 
+ // Copyright (C) 2014-2019 Free Software Foundation, Inc.
+ //
+@@ -26,20 +26,22 @@ using std::any_cast;
+ void test01()
+ {
+   const any y(1);
+-  any_cast<int&>(y); // { dg-error "invalid static_cast" "" { target { *-*-* } } 461 }
+-  // { dg-error "Template argument must be constructible from a const value" "" { target { *-*-* } } 457 }
++  any_cast<int&>(y); // { dg-error "here" }
++  // { dg-error "Template argument must be constructible from a const value" "" { target { *-*-* } } 0 }
+ }
+ 
+ void test02()
+ {
+   any y(1);
+-  any_cast<int&&>(y);
+-  // { dg-error "Template argument must be constructible from an lvalue" "" { target { *-*-* } } 483 }
++  any_cast<int&&>(y); // { dg-error "here" }
++  // { dg-error "Template argument must be constructible from an lvalue" "" { target { *-*-* } } 0 }
+ }
+ 
+ void test03()
+ {
+   any y(1);
+-  any_cast<int&>(std::move(y));  // { dg-error "invalid static_cast" "" { target { *-*-* } } 501 }
+-  // { dg-error "Template argument must be constructible from an rvalue" "" { target { *-*-* } } 497 }
++  any_cast<int&>(std::move(y)); // { dg-error "here" }
++  // { dg-error "Template argument must be constructible from an rvalue" "" { target { *-*-* } } 0 }
+ }
++
++// { dg-prune-output "invalid static_cast" }
+diff --git a/libstdc++-v3/testsuite/20_util/any/modifiers/92156.cc b/libstdc++-v3/testsuite/20_util/any/modifiers/92156.cc
+new file mode 100644
+index 00000000000..4a7bc97bb83
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/any/modifiers/92156.cc
+@@ -0,0 +1,57 @@
++// { dg-options "-std=gnu++17" }
++// { dg-do run { target c++17 } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++#include <any>
++#include <utility>
++#include <tuple>
++#include <testsuite_hooks.h>
++
++void
++test01()
++{
++  std::any a;
++  a.emplace<std::any>(5);
++  VERIFY( std::any_cast<int>(std::any_cast<std::any>(a)) == 5 );
++
++  std::any b;
++  b.emplace<std::any>({1});
++  (void) std::any_cast<std::initializer_list<int>>(std::any_cast<std::any>(b));
++}
++
++void
++test02()
++{
++  std::any p;
++  p.emplace<std::pair<std::any, std::any>>(1, 1);
++  auto pt = std::any_cast<std::pair<std::any, std::any>>(p);
++  VERIFY( std::any_cast<int>(pt.first) == 1 );
++  VERIFY( std::any_cast<int>(pt.second) == 1 );
++
++  std::any t;
++  t.emplace<std::tuple<std::any>>(1);
++  auto tt = std::any_cast<std::tuple<std::any>>(t);
++  VERIFY( std::any_cast<int>(std::get<0>(tt)) == 1 );
++}
++
++int main()
++{
++  test01();
++  test02();
++}
+diff --git a/libstdc++-v3/testsuite/20_util/optional/assignment/100982.cc b/libstdc++-v3/testsuite/20_util/optional/assignment/100982.cc
+new file mode 100644
+index 00000000000..ae565250d68
+--- /dev/null
++++ b/libstdc++-v3/testsuite/20_util/optional/assignment/100982.cc
+@@ -0,0 +1,17 @@
++// { dg-do compile { target c++17 } }
++
++#include <optional>
++
++struct U {};
++
++struct T {
++  explicit T(const U&);
++  T& operator=(const U&);
++  T& operator=(U&&) = delete;
++};
++
++int main() {
++  std::optional<U> opt1;
++  std::optional<T> opt2;
++  opt2 = opt1; // PR libstdc++/100982
++}
 diff --git a/libstdc++-v3/testsuite/20_util/shared_ptr/creation/99006.cc b/libstdc++-v3/testsuite/20_util/shared_ptr/creation/99006.cc
 new file mode 100644
 index 00000000000..d5f7a5da5e9
@@ -2516,3 +3719,14 @@ index 00000000000..b2428ff74cf
 +  volatile bool b = true;
 +  f(b);
 +}
+diff --git a/libstdc++-v3/testsuite/ext/profile/mutex_extensions_neg.cc b/libstdc++-v3/testsuite/ext/profile/mutex_extensions_neg.cc
+index cd2a48845aa..f34c4fd107e 100644
+--- a/libstdc++-v3/testsuite/ext/profile/mutex_extensions_neg.cc
++++ b/libstdc++-v3/testsuite/ext/profile/mutex_extensions_neg.cc
+@@ -31,3 +31,6 @@
+ // { dg-prune-output "tuple:993" }
+ // PMR alias templates cause ambiguities between debug and profile containers:
+ // { dg-prune-output "is ambiguous" }
++// C++20 uniform container erasure causes more errors
++// { dg-prune-output "expected nested-name-specifier before" }
++// { dg-prune-output "expected initializer before" }
