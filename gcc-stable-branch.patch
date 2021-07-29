@@ -1,7 +1,13 @@
 Bill Schmidt (1):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
 
-GCC Administrator (52):
+GCC Administrator (58):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -59,12 +65,16 @@ Harald Anlauf (2):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
 
-Iain Buclaw (5):
+Iain Buclaw (9):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
       d: Respect explicit align(N) type alignment (PR100935)
       d: TypeInfo error when using slice copy on Structs (PR100964)
       PR d/90651 (ICE in FuncDeclaration::semantic3, at d/dmd/func.c:1524)
       d: Fix ICE in TypeInfoDeclaration, at dmd/declaration.c (PR100967)
+      d: Compile-time reflection for supported built-ins (PR101127)
+      d: __FUNCTION__ doesn't work in core.stdc.stdio functions without cast (PR101441)
+      d: fix ICE at convert_expr(tree_node*, Type*, Type*) (PR101490)
+      d: Wrong evaluation order of binary expressions (PR101640)
 
 Jonathan Wakely (11):
       libstdc++: Fix find_type helper to work consistently
@@ -1395,10 +1405,47 @@ index d7a4ae64c36..788175e1543 100644
    (__vector unsigned char)__builtin_s390_vlrlr((L),(X))
  #define vec_store_len_r(X,Y,L) \
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index b0e68a99a73..809827945f2 100644
+index b0e68a99a73..42b62a45610 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,72 @@
+@@ -1,3 +1,109 @@
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101640
++	* expr.cc (binary_op): Use build2 instead of fold_build2.
++
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101490
++	* d-codegen.cc (build_array_index): Handle void arrays same as byte.
++	* d-convert.cc (convert_expr): Handle converting to zero-sized arrays.
++	* dmd/dcast.c (castTo): Handle casting to zero-sized arrays.
++
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101441
++	* dmd/expression.c (FuncInitExp::resolveLoc): Set type as `string'.
++	(PrettyFuncInitExp::resolveLoc): Likewise.
++
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101127
++	* d-builtins.cc (d_builtin_function_ext_scope): New function.
++	* d-lang.cc (LANG_HOOKS_BUILTIN_FUNCTION_EXT_SCOPE): Define.
++	* d-tree.h (d_builtin_function_ext_scope): Declare.
++
 +2021-06-10  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -1471,8 +1518,33 @@ index b0e68a99a73..809827945f2 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/d/d-builtins.cc b/gcc/d/d-builtins.cc
+index 3dbdafb492a..333c4930318 100644
+--- a/gcc/d/d-builtins.cc
++++ b/gcc/d/d-builtins.cc
+@@ -1175,5 +1175,20 @@ d_builtin_function (tree decl)
+   return decl;
+ }
+ 
++/* Same as d_builtin_function, but used to delay putting in back-end builtin
++   functions until the ISA that defines the builtin has been declared.
++   However in D, there is no global namespace.  All builtins get pushed into the
++   `gcc.builtins' module, which is constructed during the semantic analysis
++   pass, which has already finished by the time target attributes are evaluated.
++   So builtins are not pushed because they would be ultimately ignored.
++   The purpose of having this function then is to improve compile-time
++   reflection support to allow user-code to determine whether a given back end
++   function is enabled by the ISA.  */
++
++tree
++d_builtin_function_ext_scope (tree decl)
++{
++  return decl;
++}
+ 
+ #include "gt-d-d-builtins.h"
 diff --git a/gcc/d/d-codegen.cc b/gcc/d/d-codegen.cc
-index 17f624b5a4f..5368b5892db 100644
+index 17f624b5a4f..fb83770d64a 100644
 --- a/gcc/d/d-codegen.cc
 +++ b/gcc/d/d-codegen.cc
 @@ -1304,6 +1304,7 @@ component_ref (tree object, tree field)
@@ -1549,6 +1621,58 @@ index 17f624b5a4f..5368b5892db 100644
    return fold_build1_loc (input_location, RETURN_EXPR,
  			  void_type_node, ret);
  }
+@@ -1579,21 +1606,9 @@ build_array_index (tree ptr, tree index)
+   /* Array element size.  */
+   tree size_exp = size_in_bytes (target_type);
+ 
+-  if (integer_zerop (size_exp))
+-    {
+-      /* Test for array of void.  */
+-      if (TYPE_MODE (target_type) == TYPE_MODE (void_type_node))
+-	index = fold_convert (type, index);
+-      else
+-	{
+-	  /* Should catch this earlier.  */
+-	  error ("invalid use of incomplete type %qD", TYPE_NAME (target_type));
+-	  ptr_type = error_mark_node;
+-	}
+-    }
+-  else if (integer_onep (size_exp))
++  if (integer_zerop (size_exp) || integer_onep (size_exp))
+     {
+-      /* Array of bytes -- No need to multiply.  */
++      /* Array of void or bytes -- No need to multiply.  */
+       index = fold_convert (type, index);
+     }
+   else
+diff --git a/gcc/d/d-convert.cc b/gcc/d/d-convert.cc
+index 761ab3c5435..9c2f6b45a44 100644
+--- a/gcc/d/d-convert.cc
++++ b/gcc/d/d-convert.cc
+@@ -473,13 +473,18 @@ convert_expr (tree exp, Type *etype, Type *totype)
+ 
+ 	  tree ptrtype = build_ctype (tbtype->nextOf ()->pointerTo ());
+ 
+-	  if ((dim * esize) % tsize != 0)
++	  if (esize != tsize)
+ 	    {
+-	      error ("cannot cast %qs to %qs since sizes don't line up",
+-		     etype->toChars (), totype->toChars ());
+-	      return error_mark_node;
++	      /* Array element sizes do not match, so we must adjust the
++		 dimensions.  */
++	      if (tsize == 0 || (dim * esize) % tsize != 0)
++		{
++		  error ("cannot cast %qs to %qs since sizes don't line up",
++			 etype->toChars (), totype->toChars ());
++		  return error_mark_node;
++		}
++	      dim = (dim * esize) / tsize;
+ 	    }
+-	  dim = (dim * esize) / tsize;
+ 
+ 	  /* Assumes casting to dynamic array of same type or void.  */
+ 	  return d_array_value (build_ctype (totype), size_int (dim),
 diff --git a/gcc/d/d-frontend.cc b/gcc/d/d-frontend.cc
 index ccd5f50130f..563696bdf9f 100644
 --- a/gcc/d/d-frontend.cc
@@ -1594,11 +1718,39 @@ index ccd5f50130f..563696bdf9f 100644
    create_typeinfo (type, sc ? sc->_module->importedFrom : NULL);
    return type->vtinfo->type;
  }
+diff --git a/gcc/d/d-lang.cc b/gcc/d/d-lang.cc
+index 62a8ddd69b2..322a93ee139 100644
+--- a/gcc/d/d-lang.cc
++++ b/gcc/d/d-lang.cc
+@@ -1783,6 +1783,7 @@ d_build_eh_runtime_type (tree type)
+ #undef LANG_HOOKS_GET_ALIAS_SET
+ #undef LANG_HOOKS_TYPES_COMPATIBLE_P
+ #undef LANG_HOOKS_BUILTIN_FUNCTION
++#undef LANG_HOOKS_BUILTIN_FUNCTION_EXT_SCOPE
+ #undef LANG_HOOKS_REGISTER_BUILTIN_TYPE
+ #undef LANG_HOOKS_FINISH_INCOMPLETE_DECL
+ #undef LANG_HOOKS_GIMPLIFY_EXPR
+@@ -1813,6 +1814,7 @@ d_build_eh_runtime_type (tree type)
+ #define LANG_HOOKS_GET_ALIAS_SET	    d_get_alias_set
+ #define LANG_HOOKS_TYPES_COMPATIBLE_P	    d_types_compatible_p
+ #define LANG_HOOKS_BUILTIN_FUNCTION	    d_builtin_function
++#define LANG_HOOKS_BUILTIN_FUNCTION_EXT_SCOPE d_builtin_function_ext_scope
+ #define LANG_HOOKS_REGISTER_BUILTIN_TYPE    d_register_builtin_type
+ #define LANG_HOOKS_FINISH_INCOMPLETE_DECL   d_finish_incomplete_decl
+ #define LANG_HOOKS_GIMPLIFY_EXPR	    d_gimplify_expr
 diff --git a/gcc/d/d-tree.h b/gcc/d/d-tree.h
-index 7a54dfbc59e..5d10333fbdc 100644
+index 7a54dfbc59e..5daba412a4d 100644
 --- a/gcc/d/d-tree.h
 +++ b/gcc/d/d-tree.h
-@@ -650,6 +650,7 @@ extern tree layout_typeinfo (TypeInfoDeclaration *);
+@@ -488,6 +488,7 @@ extern const attribute_spec d_langhook_attribute_table[];
+ extern const attribute_spec d_langhook_common_attribute_table[];
+ 
+ extern tree d_builtin_function (tree);
++extern tree d_builtin_function_ext_scope (tree);
+ extern void d_init_builtins (void);
+ extern void d_register_builtin_type (tree, const char *);
+ extern void d_build_builtins_module (Module *);
+@@ -650,6 +651,7 @@ extern tree layout_typeinfo (TypeInfoDeclaration *);
  extern tree layout_classinfo (ClassDeclaration *);
  extern tree get_typeinfo_decl (TypeInfoDeclaration *);
  extern tree get_classinfo_decl (ClassDeclaration *);
@@ -1606,8 +1758,35 @@ index 7a54dfbc59e..5d10333fbdc 100644
  extern tree build_typeinfo (const Loc &, Type *);
  extern void create_typeinfo (Type *, Module *);
  extern void create_tinfo_types (Module *);
+diff --git a/gcc/d/dmd/dcast.c b/gcc/d/dmd/dcast.c
+index a3df701c341..905aed72625 100644
+--- a/gcc/d/dmd/dcast.c
++++ b/gcc/d/dmd/dcast.c
+@@ -1494,13 +1494,16 @@ Expression *castTo(Expression *e, Scope *sc, Type *t)
+                     // cast(U[])sa; // ==> cast(U[])sa[];
+                     d_uns64 fsize = t1b->nextOf()->size();
+                     d_uns64 tsize = tob->nextOf()->size();
+-                    if ((((TypeSArray *)t1b)->dim->toInteger() * fsize) % tsize != 0)
++                    if (fsize != tsize)
+                     {
+-                        // copied from sarray_toDarray() in e2ir.c
+-                        e->error("cannot cast expression %s of type %s to %s since sizes don't line up",
+-                            e->toChars(), e->type->toChars(), t->toChars());
+-                        result = new ErrorExp();
+-                        return;
++                        dinteger_t dim = ((TypeSArray *)t1b)->dim->toInteger();
++                        if (tsize == 0 || (dim * fsize) % tsize != 0)
++                        {
++                            e->error("cannot cast expression `%s` of type `%s` to `%s` since sizes don't line up",
++                                     e->toChars(), e->type->toChars(), t->toChars());
++                            result = new ErrorExp();
++                            return;
++                        }
+                     }
+                     goto Lok;
+                 }
 diff --git a/gcc/d/dmd/expression.c b/gcc/d/dmd/expression.c
-index af762eb3c66..4798409edb9 100644
+index af762eb3c66..e59c5b114dd 100644
 --- a/gcc/d/dmd/expression.c
 +++ b/gcc/d/dmd/expression.c
 @@ -2647,8 +2647,11 @@ bool Expression::checkPostblit(Scope *sc, Type *t)
@@ -1624,6 +1803,24 @@ index af762eb3c66..4798409edb9 100644
  
          StructDeclaration *sd = ((TypeStruct *)t)->sym;
          if (sd->postblit)
+@@ -6714,7 +6717,7 @@ Expression *FuncInitExp::resolveLoc(Loc loc, Scope *sc)
+         s = "";
+     Expression *e = new StringExp(loc, const_cast<char *>(s));
+     e = semantic(e, sc);
+-    e = e->castTo(sc, type);
++    e->type = Type::tstring;
+     return e;
+ }
+ 
+@@ -6748,7 +6751,7 @@ Expression *PrettyFuncInitExp::resolveLoc(Loc loc, Scope *sc)
+ 
+     Expression *e = new StringExp(loc, const_cast<char *>(s));
+     e = semantic(e, sc);
+-    e = e->castTo(sc, type);
++    e->type = Type::tstring;
+     return e;
+ }
+ 
 diff --git a/gcc/d/dmd/expressionsem.c b/gcc/d/dmd/expressionsem.c
 index 75794a03285..847a0796792 100644
 --- a/gcc/d/dmd/expressionsem.c
@@ -1707,9 +1904,18 @@ index d0e73967d45..0204860fec3 100644
              if (e->op == TOKtype || e->op == TOKdottype)
              {
 diff --git a/gcc/d/expr.cc b/gcc/d/expr.cc
-index 3a2823d6e46..ff8cd1304a8 100644
+index 3a2823d6e46..2d981154672 100644
 --- a/gcc/d/expr.cc
 +++ b/gcc/d/expr.cc
+@@ -162,7 +162,7 @@ class ExprVisitor : public Visitor
+ 	    eptype = type;
+ 	  }
+ 
+-	ret = fold_build2 (code, eptype, arg0, arg1);
++	ret = build2 (code, eptype, arg0, arg1);
+       }
+ 
+     return d_convert (type, ret);
 @@ -1837,15 +1837,10 @@ public:
        exp = d_convert (build_ctype (e->type), exp);
  
@@ -2067,10 +2273,44 @@ index 9be8dd185bf..59ffd071430 100644
        tree present = gfc_conv_expr_present (code->expr1->symtree->n.sym);
        tmp = build3_loc (input_location, COND_EXPR, TREE_TYPE (tmp),
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..641d1b1b685 100644
+index 47eac19a1f6..360c05d27b4 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,94 @@
+@@ -1,3 +1,128 @@
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101640
++	* gdc.dg/pr101640.d: New test.
++
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101490
++	* gdc.dg/pr101490.d: New test.
++	* gdc.test/fail_compilation/fail22144.d: New test.
++
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101441
++	* gdc.test/compilable/b19002.d: New test.
++
++2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/101127
++	* gdc.dg/pr101127a.d: New test.
++	* gdc.dg/pr101127b.d: New test.
++
 +2021-07-20  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/100182
@@ -2437,6 +2677,77 @@ index 00000000000..582ad582676
 +    aa[0] = 1;  // { dg-error ".object.TypeInfo. could not be found, but is implicitly used" }
 +    return 0;
 +}
+diff --git a/gcc/testsuite/gdc.dg/pr101127a.d b/gcc/testsuite/gdc.dg/pr101127a.d
+new file mode 100644
+index 00000000000..b56398e1929
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr101127a.d
+@@ -0,0 +1,8 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101127
++// { dg-do compile { target i?86*-*-* x86_64-*-* } }
++// { dg-additional-options "-mavx" }
++
++import gcc.builtins;
++
++static assert(__traits(compiles, __builtin_ia32_andps256));
++static assert(__traits(compiles, __builtin_ia32_pmulhrsw128));
+diff --git a/gcc/testsuite/gdc.dg/pr101127b.d b/gcc/testsuite/gdc.dg/pr101127b.d
+new file mode 100644
+index 00000000000..b462d75c424
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr101127b.d
+@@ -0,0 +1,7 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101127
++// { dg-do compile { target i?86*-*-* x86_64-*-* } }
++
++import gcc.builtins;
++
++static assert(!__traits(compiles, __builtin_ia32_andps256));
++static assert(!__traits(compiles, __builtin_ia32_pmulhrsw128));
+diff --git a/gcc/testsuite/gdc.dg/pr101490.d b/gcc/testsuite/gdc.dg/pr101490.d
+new file mode 100644
+index 00000000000..6929d406863
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr101490.d
+@@ -0,0 +1,21 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101490
++// { dg-do compile }
++
++struct S101490
++{
++    int[0] arr;
++}
++
++void main()
++{
++    S101490* t;
++    auto a = cast(typeof(t.arr)[0])t.arr;
++    write(a);
++}
++
++void write(S)(S args)
++{
++    foreach (arg; args)
++    {
++    }
++}
+diff --git a/gcc/testsuite/gdc.dg/pr101640.d b/gcc/testsuite/gdc.dg/pr101640.d
+new file mode 100644
+index 00000000000..68de4088512
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr101640.d
+@@ -0,0 +1,11 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101640
++// { dg-do compile }
++// { dg-options "-fdump-tree-original" }
++
++int fun101640(ref int);
++
++int test101640(int val)
++{
++    // { dg-final { scan-tree-dump "= val \\\+ fun101640 \\\(\\\(int &\\\) &val\\\);" "original" } }
++    return val + fun101640(val);
++}
 diff --git a/gcc/testsuite/gdc.test/compilable/aggr_alignment.d b/gcc/testsuite/gdc.test/compilable/aggr_alignment.d
 index 3a80a039e26..5b3542828dd 100644
 --- a/gcc/testsuite/gdc.test/compilable/aggr_alignment.d
@@ -2466,6 +2777,24 @@ index 3a80a039e26..5b3542828dd 100644
 +static assert(UglyStruct.i.offsetof == 4);
 +static assert(UglyStruct.alignof == 1);
 +static assert(UglyStruct.sizeof == 9);
+diff --git a/gcc/testsuite/gdc.test/compilable/b19002.d b/gcc/testsuite/gdc.test/compilable/b19002.d
+new file mode 100644
+index 00000000000..fd8e6d18b37
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/compilable/b19002.d
+@@ -0,0 +1,12 @@
++module b19002;
++
++void printf(scope const char* format){}
++
++void main()
++{
++    printf(__FILE__);
++    printf(__FILE_FULL_PATH__);
++    printf(__FUNCTION__);
++    printf(__PRETTY_FUNCTION__);
++    printf(__MODULE__);
++}
 diff --git a/gcc/testsuite/gdc.test/compilable/betterCarray.d b/gcc/testsuite/gdc.test/compilable/betterCarray.d
 index 74c80be3b95..3f48b042bde 100644
 --- a/gcc/testsuite/gdc.test/compilable/betterCarray.d
@@ -2600,6 +2929,26 @@ index 00000000000..042cf8af11a
 +    auto ti = o.classinfo;
 +}
 +
+diff --git a/gcc/testsuite/gdc.test/fail_compilation/fail22144.d b/gcc/testsuite/gdc.test/fail_compilation/fail22144.d
+new file mode 100644
+index 00000000000..e0fd5b19225
+--- /dev/null
++++ b/gcc/testsuite/gdc.test/fail_compilation/fail22144.d
+@@ -0,0 +1,14 @@
++// https://issues.dlang.org/show_bug.cgi?id=22144
++/* TEST_OUTPUT
++---
++fail_compilation/fail22144.d(12): Error: cannot cast expression `zarray1` of type `int[0]` to `int[0][]` since sizes don't line up
++---
++*/
++void main()
++{
++  int[0] zarray1;
++  int[0][0] zarray2;
++
++  auto zslice1 = cast(int[0][])zarray1; // ICE -> Error
++  auto zslice2 = cast(int[0][])zarray2; // ICE -> OK
++}
 diff --git a/gcc/testsuite/gfortran.dg/implied_do_io_7.f90 b/gcc/testsuite/gfortran.dg/implied_do_io_7.f90
 new file mode 100644
 index 00000000000..63927aafea9
