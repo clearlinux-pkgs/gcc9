@@ -15,7 +15,7 @@
 
 Name     : gcc9
 Version  : 9.4.0
-Release  : 971
+Release  : 972
 URL      : http://www.gnu.org/software/gcc/
 Source0  : https://gcc.gnu.org/pub/gcc/releases/gcc-9.4.0/gcc-9.4.0.tar.xz
 Source1  : https://gcc.gnu.org/pub/gcc/infrastructure/isl-0.16.1.tar.bz2

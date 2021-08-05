@@ -1,7 +1,11 @@
-Bill Schmidt (1):
+Bill Schmidt (2):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
+      rs6000: Add int128 target check to pr101129.c (PR101531)
 
-GCC Administrator (58):
+GCC Administrator (61):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -65,7 +69,7 @@ Harald Anlauf (2):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
 
-Iain Buclaw (9):
+Iain Buclaw (10):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
       d: Respect explicit align(N) type alignment (PR100935)
       d: TypeInfo error when using slice copy on Structs (PR100964)
@@ -75,8 +79,9 @@ Iain Buclaw (9):
       d: __FUNCTION__ doesn't work in core.stdc.stdio functions without cast (PR101441)
       d: fix ICE at convert_expr(tree_node*, Type*, Type*) (PR101490)
       d: Wrong evaluation order of binary expressions (PR101640)
+      d: Ensure casting from bool results in either 0 or 1 (PR96435)
 
-Jonathan Wakely (11):
+Jonathan Wakely (13):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -88,13 +93,16 @@ Jonathan Wakely (11):
       libstdc++: Fix std::any constraints [PR101034]
       libstdc++: Move atomic functions to libsupc++ [PR 96657]
       libstdc++: Fix test failure in C++20 mode
+      libstdc++: Re-enable workaround for _wstat64 bug [PR 88881]
+      libstdc++: Re-enable workaround for _wstat64 bug, again [PR 88881]
 
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
 
-Martin Liska (2):
+Martin Liska (3):
       contrib: add git-commit-mklog wrapper
       Add mklog.py.
+      sanitizer: cherry pick 414482751452e54710f16bae58458c66298aaf69
 
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
@@ -108,6 +116,9 @@ Thomas Koenig (1):
 Uros Bizjak (2):
       i386: Prevent unwanted combine from LZCNT to BSR [PR101175]
       i386: Remove atomic_storedi_fpu and atomic_loaddi_fpu peepholes [PR100182]
+
+Xi Ruoyao (1):
+      mips: Fix up mips_atomic_assign_expand_fenv [PR94780]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 7ab95a2466e..fdaf498c25f 100644
@@ -1048,10 +1059,19 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..0ef611050e1 100644
+index 7558c0a369e..e58da4ba226 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,47 @@
+@@ -1,3 +1,56 @@
++2021-07-31  Xi Ruoyao  <xry111@mengyan1223.wang>
++
++	Backported from master:
++	2021-07-30  Xi Ruoyao  <xry111@mengyan1223.wang>
++
++	PR target/94780
++	* config/mips/mips.c (mips_atomic_assign_expand_fenv): Use
++	  TARGET_EXPR instead of MODIFY_EXPR.
++
 +2021-07-20  Uroš Bizjak  <ubizjak@gmail.com>
 +
 +	PR target/100182
@@ -1352,6 +1372,38 @@ index 08149006876..bbf91c46c4d 100644
  ;; ??? You'd think that we'd be able to perform this via FLOAT + FIX_TRUNC
  ;; operations.  But the fix_trunc patterns want way more setup than we want
  ;; to provide.  Note that the scratch is DFmode instead of XFmode in order
+diff --git a/gcc/config/mips/mips.c b/gcc/config/mips/mips.c
+index d758fbf1be6..1e3ea6b5f43 100644
+--- a/gcc/config/mips/mips.c
++++ b/gcc/config/mips/mips.c
+@@ -22370,12 +22370,12 @@ mips_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+   tree get_fcsr = mips_builtin_decls[MIPS_GET_FCSR];
+   tree set_fcsr = mips_builtin_decls[MIPS_SET_FCSR];
+   tree get_fcsr_hold_call = build_call_expr (get_fcsr, 0);
+-  tree hold_assign_orig = build2 (MODIFY_EXPR, MIPS_ATYPE_USI,
+-				  fcsr_orig_var, get_fcsr_hold_call);
++  tree hold_assign_orig = build4 (TARGET_EXPR, MIPS_ATYPE_USI,
++				  fcsr_orig_var, get_fcsr_hold_call, NULL, NULL);
+   tree hold_mod_val = build2 (BIT_AND_EXPR, MIPS_ATYPE_USI, fcsr_orig_var,
+ 			      build_int_cst (MIPS_ATYPE_USI, 0xfffff003));
+-  tree hold_assign_mod = build2 (MODIFY_EXPR, MIPS_ATYPE_USI,
+-				 fcsr_mod_var, hold_mod_val);
++  tree hold_assign_mod = build4 (TARGET_EXPR, MIPS_ATYPE_USI,
++				 fcsr_mod_var, hold_mod_val, NULL, NULL);
+   tree set_fcsr_hold_call = build_call_expr (set_fcsr, 1, fcsr_mod_var);
+   tree hold_all = build2 (COMPOUND_EXPR, MIPS_ATYPE_USI,
+ 			  hold_assign_orig, hold_assign_mod);
+@@ -22385,8 +22385,8 @@ mips_atomic_assign_expand_fenv (tree *hold, tree *clear, tree *update)
+   *clear = build_call_expr (set_fcsr, 1, fcsr_mod_var);
+ 
+   tree get_fcsr_update_call = build_call_expr (get_fcsr, 0);
+-  *update = build2 (MODIFY_EXPR, MIPS_ATYPE_USI,
+-		    exceptions_var, get_fcsr_update_call);
++  *update = build4 (TARGET_EXPR, MIPS_ATYPE_USI,
++		    exceptions_var, get_fcsr_update_call, NULL, NULL);
+   tree set_fcsr_update_call = build_call_expr (set_fcsr, 1, fcsr_orig_var);
+   *update = build2 (COMPOUND_EXPR, void_type_node, *update,
+ 		    set_fcsr_update_call);
 diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
 index d30e5dec980..d8fc8a74e77 100644
 --- a/gcc/config/rs6000/rs6000-p8swap.c
@@ -1405,10 +1457,21 @@ index d7a4ae64c36..788175e1543 100644
    (__vector unsigned char)__builtin_s390_vlrlr((L),(X))
  #define vec_store_len_r(X,Y,L) \
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index b0e68a99a73..42b62a45610 100644
+index b0e68a99a73..947bf2b46b4 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,109 @@
+@@ -1,3 +1,120 @@
++2021-07-29  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-29  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/96435
++	* d-convert.cc (convert_for_rvalue): New function.
++	* d-tree.h (convert_for_rvalue): Declare.
++	* expr.cc (ExprVisitor::visit (CastExp *)): Use convert_for_rvalue.
++	(build_return_dtor): Likewise.
++
 +2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -1646,7 +1709,7 @@ index 17f624b5a4f..fb83770d64a 100644
      }
    else
 diff --git a/gcc/d/d-convert.cc b/gcc/d/d-convert.cc
-index 761ab3c5435..9c2f6b45a44 100644
+index 761ab3c5435..537324ddb35 100644
 --- a/gcc/d/d-convert.cc
 +++ b/gcc/d/d-convert.cc
 @@ -473,13 +473,18 @@ convert_expr (tree exp, Type *etype, Type *totype)
@@ -1673,6 +1736,49 @@ index 761ab3c5435..9c2f6b45a44 100644
  
  	  /* Assumes casting to dynamic array of same type or void.  */
  	  return d_array_value (build_ctype (totype), size_int (dim),
+@@ -596,6 +601,42 @@ convert_expr (tree exp, Type *etype, Type *totype)
+   return result ? result : convert (build_ctype (totype), exp);
+ }
+ 
++/* Return a TREE represenwation of EXPR, whose type has been converted from
++ * ETYPE to TOTYPE, and is being used in an rvalue context.  */
++
++tree
++convert_for_rvalue (tree expr, Type *etype, Type *totype)
++{
++  tree result = NULL_TREE;
++
++  Type *ebtype = etype->toBasetype ();
++  Type *tbtype = totype->toBasetype ();
++
++  switch (ebtype->ty)
++    {
++    case Tbool:
++      /* If casting from bool, the result is either 0 or 1, any other value
++	 violates @safe code, so enforce that it is never invalid.  */
++      if (CONSTANT_CLASS_P (expr))
++	result = d_truthvalue_conversion (expr);
++      else
++	{
++	  /* Reinterpret the boolean as an integer and test the first bit.
++	     The generated code should end up being equivalent to:
++		*cast(ubyte *)&expr & 1;  */
++	  machine_mode bool_mode = TYPE_MODE (TREE_TYPE (expr));
++	  tree mtype = lang_hooks.types.type_for_mode (bool_mode, 1);
++	  result = fold_build2 (BIT_AND_EXPR, mtype,
++				build_vconvert (mtype, expr),
++				build_one_cst (mtype));
++	}
++
++      result = convert (build_ctype (tbtype), result);
++      break;
++    }
++
++  return result ? result : convert_expr (expr, etype, totype);
++}
+ 
+ /* Apply semantics of assignment to a value of type TOTYPE to EXPR
+    (e.g., pointer = array -> pointer = &array[0])
 diff --git a/gcc/d/d-frontend.cc b/gcc/d/d-frontend.cc
 index ccd5f50130f..563696bdf9f 100644
 --- a/gcc/d/d-frontend.cc
@@ -1739,7 +1845,7 @@ index 62a8ddd69b2..322a93ee139 100644
  #define LANG_HOOKS_FINISH_INCOMPLETE_DECL   d_finish_incomplete_decl
  #define LANG_HOOKS_GIMPLIFY_EXPR	    d_gimplify_expr
 diff --git a/gcc/d/d-tree.h b/gcc/d/d-tree.h
-index 7a54dfbc59e..5daba412a4d 100644
+index 7a54dfbc59e..ad8e25fa45d 100644
 --- a/gcc/d/d-tree.h
 +++ b/gcc/d/d-tree.h
 @@ -488,6 +488,7 @@ extern const attribute_spec d_langhook_attribute_table[];
@@ -1750,7 +1856,15 @@ index 7a54dfbc59e..5daba412a4d 100644
  extern void d_init_builtins (void);
  extern void d_register_builtin_type (tree, const char *);
  extern void d_build_builtins_module (Module *);
-@@ -650,6 +651,7 @@ extern tree layout_typeinfo (TypeInfoDeclaration *);
+@@ -577,6 +578,7 @@ extern bool decl_with_nonnull_addr_p (const_tree);
+ extern tree d_truthvalue_conversion (tree);
+ extern tree d_convert (tree, tree);
+ extern tree convert_expr (tree, Type *, Type *);
++extern tree convert_for_rvalue (tree, Type *, Type *);
+ extern tree convert_for_assignment (tree, Type *, Type *);
+ extern tree convert_for_argument (tree, Parameter *);
+ extern tree convert_for_condition (tree, Type *);
+@@ -650,6 +652,7 @@ extern tree layout_typeinfo (TypeInfoDeclaration *);
  extern tree layout_classinfo (ClassDeclaration *);
  extern tree get_typeinfo_decl (TypeInfoDeclaration *);
  extern tree get_classinfo_decl (ClassDeclaration *);
@@ -1904,7 +2018,7 @@ index d0e73967d45..0204860fec3 100644
              if (e->op == TOKtype || e->op == TOKdottype)
              {
 diff --git a/gcc/d/expr.cc b/gcc/d/expr.cc
-index 3a2823d6e46..2d981154672 100644
+index 3a2823d6e46..244dd860b7f 100644
 --- a/gcc/d/expr.cc
 +++ b/gcc/d/expr.cc
 @@ -162,7 +162,7 @@ class ExprVisitor : public Visitor
@@ -1916,6 +2030,15 @@ index 3a2823d6e46..2d981154672 100644
        }
  
      return d_convert (type, ret);
+@@ -1435,7 +1435,7 @@ public:
+     if (tbtype->ty == Tvoid)
+       this->result_ = build_nop (build_ctype (tbtype), result);
+     else
+-      this->result_ = convert_expr (result, ebtype, tbtype);
++      this->result_ = convert_for_rvalue (result, ebtype, tbtype);
+   }
+ 
+   /* Build a delete expression.  */
 @@ -1837,15 +1837,10 @@ public:
        exp = d_convert (build_ctype (e->type), exp);
  
@@ -1933,6 +2056,25 @@ index 3a2823d6e46..2d981154672 100644
  	TARGET_EXPR_INITIAL (cleanup) = compound_expr (init, exp);
  	exp = cleanup;
        }
+@@ -3111,11 +3106,14 @@ build_return_dtor (Expression *e, Type *type, TypeFunction *tf)
+   tree result = build_expr (e);
+ 
+   /* Convert for initializing the DECL_RESULT.  */
+-  result = convert_expr (result, e->type, type);
+-
+-  /* If we are returning a reference, take the address.  */
+   if (tf->isref)
+-    result = build_address (result);
++    {
++      /* If we are returning a reference, take the address.  */
++      result = convert_expr (result, e->type, type);
++      result = build_address (result);
++    }
++  else
++    result = convert_for_rvalue (result, e->type, type);
+ 
+   /* The decl to store the return expression.  */
+   tree decl = DECL_RESULT (cfun->decl);
 diff --git a/gcc/d/typeinfo.cc b/gcc/d/typeinfo.cc
 index 0b19bcf7f34..117a5bd1592 100644
 --- a/gcc/d/typeinfo.cc
@@ -2273,10 +2415,23 @@ index 9be8dd185bf..59ffd071430 100644
        tree present = gfc_conv_expr_present (code->expr1->symtree->n.sym);
        tmp = build3_loc (input_location, COND_EXPR, TREE_TYPE (tmp),
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..360c05d27b4 100644
+index 47eac19a1f6..ac14d22c9c5 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,128 @@
+@@ -1,3 +1,141 @@
++2021-07-29  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/101531
++	* gcc.target/powerpc/pr101129.c: Adjust.
++
++2021-07-29  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-07-29  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/96435
++	* gdc.dg/pr96435.d: New test.
++
 +2021-07-28  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -2497,12 +2652,13 @@ index bf37a8cbb71..00000000000
 -/* { dg-final { scan-assembler-not "movlps" { xfail *-*-* } } } */
 diff --git a/gcc/testsuite/gcc.target/powerpc/pr101129.c b/gcc/testsuite/gcc.target/powerpc/pr101129.c
 new file mode 100644
-index 00000000000..1abc12480e4
+index 00000000000..6b8e5a9b597
 --- /dev/null
 +++ b/gcc/testsuite/gcc.target/powerpc/pr101129.c
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,36 @@
 +/* { dg-do run } */
 +/* { dg-require-effective-target p8vector_hw } */
++/* { dg-require-effective-target int128 } */
 +/* { dg-options "-mdejagnu-cpu=power8 -O " } */
 +
 +/* PR101129: The swaps pass was turning a mult-lopart into a mult-hipart.
@@ -2747,6 +2903,33 @@ index 00000000000..68de4088512
 +{
 +    // { dg-final { scan-tree-dump "= val \\\+ fun101640 \\\(\\\(int &\\\) &val\\\);" "original" } }
 +    return val + fun101640(val);
++}
+diff --git a/gcc/testsuite/gdc.dg/pr96435.d b/gcc/testsuite/gdc.dg/pr96435.d
+new file mode 100644
+index 00000000000..c6d8785ec5b
+--- /dev/null
++++ b/gcc/testsuite/gdc.dg/pr96435.d
+@@ -0,0 +1,21 @@
++// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=96435
++// { dg-do run }
++
++@safe bool test96435()
++{
++    int[2] array = [16, 678];
++    union U { int i; bool b; }
++    U u;
++    u.i = 0xDEADBEEF;
++    assert(array[u.b] == 678);
++    return u.b;
++}
++
++@safe void main()
++{
++    auto b = test96435();
++    if (b)
++        assert(true);
++    if (!b)
++        assert(false);
 +}
 diff --git a/gcc/testsuite/gdc.test/compilable/aggr_alignment.d b/gcc/testsuite/gdc.test/compilable/aggr_alignment.d
 index 3a80a039e26..5b3542828dd 100644
@@ -3033,11 +3216,45 @@ index 00000000000..e9e82bd1ce2
 +int main() {
 +    return std::char_traits<char>::length("");
 +}
+diff --git a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
+index 1917e29ced2..8c8aa75004e 100644
+--- a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
++++ b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
+@@ -170,9 +170,10 @@ bool SupportsColoredOutput(fd_t fd) {
+ #if !SANITIZER_GO
+ // TODO(glider): different tools may require different altstack size.
+ static uptr GetAltStackSize() {
+-  // SIGSTKSZ is not enough.
+-  static const uptr kAltStackSize = SIGSTKSZ * 4;
+-  return kAltStackSize;
++  // Note: since GLIBC_2.31, SIGSTKSZ may be a function call, so this may be
++  // more costly that you think. However GetAltStackSize is only call 2-3 times
++  // per thread so don't cache the evaluation.
++  return SIGSTKSZ * 4;
+ }
+ 
+ void SetAlternateSignalStack() {
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 4a898cd27d7..d6182b2727d 100644
+index 4a898cd27d7..0490b28f6c8 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,132 @@
+@@ -1,3 +1,148 @@
++2021-08-02  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-02-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/88881
++	* src/c++17/fs_ops.cc (fs::symlink_status): Re-enable workaround.
++
++2021-08-02  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-02-10  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/88881
++	* src/c++17/fs_ops.cc (fs::status): Re-enable workaround.
++
 +2021-07-22  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	* testsuite/ext/profile/mutex_extensions_neg.cc: Prune
@@ -3616,6 +3833,42 @@ index 32b8210414a..0c94a038437 100644
          try:
              return gdb.lookup_type(search)
          except RuntimeError:
+diff --git a/libstdc++-v3/src/c++17/fs_ops.cc b/libstdc++-v3/src/c++17/fs_ops.cc
+index f744d2f7b56..c641e2a53f7 100644
+--- a/libstdc++-v3/src/c++17/fs_ops.cc
++++ b/libstdc++-v3/src/c++17/fs_ops.cc
+@@ -1404,7 +1404,6 @@ fs::status(const fs::path& p, error_code& ec) noexcept
+   auto str = p.c_str();
+ 
+ #if _GLIBCXX_FILESYSTEM_IS_WINDOWS
+-#if ! defined __MINGW64_VERSION_MAJOR || __MINGW64_VERSION_MAJOR < 6
+   // stat() fails if there's a trailing slash (PR 88881)
+   path p2;
+   if (p.has_relative_path() && !p.has_filename())
+@@ -1421,7 +1420,6 @@ fs::status(const fs::path& p, error_code& ec) noexcept
+ 	}
+       str = p2.c_str();
+     }
+-#endif
+ #endif
+ 
+   stat_type st;
+@@ -1451,7 +1449,6 @@ fs::symlink_status(const fs::path& p, std::error_code& ec) noexcept
+   auto str = p.c_str();
+ 
+ #if _GLIBCXX_FILESYSTEM_IS_WINDOWS
+-#if ! defined __MINGW64_VERSION_MAJOR || __MINGW64_VERSION_MAJOR < 6
+   // stat() fails if there's a trailing slash (PR 88881)
+   path p2;
+   if (p.has_relative_path() && !p.has_filename())
+@@ -1468,7 +1465,6 @@ fs::symlink_status(const fs::path& p, std::error_code& ec) noexcept
+ 	}
+       str = p2.c_str();
+     }
+-#endif
+ #endif
+ 
+   stat_type st;
 diff --git a/libstdc++-v3/src/c++98/Makefile.am b/libstdc++-v3/src/c++98/Makefile.am
 index ba88f002389..c215cf2376e 100644
 --- a/libstdc++-v3/src/c++98/Makefile.am
