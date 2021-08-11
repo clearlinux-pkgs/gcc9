@@ -2,7 +2,13 @@ Bill Schmidt (2):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
       rs6000: Add int128 target check to pr101129.c (PR101531)
 
-GCC Administrator (61):
+GCC Administrator (67):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3216,6 +3222,21 @@ index 00000000000..e9e82bd1ce2
 +int main() {
 +    return std::char_traits<char>::length("");
 +}
+diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
+index d8c2f6b863a..a82ac090821 100644
+--- a/libsanitizer/ChangeLog
++++ b/libsanitizer/ChangeLog
+@@ -1,3 +1,10 @@
++2021-08-05  Martin Liska  <mliska@suse.cz>
++
++	PR sanitizer/101749
++	* sanitizer_common/sanitizer_posix_libcdep.cc: Prevent
++	generation of dependency on _cxa_guard for static
++	initialization.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
 diff --git a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
 index 1917e29ced2..8c8aa75004e 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
