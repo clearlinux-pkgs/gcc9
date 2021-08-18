@@ -2,7 +2,13 @@ Bill Schmidt (2):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
       rs6000: Add int128 target check to pr101129.c (PR101531)
 
-GCC Administrator (68):
+GCC Administrator (74):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -117,11 +123,17 @@ Martin Liska (3):
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
 
+Richard Sandiford (1):
+      aarch64: Add -mtune=neoverse-512tvb
+
 Segher Boessenkool (1):
       combine: Don't create REG_UNUSED notes if the reg already died (PR99927)
 
 Thomas Koenig (1):
       Do not replace variable op variable in I/O implied DO loop replacement.
+
+Thomas Schwinge (1):
+      Restore 'gcc.dg/pr78213.c' testing
 
 Uros Bizjak (2):
       i386: Prevent unwanted combine from LZCNT to BSR [PR101175]
@@ -1069,10 +1081,20 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..e58da4ba226 100644
+index 7558c0a369e..073c0f0c524 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,56 @@
+@@ -1,3 +1,66 @@
++2021-08-17  Richard Sandiford  <richard.sandiford@arm.com>
++
++	Backported from master:
++	2021-08-03  Richard Sandiford  <richard.sandiford@arm.com>
++
++	* doc/invoke.texi: Document -mtune=neoverse-512tvb and
++	-mcpu=neoverse-512tvb.
++	* config/aarch64/aarch64-cores.def (neoverse-512tvb): New entry.
++	* config/aarch64/aarch64-tune.md: Regenerate.
++
 +2021-07-31  Xi Ruoyao  <xry111@mengyan1223.wang>
 +
 +	Backported from master:
@@ -1145,6 +1167,30 @@ index d82161e5161..fe31bb59c82 100644
  	  /* If this register is set or clobbered in I3, put the note there
  	     unless there is one already.  */
  	  if (reg_set_p (XEXP (note, 0), PATTERN (i3)))
+diff --git a/gcc/config/aarch64/aarch64-cores.def b/gcc/config/aarch64/aarch64-cores.def
+index 3cd7db88b77..fb2faa44e06 100644
+--- a/gcc/config/aarch64/aarch64-cores.def
++++ b/gcc/config/aarch64/aarch64-cores.def
+@@ -115,7 +115,7 @@ AARCH64_CORE("tsv110",  tsv110, tsv110, 8_2A,  AARCH64_FL_FOR_ARCH8_2 | AARCH64_
+ /* ARM ('A') cores. */
+ AARCH64_CORE("zeus", zeus, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversev1, 0x41, 0xd40, -1)
+ AARCH64_CORE("neoverse-v1", neoversev1, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversev1, 0x41, 0xd40, -1)
+-
++AARCH64_CORE("neoverse-512tvb", neoverse512tvb, cortexa57, 8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_SVE | AARCH64_FL_RNG | AARCH64_FL_RCPC | AARCH64_FL_F16 | AARCH64_FL_PROFILE | AARCH64_FL_SSBS, neoversev1, INVALID_IMP, INVALID_CORE, -1)
+ 
+ /* Qualcomm ('Q') cores. */
+ AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
+diff --git a/gcc/config/aarch64/aarch64-tune.md b/gcc/config/aarch64/aarch64-tune.md
+index 0a73e105e08..e4ae7d9b16b 100644
+--- a/gcc/config/aarch64/aarch64-tune.md
++++ b/gcc/config/aarch64/aarch64-tune.md
+@@ -1,5 +1,5 @@
+ ;; -*- buffer-read-only: t -*-
+ ;; Generated automatically by gentune.sh from aarch64-cores.def
+ (define_attr "tune"
+-	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
++	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,neoverse512tvb,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
+ 	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
 index 8ae7ea68c16..5d76d36e1c0 100644
 --- a/gcc/config/i386/i386.md
@@ -2336,6 +2382,51 @@ index 0b19bcf7f34..117a5bd1592 100644
    /* Do this since not all Type's are merged.  */
    Type *t = type->merge2 ();
    Identifier *ident;
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index 7b5f6e03d9f..7226c9cc4af 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -15858,6 +15858,7 @@ performance of the code.  Permissible values for this option are:
+ @samp{cortex-a57}, @samp{cortex-a72}, @samp{cortex-a73}, @samp{cortex-a75},
+ @samp{cortex-a76}, @samp{ares}, @samp{exynos-m1}, @samp{emag}, @samp{falkor},
+ @samp{neoverse-e1}, @samp{neoverse-n1}, @samp{neoverse-n2}, @samp{neoverse-v1},
++@samp{neoverse-512tvb},
+ @samp{qdf24xx}, @samp{saphira}, @samp{phecda}, @samp{xgene1}, @samp{vulcan},
+ @samp{octeontx}, @samp{octeontx81},  @samp{octeontx83},
+ @samp{a64fx},
+@@ -15874,6 +15875,15 @@ The values @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
+ @samp{cortex-a75.cortex-a55}, @samp{cortex-a76.cortex-a55} specify that GCC
+ should tune for a big.LITTLE system.
+ 
++The value @samp{neoverse-512tvb} specifies that GCC should tune
++for Neoverse cores that (a) implement SVE and (b) have a total vector
++bandwidth of 512 bits per cycle.  In other words, the option tells GCC to
++tune for Neoverse cores that can execute 4 128-bit Advanced SIMD arithmetic
++instructions a cycle and that can execute an equivalent number of SVE
++arithmetic instructions per cycle (2 for 256-bit SVE, 4 for 128-bit SVE).
++This is more general than tuning for a specific core like Neoverse V1
++but is more specific than the default tuning described below.
++
+ Additionally on native AArch64 GNU/Linux systems the value
+ @samp{native} tunes performance to the host system.  This option has no effect
+ if the compiler is unable to recognize the processor of the host system.
+@@ -15903,6 +15913,16 @@ by @option{-mtune}).  Where this option is used in conjunction
+ with @option{-march} or @option{-mtune}, those options take precedence
+ over the appropriate part of this option.
+ 
++@option{-mcpu=neoverse-512tvb} is special in that it does not refer
++to a specific core, but instead refers to all Neoverse cores that
++(a) implement SVE and (b) have a total vector bandwidth of 512 bits
++a cycle.  Unless overridden by @option{-march},
++@option{-mcpu=neoverse-512tvb} generates code that can run on a
++Neoverse V1 core, since Neoverse V1 is the first Neoverse core with
++these properties.  Unless overridden by @option{-mtune},
++@option{-mcpu=neoverse-512tvb} tunes code in the same way as for
++@option{-mtune=neoverse-512tvb}.
++
+ @item -moverride=@var{string}
+ @opindex moverride
+ Override tuning decisions made by the back-end in response to a
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
 index f1d66e38980..f1dec2b1bec 100644
 --- a/gcc/fortran/ChangeLog
@@ -2425,10 +2516,17 @@ index 9be8dd185bf..59ffd071430 100644
        tree present = gfc_conv_expr_present (code->expr1->symtree->n.sym);
        tmp = build3_loc (input_location, COND_EXPR, TREE_TYPE (tmp),
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..ac14d22c9c5 100644
+index 47eac19a1f6..40aab9c9c3c 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,141 @@
+@@ -1,3 +1,148 @@
++2021-08-17  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backported from master:
++	2021-08-17  Thomas Schwinge  <thomas@codesourcery.com>
++
++	* gcc.dg/pr78213.c: Restore testing.
++
 +2021-07-29  Bill Schmidt  <wschmidt@linux.ibm.com>
 +
 +	PR target/101531
@@ -2570,6 +2668,24 @@ index 47eac19a1f6..ac14d22c9c5 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/testsuite/gcc.dg/pr78213.c b/gcc/testsuite/gcc.dg/pr78213.c
+index ebc2cce78f4..40dd3c82b60 100644
+--- a/gcc/testsuite/gcc.dg/pr78213.c
++++ b/gcc/testsuite/gcc.dg/pr78213.c
+@@ -1,12 +1,5 @@
+ /* { dg-do compile } */
+-/* { dg-options "-fself-test" } */
+-
+-/* When this test was written -fself-test took no argument, but it
+-   has subsequently gained a mandatory argument, giving the path
+-   to selftest support files (within the srcdir).
+-   It's not clear how to provide this path sanely from
+-   within DejaGnu, so for now, this test is disabled.  */
+-/* { dg-skip-if "" { *-*-* } } */
++/* { dg-options "-fself-test=$srcdir/selftests" } */
+ 
+ /* Verify that -fself-test does not fail on a non empty source.  */
+ 
 diff --git a/gcc/testsuite/gcc.target/i386/pr101175.c b/gcc/testsuite/gcc.target/i386/pr101175.c
 new file mode 100644
 index 00000000000..ed7a08110a5
