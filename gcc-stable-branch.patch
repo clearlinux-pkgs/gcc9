@@ -2,7 +2,9 @@ Bill Schmidt (2):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
       rs6000: Add int128 target check to pr101129.c (PR101531)
 
-GCC Administrator (74):
+GCC Administrator (76):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -123,6 +125,9 @@ Martin Liska (3):
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
 
+Richard Earnshaw (1):
+      arm: Remove use of opts_set in arm_configure_build_target [PR100767]
+
 Richard Sandiford (1):
       aarch64: Add -mtune=neoverse-512tvb
 
@@ -132,8 +137,9 @@ Segher Boessenkool (1):
 Thomas Koenig (1):
       Do not replace variable op variable in I/O implied DO loop replacement.
 
-Thomas Schwinge (1):
+Thomas Schwinge (2):
       Restore 'gcc.dg/pr78213.c' testing
+      Fix up 'gcc.dg/pr78213.c' for '--enable-checking=release' etc.
 
 Uros Bizjak (2):
       i386: Prevent unwanted combine from LZCNT to BSR [PR101175]
@@ -1081,10 +1087,26 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..073c0f0c524 100644
+index 7558c0a369e..4a416485e2e 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,66 @@
+@@ -1,3 +1,82 @@
++2021-08-19  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backported from master:
++	2021-05-27  Richard Earnshaw  <rearnsha@arm.com>
++
++	PR target/100767
++	* config/arm/arm.c (arm_configure_build_target): Remove parameter
++	opts_set, directly check opts parameters for being non-null.
++	(arm_option_restore): Update call to arm_configure_build_target.
++	(arm_option_override): Likewise.
++	(arm_can_inline_p): Likewise.
++	(arm_valid_target_attribute_tree): Likewise.
++	* config/arm/arm-c.c (arm_pragma_target_parse): Likewise.
++	* config/arm/arm-protos.h (arm_configure_build_target): Adjust
++	prototype.
++
 +2021-08-17  Richard Sandiford  <richard.sandiford@arm.com>
 +
 +	Backported from master:
@@ -1191,6 +1213,124 @@ index 0a73e105e08..e4ae7d9b16b 100644
 -	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
 +	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,neoverse512tvb,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
+diff --git a/gcc/config/arm/arm-c.c b/gcc/config/arm/arm-c.c
+index 6e256ee0a12..38da34203d0 100644
+--- a/gcc/config/arm/arm-c.c
++++ b/gcc/config/arm/arm-c.c
+@@ -266,8 +266,7 @@ arm_pragma_target_parse (tree args, tree pop_target)
+        target_option_current_node, but not handle_pragma_target.  */
+       target_option_current_node = cur_tree;
+       arm_configure_build_target (&arm_active_target,
+-				  TREE_TARGET_OPTION (cur_tree),
+-				  &global_options_set, false);
++				  TREE_TARGET_OPTION (cur_tree), false);
+     }
+ 
+   /* Update macros if target_node changes. The global state will be restored
+diff --git a/gcc/config/arm/arm-protos.h b/gcc/config/arm/arm-protos.h
+index 3e8bba5caea..cd16c3c35f9 100644
+--- a/gcc/config/arm/arm-protos.h
++++ b/gcc/config/arm/arm-protos.h
+@@ -229,8 +229,7 @@ extern bool arm_change_mode_p (tree);
+ extern tree arm_valid_target_attribute_tree (tree, struct gcc_options *,
+ 					     struct gcc_options *);
+ extern void arm_configure_build_target (struct arm_build_target *,
+-					struct cl_target_option *,
+-					struct gcc_options *, bool);
++					struct cl_target_option *, bool);
+ extern void arm_option_reconfigure_globals (void);
+ extern void arm_options_perform_arch_sanity_checks (void);
+ extern void arm_pr_long_calls (struct cpp_reader *);
+diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+index 4679da75dd8..3895007dcdb 100644
+--- a/gcc/config/arm/arm.c
++++ b/gcc/config/arm/arm.c
+@@ -2985,7 +2985,7 @@ arm_override_options_after_change (void)
+ {
+   arm_configure_build_target (&arm_active_target,
+ 			      TREE_TARGET_OPTION (target_option_default_node),
+-			      &global_options_set, false);
++			      false);
+ 
+   arm_override_options_after_change_1 (&global_options);
+ }
+@@ -3006,8 +3006,7 @@ arm_option_restore (struct gcc_options *opts, struct cl_target_option *ptr)
+   opts->x_arm_arch_string = ptr->x_arm_arch_string;
+   opts->x_arm_cpu_string = ptr->x_arm_cpu_string;
+   opts->x_arm_tune_string = ptr->x_arm_tune_string;
+-  arm_configure_build_target (&arm_active_target, ptr, &global_options_set,
+-			      false);
++  arm_configure_build_target (&arm_active_target, ptr, false);
+ }
+ 
+ /* Reset options between modes that the user has specified.  */
+@@ -3124,7 +3123,6 @@ static sbitmap isa_quirkbits;
+ void
+ arm_configure_build_target (struct arm_build_target *target,
+ 			    struct cl_target_option *opts,
+-			    struct gcc_options *opts_set,
+ 			    bool warn_compatible)
+ {
+   const cpu_option *arm_selected_tune = NULL;
+@@ -3139,7 +3137,7 @@ arm_configure_build_target (struct arm_build_target *target,
+   target->core_name = NULL;
+   target->arch_name = NULL;
+ 
+-  if (opts_set->x_arm_arch_string)
++  if (opts->x_arm_arch_string)
+     {
+       arm_selected_arch = arm_parse_arch_option_name (all_architectures,
+ 						      "-march",
+@@ -3147,7 +3145,7 @@ arm_configure_build_target (struct arm_build_target *target,
+       arch_opts = strchr (opts->x_arm_arch_string, '+');
+     }
+ 
+-  if (opts_set->x_arm_cpu_string)
++  if (opts->x_arm_cpu_string)
+     {
+       arm_selected_cpu = arm_parse_cpu_option_name (all_cores, "-mcpu",
+ 						    opts->x_arm_cpu_string);
+@@ -3157,7 +3155,7 @@ arm_configure_build_target (struct arm_build_target *target,
+ 	 options for tuning.  */
+     }
+ 
+-  if (opts_set->x_arm_tune_string)
++  if (opts->x_arm_tune_string)
+     {
+       arm_selected_tune = arm_parse_cpu_option_name (all_cores, "-mtune",
+ 						     opts->x_arm_tune_string);
+@@ -3392,8 +3390,7 @@ arm_option_override (void)
+     }
+ 
+   cl_target_option_save (&opts, &global_options);
+-  arm_configure_build_target (&arm_active_target, &opts, &global_options_set,
+-			      true);
++  arm_configure_build_target (&arm_active_target, &opts, true);
+ 
+ #ifdef SUBTARGET_OVERRIDE_OPTIONS
+   SUBTARGET_OVERRIDE_OPTIONS;
+@@ -30938,10 +30935,8 @@ arm_can_inline_p (tree caller, tree callee)
+   caller_target.isa = sbitmap_alloc (isa_num_bits);
+   callee_target.isa = sbitmap_alloc (isa_num_bits);
+ 
+-  arm_configure_build_target (&caller_target, caller_opts, &global_options_set,
+-			      false);
+-  arm_configure_build_target (&callee_target, callee_opts, &global_options_set,
+-			      false);
++  arm_configure_build_target (&caller_target, caller_opts, false);
++  arm_configure_build_target (&callee_target, callee_opts, false);
+   if (!bitmap_subset_p (callee_target.isa, caller_target.isa))
+     can_inline = false;
+ 
+@@ -31073,7 +31068,7 @@ arm_valid_target_attribute_tree (tree args, struct gcc_options *opts,
+     return NULL_TREE;
+ 
+   cl_target_option_save (&cl_opts, opts);
+-  arm_configure_build_target (&arm_active_target, &cl_opts, opts_set, false);
++  arm_configure_build_target (&arm_active_target, &cl_opts, false);
+   arm_option_check_internal (opts);
+   /* Do any overrides, such as global options arch=xxx.
+      We do this since arm_active_target was overridden.  */
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
 index 8ae7ea68c16..5d76d36e1c0 100644
 --- a/gcc/config/i386/i386.md
@@ -2516,10 +2656,18 @@ index 9be8dd185bf..59ffd071430 100644
        tree present = gfc_conv_expr_present (code->expr1->symtree->n.sym);
        tmp = build3_loc (input_location, COND_EXPR, TREE_TYPE (tmp),
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..40aab9c9c3c 100644
+index 47eac19a1f6..60e5c37d1a6 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,148 @@
+@@ -1,3 +1,156 @@
++2021-08-19  Thomas Schwinge  <thomas@codesourcery.com>
++
++	Backported from master:
++	2021-08-19  Thomas Schwinge  <thomas@codesourcery.com>
++
++	PR testsuite/101969
++	* gcc.dg/pr78213.c: Fix up for '--enable-checking=release' etc.
++
 +2021-08-17  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	Backported from master:
@@ -2669,7 +2817,7 @@ index 47eac19a1f6..40aab9c9c3c 100644
  
  	* GCC 9.4.0 released.
 diff --git a/gcc/testsuite/gcc.dg/pr78213.c b/gcc/testsuite/gcc.dg/pr78213.c
-index ebc2cce78f4..40dd3c82b60 100644
+index ebc2cce78f4..04bf0381f76 100644
 --- a/gcc/testsuite/gcc.dg/pr78213.c
 +++ b/gcc/testsuite/gcc.dg/pr78213.c
 @@ -1,12 +1,5 @@
@@ -2686,6 +2834,13 @@ index ebc2cce78f4..40dd3c82b60 100644
  
  /* Verify that -fself-test does not fail on a non empty source.  */
  
+@@ -15,4 +8,5 @@ int i;
+   while (i--)
+     bar();
+ }
+-/* { dg-message "fself\-test: " "-fself-test" { target *-*-* } 0 } */
++
++/* { dg-regexp {^-fself-test: [0-9]+ pass\(es\) in [.0-9]+ seconds$|.*: note: self-tests are not enabled in this build$} } */
 diff --git a/gcc/testsuite/gcc.target/i386/pr101175.c b/gcc/testsuite/gcc.target/i386/pr101175.c
 new file mode 100644
 index 00000000000..ed7a08110a5
