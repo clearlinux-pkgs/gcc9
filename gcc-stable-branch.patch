@@ -2,7 +2,16 @@ Bill Schmidt (2):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
       rs6000: Add int128 target check to pr101129.c (PR101531)
 
-GCC Administrator (76):
+Christophe Lyon (1):
+      arm: Fix pr69245.c testcase for reorder assembler architecture directives [PR101723]
+
+GCC Administrator (82):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -125,8 +134,12 @@ Martin Liska (3):
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
 
-Richard Earnshaw (1):
+Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
+      arm: Fix an incorrect warning when -mcpu=cortex-a55 is used with -mfloat-abi=soft
+      arm: ensure the arch_name is always set for the build target
+      arm: Don't reconfigure globals in arm_configure_build_target
+      arm: reorder assembler architecture directives [PR101723]
 
 Richard Sandiford (1):
       aarch64: Add -mtune=neoverse-512tvb
@@ -147,6 +160,9 @@ Uros Bizjak (2):
 
 Xi Ruoyao (1):
       mips: Fix up mips_atomic_assign_expand_fenv [PR94780]
+
+konglin1 (1):
+      i386: Fix _mm512_fpclass_ps_mask in O0 [PR 101471]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 7ab95a2466e..fdaf498c25f 100644
@@ -1087,10 +1103,79 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..4a416485e2e 100644
+index 7558c0a369e..0053f956669 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,82 @@
+@@ -1,3 +1,151 @@
++2021-08-25  konglin1  <lingling.kong@intel.com>
++
++	PR target/101471
++	* config/i386/avx512dqintrin.h (_mm512_fpclass_ps_mask): Fix
++	macro define in O0.
++	(_mm512_mask_fpclass_ps_mask): Ditto.
++
++2021-08-23  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backported from master:
++	2021-08-05  Richard Earnshaw  <rearnsha@arm.com>
++
++	PR target/101723
++	* config/arm/arm-cpus.in (quirk_no_asmcpu): New feature bit.
++	(ALL_QUIRKS): Add it.
++	(generic-armv7-a): Add quirk to suppress writing .cpu directive in
++	asm output.
++	* config/arm/arm.c (arm_identify_fpu_from_isa): New variable.
++	(arm_last_printed_arch_string): Delete.
++	(arm_last-printed_fpu_string): Delete.
++	(arm_configure_build_target): If use of floating-point/SIMD is
++	disabled, remove all fp/simd related features from the target ISA.
++	(last_arm_targ_options): New variable.
++	(arm_print_asm_arch_directives): Add new parameters.  Change order
++	of emitted directives and handle all cases here.
++	(arm_file_start): Always call arm_print_asm_arch_directives, move
++	all generation of .arch/.arch_extension here.
++	(arm_file_end): Call arm_print_asm_arch.
++	(arm_declare_function_name): Call arm_print_asm_arch_directives
++	instead of printing .arch/.fpu directives directly.
++
++2021-08-23  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backported from master:
++	2021-08-05  Richard Earnshaw  <rearnsha@arm.com>
++
++	* config/arm/arm.c (arm_configure_build_target): Don't call
++	arm_option_reconfigure_globals.
++	(arm_option_restore): Call arm_option_reconfigure_globals after
++	reconfiguring the target.
++	* config/arm/arm-c.c (arm_pragma_target_parse): Likewise.
++
++2021-08-23  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backported from master:
++	2021-08-05  Richard Earnshaw  <rearnsha@arm.com>
++
++	* config/arm/arm.c (arm_configure_build_target): Ensure the target's
++	arch_name is always set.
++
++2021-08-23  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backported from master:
++	2019-12-11  Richard Earnshaw  <rearnsha@arm.com>
++
++	* config/arm/arm-cpus.in (ALL_SIMD_EXTERNAL): New fgroup.
++	(ALL_SIMD): Use it.
++	(ALL_FPU_EXTERNAL): New fgroup.
++	(ALL_FP): Use it.
++	(cortex-a55, cortex-a75, cortex-a76): Remove redundant
++	+simd from architecture specification.
++	(neoverse-n1, cortex-a75.cortex-a55): Likewise.
++	* config/arm/arm.c (isa_all_fpubits, fpu_bitlist): Rename to ...
++	(isa_all_fpubits_internal, fpu_bitlist_internal): ... these.
++	(isa_all_fpbits): New bitmap.
++	(arm_option_override): Initialize it.
++	(arm_configure_build_target): If the target isa does not have any
++	FP enabled, do not warn about mismatches in FP-related feature bits.
++
 +2021-08-19  Richard Earnshaw  <rearnsha@arm.com>
 +
 +	Backported from master:
@@ -1214,19 +1299,127 @@ index 0a73e105e08..e4ae7d9b16b 100644
 +	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,neoverse512tvb,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
 diff --git a/gcc/config/arm/arm-c.c b/gcc/config/arm/arm-c.c
-index 6e256ee0a12..38da34203d0 100644
+index 6e256ee0a12..8cb08646ce5 100644
 --- a/gcc/config/arm/arm-c.c
 +++ b/gcc/config/arm/arm-c.c
-@@ -266,8 +266,7 @@ arm_pragma_target_parse (tree args, tree pop_target)
+@@ -266,8 +266,8 @@ arm_pragma_target_parse (tree args, tree pop_target)
         target_option_current_node, but not handle_pragma_target.  */
        target_option_current_node = cur_tree;
        arm_configure_build_target (&arm_active_target,
 -				  TREE_TARGET_OPTION (cur_tree),
 -				  &global_options_set, false);
 +				  TREE_TARGET_OPTION (cur_tree), false);
++      arm_option_reconfigure_globals ();
      }
  
    /* Update macros if target_node changes. The global state will be restored
+diff --git a/gcc/config/arm/arm-cpus.in b/gcc/config/arm/arm-cpus.in
+index f87044fd25c..de2caec5497 100644
+--- a/gcc/config/arm/arm-cpus.in
++++ b/gcc/config/arm/arm-cpus.in
+@@ -180,6 +180,9 @@ define feature quirk_armv6kz
+ # Cortex-M3 LDRD quirk.
+ define feature quirk_cm3_ldrd
+ 
++# Don't use .cpu assembly directive
++define feature quirk_no_asmcpu
++
+ # (Very) slow multiply operations.  Should probably be a tuning bit.
+ define feature smallmul
+ 
+@@ -213,15 +216,18 @@ define fgroup ALL_CRYPTO	crypto
+ # strip off 32 D-registers, but does not remove support for
+ # double-precision FP.
+ define fgroup ALL_SIMD_INTERNAL	fp_d32 neon ALL_CRYPTO
+-define fgroup ALL_SIMD	ALL_SIMD_INTERNAL dotprod fp16fml
++define fgroup ALL_SIMD_EXTERNAL dotprod fp16fml
++define fgroup ALL_SIMD	ALL_SIMD_INTERNAL ALL_SIMD_EXTERNAL
+ 
+ # List of all FPU bits to strip out if -mfpu is used to override the
+ # default.  fp16 is deliberately missing from this list.
+ define fgroup ALL_FPU_INTERNAL	vfpv2 vfpv3 vfpv4 fpv5 fp16conv fp_dbl ALL_SIMD_INTERNAL
+-
+ # Similarly, but including fp16 and other extensions that aren't part of
+ # -mfpu support.
+-define fgroup ALL_FP	fp16 ALL_FPU_INTERNAL
++define fgroup ALL_FPU_EXTERNAL fp16
++
++# Everything related to the FPU extensions (FP or SIMD).
++define fgroup ALL_FP	ALL_FPU_EXTERNAL ALL_FPU_INTERNAL ALL_SIMD
+ 
+ define fgroup ARMv4       armv4 notm
+ define fgroup ARMv4t      ARMv4 thumb
+@@ -274,7 +280,7 @@ define fgroup DOTPROD	NEON dotprod
+ # architectures.
+ # xscale isn't really a 'quirk', but it isn't an architecture either and we
+ # need to ignore it for matching purposes.
+-define fgroup ALL_QUIRKS   quirk_no_volatile_ce quirk_armv6kz quirk_cm3_ldrd xscale
++define fgroup ALL_QUIRKS   quirk_no_volatile_ce quirk_armv6kz quirk_cm3_ldrd xscale quirk_no_asmcpu
+ 
+ # Architecture entries
+ # format:
+@@ -976,6 +982,7 @@ begin cpu generic-armv7-a
+  cname genericv7a
+  tune flags LDSCHED
+  architecture armv7-a+fp
++ isa quirk_no_asmcpu
+  option mp add mp
+  option sec add sec
+  option vfpv3-d16 add VFPv3 FP_DBL
+@@ -1301,7 +1308,7 @@ begin cpu cortex-a55
+  cname cortexa55
+  tune for cortex-a53
+  tune flags LDSCHED
+- architecture armv8.2-a+fp16+dotprod+simd
++ architecture armv8.2-a+fp16+dotprod
+  option crypto add FP_ARMv8 CRYPTO
+  option nofp remove ALL_FP
+  costs cortex_a53
+@@ -1313,7 +1320,7 @@ begin cpu cortex-a75
+  cname cortexa75
+  tune for cortex-a57
+  tune flags LDSCHED
+- architecture armv8.2-a+fp16+dotprod+simd
++ architecture armv8.2-a+fp16+dotprod
+  option crypto add FP_ARMv8 CRYPTO
+  costs cortex_a73
+  vendor 41
+@@ -1324,7 +1331,7 @@ begin cpu cortex-a76
+  cname cortexa76
+  tune for cortex-a57
+  tune flags LDSCHED
+- architecture armv8.2-a+fp16+dotprod+simd
++ architecture armv8.2-a+fp16+dotprod
+  option crypto add FP_ARMv8 CRYPTO
+  costs cortex_a57
+  vendor 41
+@@ -1336,7 +1343,7 @@ begin cpu neoverse-n1
+  alias !ares
+  tune for cortex-a57
+  tune flags LDSCHED
+- architecture armv8.2-a+fp16+dotprod+simd
++ architecture armv8.2-a+fp16+dotprod
+  option crypto add FP_ARMv8 CRYPTO
+  costs cortex_a57
+  vendor 41
+@@ -1348,7 +1355,7 @@ begin cpu cortex-a75.cortex-a55
+  cname cortexa75cortexa55
+  tune for cortex-a53
+  tune flags LDSCHED
+- architecture armv8.2-a+fp16+dotprod+simd
++ architecture armv8.2-a+fp16+dotprod
+  option crypto add FP_ARMv8 CRYPTO
+  costs cortex_a73
+ end cpu cortex-a75.cortex-a55
+@@ -1357,7 +1364,7 @@ begin cpu cortex-a76.cortex-a55
+  cname cortexa76cortexa55
+  tune for cortex-a53
+  tune flags LDSCHED
+- architecture armv8.2-a+fp16+dotprod+simd
++ architecture armv8.2-a+fp16+dotprod
+  option crypto add FP_ARMv8 CRYPTO
+  costs cortex_a57
+ end cpu cortex-a76.cortex-a55
 diff --git a/gcc/config/arm/arm-protos.h b/gcc/config/arm/arm-protos.h
 index 3e8bba5caea..cd16c3c35f9 100644
 --- a/gcc/config/arm/arm-protos.h
@@ -1242,10 +1435,29 @@ index 3e8bba5caea..cd16c3c35f9 100644
  extern void arm_options_perform_arch_sanity_checks (void);
  extern void arm_pr_long_calls (struct cpp_reader *);
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
-index 4679da75dd8..3895007dcdb 100644
+index 4679da75dd8..58afc4a2647 100644
 --- a/gcc/config/arm/arm.c
 +++ b/gcc/config/arm/arm.c
-@@ -2985,7 +2985,7 @@ arm_override_options_after_change (void)
+@@ -78,10 +78,6 @@
+ typedef struct minipool_node    Mnode;
+ typedef struct minipool_fixup   Mfix;
+ 
+-/* The last .arch and .fpu assembly strings that we printed.  */
+-static std::string arm_last_printed_arch_string;
+-static std::string arm_last_printed_fpu_string;
+-
+ void (*arm_lang_output_object_attributes_hook)(void);
+ 
+ struct four_ints
+@@ -325,6 +321,7 @@ static unsigned int arm_hard_regno_nregs (unsigned int, machine_mode);
+ static bool arm_hard_regno_mode_ok (unsigned int, machine_mode);
+ static bool arm_modes_tieable_p (machine_mode, machine_mode);
+ static HOST_WIDE_INT arm_constant_alignment (const_tree, HOST_WIDE_INT);
++static const char *arm_identify_fpu_from_isa (sbitmap);
+ 
+ /* Table of machine attributes.  */
+ static const struct attribute_spec arm_attribute_table[] =
+@@ -2985,7 +2982,7 @@ arm_override_options_after_change (void)
  {
    arm_configure_build_target (&arm_active_target,
  			      TREE_TARGET_OPTION (target_option_default_node),
@@ -1254,17 +1466,28 @@ index 4679da75dd8..3895007dcdb 100644
  
    arm_override_options_after_change_1 (&global_options);
  }
-@@ -3006,8 +3006,7 @@ arm_option_restore (struct gcc_options *opts, struct cl_target_option *ptr)
+@@ -3006,8 +3003,8 @@ arm_option_restore (struct gcc_options *opts, struct cl_target_option *ptr)
    opts->x_arm_arch_string = ptr->x_arm_arch_string;
    opts->x_arm_cpu_string = ptr->x_arm_cpu_string;
    opts->x_arm_tune_string = ptr->x_arm_tune_string;
 -  arm_configure_build_target (&arm_active_target, ptr, &global_options_set,
 -			      false);
 +  arm_configure_build_target (&arm_active_target, ptr, false);
++  arm_option_reconfigure_globals ();
  }
  
  /* Reset options between modes that the user has specified.  */
-@@ -3124,7 +3123,6 @@ static sbitmap isa_quirkbits;
+@@ -3115,7 +3112,8 @@ arm_option_override_internal (struct gcc_options *opts,
+ #endif
+ }
+ 
+-static sbitmap isa_all_fpubits;
++static sbitmap isa_all_fpubits_internal;
++static sbitmap isa_all_fpbits;
+ static sbitmap isa_quirkbits;
+ 
+ /* Configure a build target TARGET from the user-specified options OPTS and
+@@ -3124,7 +3122,6 @@ static sbitmap isa_quirkbits;
  void
  arm_configure_build_target (struct arm_build_target *target,
  			    struct cl_target_option *opts,
@@ -1272,7 +1495,7 @@ index 4679da75dd8..3895007dcdb 100644
  			    bool warn_compatible)
  {
    const cpu_option *arm_selected_tune = NULL;
-@@ -3139,7 +3137,7 @@ arm_configure_build_target (struct arm_build_target *target,
+@@ -3139,7 +3136,7 @@ arm_configure_build_target (struct arm_build_target *target,
    target->core_name = NULL;
    target->arch_name = NULL;
  
@@ -1281,7 +1504,7 @@ index 4679da75dd8..3895007dcdb 100644
      {
        arm_selected_arch = arm_parse_arch_option_name (all_architectures,
  						      "-march",
-@@ -3147,7 +3145,7 @@ arm_configure_build_target (struct arm_build_target *target,
+@@ -3147,7 +3144,7 @@ arm_configure_build_target (struct arm_build_target *target,
        arch_opts = strchr (opts->x_arm_arch_string, '+');
      }
  
@@ -1290,7 +1513,7 @@ index 4679da75dd8..3895007dcdb 100644
      {
        arm_selected_cpu = arm_parse_cpu_option_name (all_cores, "-mcpu",
  						    opts->x_arm_cpu_string);
-@@ -3157,7 +3155,7 @@ arm_configure_build_target (struct arm_build_target *target,
+@@ -3157,7 +3154,7 @@ arm_configure_build_target (struct arm_build_target *target,
  	 options for tuning.  */
      }
  
@@ -1299,7 +1522,78 @@ index 4679da75dd8..3895007dcdb 100644
      {
        arm_selected_tune = arm_parse_cpu_option_name (all_cores, "-mtune",
  						     opts->x_arm_tune_string);
-@@ -3392,8 +3390,7 @@ arm_option_override (void)
+@@ -3182,7 +3179,12 @@ arm_configure_build_target (struct arm_build_target *target,
+ 	  /* Ignore any bits that are quirk bits.  */
+ 	  bitmap_and_compl (isa_delta, isa_delta, isa_quirkbits);
+ 	  /* Ignore (for now) any bits that might be set by -mfpu.  */
+-	  bitmap_and_compl (isa_delta, isa_delta, isa_all_fpubits);
++	  bitmap_and_compl (isa_delta, isa_delta, isa_all_fpubits_internal);
++
++	  /* And if the target ISA lacks floating point, ignore any
++	     extensions that depend on that.  */
++	  if (!bitmap_bit_p (target->isa, isa_bit_vfpv2))
++	    bitmap_and_compl (isa_delta, isa_delta, isa_all_fpbits);
+ 
+ 	  if (!bitmap_empty_p (isa_delta))
+ 	    {
+@@ -3341,10 +3343,15 @@ arm_configure_build_target (struct arm_build_target *target,
+       auto_sbitmap fpu_bits (isa_num_bits);
+ 
+       arm_initialize_isa (fpu_bits, arm_selected_fpu->isa_bits);
+-      bitmap_and_compl (target->isa, target->isa, isa_all_fpubits);
++      bitmap_and_compl (target->isa, target->isa, isa_all_fpubits_internal);
+       bitmap_ior (target->isa, target->isa, fpu_bits);
+     }
+ 
++  /* If we have the soft-float ABI, clear any feature bits relating to use of
++     floating-point operations.  They'll just confuse things later on.  */
++  if (arm_float_abi == ARM_FLOAT_ABI_SOFT)
++    bitmap_and_compl (target->isa, target->isa, isa_all_fpbits);
++
+   if (!arm_selected_tune)
+     arm_selected_tune = arm_selected_cpu;
+   else /* Validate the features passed to -mtune.  */
+@@ -3353,6 +3360,8 @@ arm_configure_build_target (struct arm_build_target *target,
+   const cpu_tune *tune_data = &all_tunes[arm_selected_tune - all_cores];
+ 
+   /* Finish initializing the target structure.  */
++  if (!target->arch_name)
++    target->arch_name = arm_selected_arch->common.name;
+   target->arch_pp_name = arm_selected_arch->arch;
+   target->base_arch = arm_selected_arch->base_arch;
+   target->profile = arm_selected_arch->profile;
+@@ -3360,23 +3369,26 @@ arm_configure_build_target (struct arm_build_target *target,
+   target->tune_flags = tune_data->tune_flags;
+   target->tune = tune_data->tune;
+   target->tune_core = tune_data->scheduler;
+-  arm_option_reconfigure_globals ();
+ }
+ 
+ /* Fix up any incompatible options that the user has specified.  */
+ static void
+ arm_option_override (void)
+ {
+-  static const enum isa_feature fpu_bitlist[]
++  static const enum isa_feature fpu_bitlist_internal[]
+     = { ISA_ALL_FPU_INTERNAL, isa_nobit };
++  static const enum isa_feature fp_bitlist[]
++    = { ISA_ALL_FP, isa_nobit };
+   static const enum isa_feature quirk_bitlist[] = { ISA_ALL_QUIRKS, isa_nobit};
+   cl_target_option opts;
+ 
+   isa_quirkbits = sbitmap_alloc (isa_num_bits);
+   arm_initialize_isa (isa_quirkbits, quirk_bitlist);
+ 
+-  isa_all_fpubits = sbitmap_alloc (isa_num_bits);
+-  arm_initialize_isa (isa_all_fpubits, fpu_bitlist);
++  isa_all_fpubits_internal = sbitmap_alloc (isa_num_bits);
++  isa_all_fpbits = sbitmap_alloc (isa_num_bits);
++  arm_initialize_isa (isa_all_fpubits_internal, fpu_bitlist_internal);
++  arm_initialize_isa (isa_all_fpbits, fp_bitlist);
+ 
+   arm_active_target.isa = sbitmap_alloc (isa_num_bits);
+ 
+@@ -3392,8 +3404,7 @@ arm_option_override (void)
      }
  
    cl_target_option_save (&opts, &global_options);
@@ -1309,7 +1603,166 @@ index 4679da75dd8..3895007dcdb 100644
  
  #ifdef SUBTARGET_OVERRIDE_OPTIONS
    SUBTARGET_OVERRIDE_OPTIONS;
-@@ -30938,10 +30935,8 @@ arm_can_inline_p (tree caller, tree callee)
+@@ -26654,20 +26665,65 @@ arm_print_tune_info (void)
+ 	       (int) current_tune->sched_autopref);
+ }
+ 
++/* The last set of target options used to emit .arch directives, etc.  This
++   could be a function-local static if it were not required to expose it as a
++   root to the garbage collector.  */
++static GTY(()) cl_target_option *last_asm_targ_options = NULL;
++
+ /* Print .arch and .arch_extension directives corresponding to the
+    current architecture configuration.  */
+ static void
+-arm_print_asm_arch_directives ()
++arm_print_asm_arch_directives (FILE *stream, cl_target_option *targ_options)
+ {
++  arm_build_target build_target;
++  /* If the target options haven't changed since the last time we were called
++     there is nothing to do.  This should be sufficient to suppress the
++     majority of redundant work.  */
++  if (last_asm_targ_options == targ_options)
++    return;
++
++  last_asm_targ_options = targ_options;
++
++  build_target.isa = sbitmap_alloc (isa_num_bits);
++  arm_configure_build_target (&build_target, targ_options, false);
++
++  if (build_target.core_name
++      && !bitmap_bit_p (build_target.isa, isa_bit_quirk_no_asmcpu))
++    {
++      const char* truncated_name
++	= arm_rewrite_selected_cpu (build_target.core_name);
++      asm_fprintf (stream, "\t.cpu %s\n", truncated_name);
++    }
++
+   const arch_option *arch
+     = arm_parse_arch_option_name (all_architectures, "-march",
+-				  arm_active_target.arch_name);
++				  build_target.arch_name);
+   auto_sbitmap opt_bits (isa_num_bits);
+ 
+   gcc_assert (arch);
+ 
+-  asm_fprintf (asm_out_file, "\t.arch %s\n", arm_active_target.arch_name);
+-  arm_last_printed_arch_string = arm_active_target.arch_name;
++  if (strcmp (build_target.arch_name, "armv7ve") == 0)
++    {
++      /* Keep backward compatability for assemblers which don't support
++	 armv7ve.  Fortunately, none of the following extensions are reset
++	 by a .fpu directive.  */
++      asm_fprintf (stream, "\t.arch armv7-a\n");
++      asm_fprintf (stream, "\t.arch_extension virt\n");
++      asm_fprintf (stream, "\t.arch_extension idiv\n");
++      asm_fprintf (stream, "\t.arch_extension sec\n");
++      asm_fprintf (stream, "\t.arch_extension mp\n");
++    }
++  else
++    asm_fprintf (stream, "\t.arch %s\n", build_target.arch_name);
++
++  /* The .fpu directive will reset any architecture extensions from the
++     assembler that relate to the fp/vector extensions.  So put this out before
++     any .arch_extension directives.  */
++  const char *fpu_name = (TARGET_SOFT_FLOAT
++			  ? "softvfp"
++			  : arm_identify_fpu_from_isa (build_target.isa));
++  asm_fprintf (stream, "\t.fpu %s\n", fpu_name);
++
+   if (!arch->common.extensions)
+     return;
+ 
+@@ -26679,13 +26735,12 @@ arm_print_asm_arch_directives ()
+ 	{
+ 	  arm_initialize_isa (opt_bits, opt->isa_bits);
+ 
+-	  /* If every feature bit of this option is set in the target
+-	     ISA specification, print out the option name.  However,
+-	     don't print anything if all the bits are part of the
+-	     FPU specification.  */
+-	  if (bitmap_subset_p (opt_bits, arm_active_target.isa)
+-	      && !bitmap_subset_p (opt_bits, isa_all_fpubits))
+-	    asm_fprintf (asm_out_file, "\t.arch_extension %s\n", opt->name);
++	  /* If every feature bit of this option is set in the target ISA
++	     specification, print out the option name.  However, don't print
++	     anything if all the bits are part of the FPU specification.  */
++	  if (bitmap_subset_p (opt_bits, build_target.isa)
++	      && !bitmap_subset_p (opt_bits, isa_all_fpubits_internal))
++	    asm_fprintf (stream, "\t.arch_extension %s\n", opt->name);
+ 	}
+     }
+ }
+@@ -26695,42 +26750,23 @@ arm_file_start (void)
+ {
+   int val;
+ 
++  arm_print_asm_arch_directives
++    (asm_out_file, TREE_TARGET_OPTION (target_option_default_node));
++
+   if (TARGET_BPABI)
+     {
+-      /* We don't have a specified CPU.  Use the architecture to
+-	 generate the tags.
+-
+-	 Note: it might be better to do this unconditionally, then the
+-	 assembler would not need to know about all new CPU names as
+-	 they are added.  */
+-      if (!arm_active_target.core_name)
+-	{
+-	  /* armv7ve doesn't support any extensions.  */
+-	  if (strcmp (arm_active_target.arch_name, "armv7ve") == 0)
+-	    {
+-	      /* Keep backward compatability for assemblers
+-		 which don't support armv7ve.  */
+-	      asm_fprintf (asm_out_file, "\t.arch armv7-a\n");
+-	      asm_fprintf (asm_out_file, "\t.arch_extension virt\n");
+-	      asm_fprintf (asm_out_file, "\t.arch_extension idiv\n");
+-	      asm_fprintf (asm_out_file, "\t.arch_extension sec\n");
+-	      asm_fprintf (asm_out_file, "\t.arch_extension mp\n");
+-	      arm_last_printed_arch_string = "armv7ve";
+-	    }
+-	  else
+-	    arm_print_asm_arch_directives ();
+-	}
+-      else if (strncmp (arm_active_target.core_name, "generic", 7) == 0)
+-	{
+-	  asm_fprintf (asm_out_file, "\t.arch %s\n",
+-		       arm_active_target.core_name + 8);
+-	  arm_last_printed_arch_string = arm_active_target.core_name + 8;
+-	}
+-      else
++      /* If we have a named cpu, but we the assembler does not support that
++	 name via .cpu, put out a cpu name attribute; but don't do this if the
++	 name starts with the fictitious prefix, 'generic'.  */
++      if (arm_active_target.core_name
++	  && bitmap_bit_p (arm_active_target.isa, isa_bit_quirk_no_asmcpu)
++	  && strncmp (arm_active_target.core_name, "generic", 7) != 0)
+ 	{
+ 	  const char* truncated_name
+ 	    = arm_rewrite_selected_cpu (arm_active_target.core_name);
+-	  asm_fprintf (asm_out_file, "\t.cpu %s\n", truncated_name);
++	  if (bitmap_bit_p (arm_active_target.isa, isa_bit_quirk_no_asmcpu))
++	    asm_fprintf (asm_out_file, "\t.eabi_attribute 5, \"%s\"\n",
++			 truncated_name);
+ 	}
+ 
+       if (print_tune_info)
+@@ -26798,6 +26834,13 @@ arm_file_end (void)
+ {
+   int regno;
+ 
++  /* Just in case the last function output in the assembler had non-default
++     architecture directives, we force the assembler state back to the default
++     set, so that any 'calculated' build attributes are based on the default
++     options rather than the special options for that function.  */
++  arm_print_asm_arch_directives
++    (asm_out_file, TREE_TARGET_OPTION (target_option_default_node));
++
+   if (NEED_INDICATE_EXEC_STACK)
+     /* Add .note.GNU-stack.  */
+     file_end_indicate_exec_stack ();
+@@ -30938,10 +30981,8 @@ arm_can_inline_p (tree caller, tree callee)
    caller_target.isa = sbitmap_alloc (isa_num_bits);
    callee_target.isa = sbitmap_alloc (isa_num_bits);
  
@@ -1322,7 +1775,7 @@ index 4679da75dd8..3895007dcdb 100644
    if (!bitmap_subset_p (callee_target.isa, caller_target.isa))
      can_inline = false;
  
-@@ -31073,7 +31068,7 @@ arm_valid_target_attribute_tree (tree args, struct gcc_options *opts,
+@@ -31073,7 +31114,7 @@ arm_valid_target_attribute_tree (tree args, struct gcc_options *opts,
      return NULL_TREE;
  
    cl_target_option_save (&cl_opts, opts);
@@ -1331,6 +1784,137 @@ index 4679da75dd8..3895007dcdb 100644
    arm_option_check_internal (opts);
    /* Do any overrides, such as global options arch=xxx.
       We do this since arm_active_target was overridden.  */
+@@ -31188,7 +31229,7 @@ arm_identify_fpu_from_isa (sbitmap isa)
+   auto_sbitmap fpubits (isa_num_bits);
+   auto_sbitmap cand_fpubits (isa_num_bits);
+ 
+-  bitmap_and (fpubits, isa, isa_all_fpubits);
++  bitmap_and (fpubits, isa, isa_all_fpubits_internal);
+ 
+   /* If there are no ISA feature bits relating to the FPU, we must be
+      doing soft-float.  */
+@@ -31219,44 +31260,7 @@ arm_declare_function_name (FILE *stream, const char *name, tree decl)
+     targ_options = TREE_TARGET_OPTION (target_option_current_node);
+   gcc_assert (targ_options);
+ 
+-  /* Only update the assembler .arch string if it is distinct from the last
+-     such string we printed. arch_to_print is set conditionally in case
+-     targ_options->x_arm_arch_string is NULL which can be the case
+-     when cc1 is invoked directly without passing -march option.  */
+-  std::string arch_to_print;
+-  if (targ_options->x_arm_arch_string)
+-    arch_to_print = targ_options->x_arm_arch_string;
+-
+-  if (arch_to_print != arm_last_printed_arch_string)
+-    {
+-      std::string arch_name
+-	= arch_to_print.substr (0, arch_to_print.find ("+"));
+-      asm_fprintf (asm_out_file, "\t.arch %s\n", arch_name.c_str ());
+-      const arch_option *arch
+-	= arm_parse_arch_option_name (all_architectures, "-march",
+-				      targ_options->x_arm_arch_string);
+-      auto_sbitmap opt_bits (isa_num_bits);
+-
+-      gcc_assert (arch);
+-      if (arch->common.extensions)
+-	{
+-	  for (const struct cpu_arch_extension *opt = arch->common.extensions;
+-	       opt->name != NULL;
+-	       opt++)
+-	    {
+-	      if (!opt->remove)
+-		{
+-		  arm_initialize_isa (opt_bits, opt->isa_bits);
+-		  if (bitmap_subset_p (opt_bits, arm_active_target.isa)
+-		      && !bitmap_subset_p (opt_bits, isa_all_fpubits))
+-		    asm_fprintf (asm_out_file, "\t.arch_extension %s\n",
+-				 opt->name);
+-		}
+-	     }
+-	}
+-
+-      arm_last_printed_arch_string = arch_to_print;
+-    }
++  arm_print_asm_arch_directives (stream, targ_options);
+ 
+   fprintf (stream, "\t.syntax unified\n");
+ 
+@@ -31274,16 +31278,6 @@ arm_declare_function_name (FILE *stream, const char *name, tree decl)
+   else
+     fprintf (stream, "\t.arm\n");
+ 
+-  std::string fpu_to_print
+-    = TARGET_SOFT_FLOAT
+-	? "softvfp" : arm_identify_fpu_from_isa (arm_active_target.isa);
+-
+-  if (fpu_to_print != arm_last_printed_arch_string)
+-    {
+-      asm_fprintf (asm_out_file, "\t.fpu %s\n", fpu_to_print.c_str ());
+-      arm_last_printed_fpu_string = fpu_to_print;
+-    }
+-
+   if (TARGET_POKE_FUNCTION_NAME)
+     arm_poke_function_name (stream, (const char *) name);
+ }
+@@ -31934,28 +31928,28 @@ arm_test_cpu_arch_data (void)
+ static void
+ arm_test_fpu_data (void)
+ {
+-  auto_sbitmap isa_all_fpubits (isa_num_bits);
++  auto_sbitmap isa_all_fpubits_internal (isa_num_bits);
+   auto_sbitmap fpubits (isa_num_bits);
+   auto_sbitmap tmpset (isa_num_bits);
+ 
+-  static const enum isa_feature fpu_bitlist[]
++  static const enum isa_feature fpu_bitlist_internal[]
+     = { ISA_ALL_FPU_INTERNAL, isa_nobit };
+-  arm_initialize_isa (isa_all_fpubits, fpu_bitlist);
++  arm_initialize_isa (isa_all_fpubits_internal, fpu_bitlist_internal);
+ 
+   for (unsigned int i = 0; i < TARGET_FPU_auto; i++)
+   {
+     arm_initialize_isa (fpubits, all_fpus[i].isa_bits);
+-    bitmap_and_compl (tmpset, isa_all_fpubits, fpubits);
+-    bitmap_clear (isa_all_fpubits);
+-    bitmap_copy (isa_all_fpubits, tmpset);
++    bitmap_and_compl (tmpset, isa_all_fpubits_internal, fpubits);
++    bitmap_clear (isa_all_fpubits_internal);
++    bitmap_copy (isa_all_fpubits_internal, tmpset);
+   }
+ 
+-  if (!bitmap_empty_p (isa_all_fpubits))
++  if (!bitmap_empty_p (isa_all_fpubits_internal))
+     {
+ 	fprintf (stderr, "Error: found feature bits in the ALL_FPU_INTERAL"
+ 			 " group that are not defined by any FPU.\n"
+ 			 "       Check your arm-cpus.in.\n");
+-	ASSERT_TRUE (bitmap_empty_p (isa_all_fpubits));
++	ASSERT_TRUE (bitmap_empty_p (isa_all_fpubits_internal));
+     }
+ }
+ 
+diff --git a/gcc/config/i386/avx512dqintrin.h b/gcc/config/i386/avx512dqintrin.h
+index f0c18fb45fb..c080c2041fa 100644
+--- a/gcc/config/i386/avx512dqintrin.h
++++ b/gcc/config/i386/avx512dqintrin.h
+@@ -2629,7 +2629,7 @@ _mm512_fpclass_ps_mask (__m512 __A, const int __imm)
+ 
+ #define _mm512_mask_fpclass_ps_mask(u, x, c)				\
+   ((__mmask16) __builtin_ia32_fpclassps512_mask ((__v16sf) (__m512) (x),\
+-						 (int) (c),(__mmask8)(u)))
++						 (int) (c),(__mmask16)(u)))
+ 
+ #define _mm512_fpclass_pd_mask(X, C)                                    \
+   ((__mmask8) __builtin_ia32_fpclasspd512_mask ((__v8df) (__m512d) (X), \
+@@ -2637,7 +2637,7 @@ _mm512_fpclass_ps_mask (__m512 __A, const int __imm)
+ 
+ #define _mm512_fpclass_ps_mask(x, c)                                    \
+   ((__mmask16) __builtin_ia32_fpclassps512_mask ((__v16sf) (__m512) (x),\
+-						 (int) (c),(__mmask8)-1))
++						 (int) (c),(__mmask16)-1))
+ 
+ #define _mm_reduce_sd(A, B, C)						\
+   ((__m128d) __builtin_ia32_reducesd_mask ((__v2df)(__m128d)(A),	\
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
 index 8ae7ea68c16..5d76d36e1c0 100644
 --- a/gcc/config/i386/i386.md
@@ -2656,10 +3240,38 @@ index 9be8dd185bf..59ffd071430 100644
        tree present = gfc_conv_expr_present (code->expr1->symtree->n.sym);
        tmp = build3_loc (input_location, COND_EXPR, TREE_TYPE (tmp),
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..60e5c37d1a6 100644
+index 47eac19a1f6..095bf437db9 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,156 @@
+@@ -1,3 +1,184 @@
++2021-08-25  konglin1  <lingling.kong@intel.com>
++
++	PR target/101471
++	* gcc.target/i386/avx512f-pr101471.c: New test.
++
++2021-08-23  Christophe Lyon  <christophe.lyon@foss.st.com>
++
++	Backported from master:
++	2021-08-06  Christophe Lyon  <christophe.lyon@foss.st.com>
++
++	PR target/101723
++	* gcc.target/arm/pr69245.c: Make sure to emit code for fn1, fix
++	typo.
++
++2021-08-23  Richard Earnshaw  <rearnsha@arm.com>
++
++	Backported from master:
++	2021-08-05  Richard Earnshaw  <rearnsha@arm.com>
++
++	PR target/101723
++	* gcc.target/arm/attr-neon.c: Tighten scan-assembler tests.
++	* gcc.target/arm/attr-neon2.c: Likewise.
++	* gcc.target/arm/attr-neon3.c: Likewise.
++	* gcc.target/arm/pr69245.c: Tighten scan-assembler match, but allow
++	multiple instances.
++	* gcc.target/arm/pragma_fpu_attribute.c: Likewise.
++	* gcc.target/arm/pragma_fpu_attribute_2.c: Likewise.
++
 +2021-08-19  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	Backported from master:
@@ -2841,6 +3453,139 @@ index ebc2cce78f4..04bf0381f76 100644
 -/* { dg-message "fself\-test: " "-fself-test" { target *-*-* } 0 } */
 +
 +/* { dg-regexp {^-fself-test: [0-9]+ pass\(es\) in [.0-9]+ seconds$|.*: note: self-tests are not enabled in this build$} } */
+diff --git a/gcc/testsuite/gcc.target/arm/attr-neon.c b/gcc/testsuite/gcc.target/arm/attr-neon.c
+index 225fb8dc3db..e8e3086247d 100644
+--- a/gcc/testsuite/gcc.target/arm/attr-neon.c
++++ b/gcc/testsuite/gcc.target/arm/attr-neon.c
+@@ -1,7 +1,10 @@
+ /* { dg-do compile } */
+ /* { dg-require-effective-target arm_neon_ok } */
+ /* { dg-options "-O2 -ftree-vectorize" } */
+-/* { dg-add-options arm_neon arm_v8_vfp } */ /* The arm_v8_vfp adds -mfpu=fp-armv8 to the command line, overriding any -mfpu= option set by arm_neon, thus ensuring that the attributes below really are checked for correct fpu selection.  */
++/* { dg-add-options arm_neon arm_v8_vfp } */
++/* The arm_v8_vfp adds -mfpu=fp-armv8 to the command line, overriding any
++   -mfpu= option set by arm_neon, thus ensuring that the attributes below
++   really are checked for correct fpu selection.  */
+ 
+ /* Verify that neon instructions are emitted once.  */
+ void __attribute__ ((target("fpu=neon")))
+@@ -18,6 +21,6 @@ f3(int n, int x[], int y[]) {
+     y[i] = x[i] << 3;
+ }
+ 
+-/* { dg-final { scan-assembler-times "\.fpu vfp" 1 } } */
+-/* { dg-final { scan-assembler-times "\.fpu neon" 1 } } */
++/* { dg-final { scan-assembler-times "\.fpu\\s+vfp\n" 1 } } */
++/* { dg-final { scan-assembler-times "\.fpu\\s+neon\n" 1 } } */
+ /* { dg-final { scan-assembler-times "vshl" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/arm/attr-neon2.c b/gcc/testsuite/gcc.target/arm/attr-neon2.c
+index 29668256cf5..91cf4dde8db 100644
+--- a/gcc/testsuite/gcc.target/arm/attr-neon2.c
++++ b/gcc/testsuite/gcc.target/arm/attr-neon2.c
+@@ -27,8 +27,8 @@ my1 (int8x8_t __a, int8x8_t __b)
+   return __a + __b;
+ }
+ 
+-/* { dg-final { scan-assembler-times "\.fpu vfp" 1 } } */
+-/* { dg-final { scan-assembler-times "\.fpu neon" 1 } } */
++/* { dg-final { scan-assembler {\.fpu\s+vfp\n} } } */
++/* { dg-final { scan-assembler {\.fpu\s+neon\n} } } */
+ /* { dg-final { scan-assembler "vadd" } } */
+ 
+ 
+diff --git a/gcc/testsuite/gcc.target/arm/attr-neon3.c b/gcc/testsuite/gcc.target/arm/attr-neon3.c
+index 17e429ad739..0acb7f98dc6 100644
+--- a/gcc/testsuite/gcc.target/arm/attr-neon3.c
++++ b/gcc/testsuite/gcc.target/arm/attr-neon3.c
+@@ -31,8 +31,8 @@ my1 (int8x8_t __a, int8x8_t __b)
+   return __a + __b;
+ }
+ 
+-/* { dg-final { scan-assembler-times "\.fpu vfp" 1 } } */
+-/* { dg-final { scan-assembler-times "\.fpu neon" 1 } } */
+-/* { dg-final { scan-assembler-times "\.fpu crypto-neon-fp-armv8" 1 } } */
++/* { dg-final { scan-assembler {\.fpu\s+vfp\n} } } */
++/* { dg-final { scan-assembler {\.fpu\s+neon\n} } } */
++/* { dg-final { scan-assembler {\.fpu\s+crypto-neon-fp-armv8\n} } } */
+ /* { dg-final { scan-assembler-times "vld1" 1 } } */
+ /* { dg-final { scan-assembler-times "vadd" 1} } */
+diff --git a/gcc/testsuite/gcc.target/arm/pr69245.c b/gcc/testsuite/gcc.target/arm/pr69245.c
+index bd505187728..58a6104e8f6 100644
+--- a/gcc/testsuite/gcc.target/arm/pr69245.c
++++ b/gcc/testsuite/gcc.target/arm/pr69245.c
+@@ -12,7 +12,7 @@
+ #pragma GCC target "fpu=neon-vfpv4"
+ int a, c, d;
+ float b;
+-static int fn1 ()
++ int fn1 ()
+ {
+   return 0;
+ }
+@@ -23,4 +23,8 @@ void fn2 ()
+   d = b * c + a;
+ }
+ 
+-/* { dg-final { scan-assembler-times "\.fpu vfp" 1 } } */
++/* Because we don't know the exact command-line options used to invoke the test
++   we cannot expect these tests to match exactly once.  But they must appear at
++   least once.  */
++/* { dg-final { scan-assembler "\.fpu\\s+vfp\n" } } */
++/* { dg-final { scan-assembler "\.fpu\\s+neon-vfpv4\n" } } */
+diff --git a/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c b/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c
+index 174be85f3f7..7e63cf53013 100644
+--- a/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c
++++ b/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c
+@@ -22,5 +22,8 @@ uint32_t restored ()
+   return bar();
+ }
+ 
+-/* { dg-final { scan-assembler-times {\.fpu\s+vfpv4} 1 } } */
+-/* { dg-final { scan-assembler-times {\.fpu\s+vfpv3-d16} 1 } } */
++/* We can't tell exactly how many times the following tests will match because
++   command-line options may cause additional instances to be generated, but
++   each must be present at least once.  */
++/* { dg-final { scan-assembler {\.fpu\s+vfpv4\n} } } */
++/* { dg-final { scan-assembler {\.fpu\s+vfpv3-d16\n} } } */
+diff --git a/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute_2.c b/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute_2.c
+index add40ddc6b8..398d8fff35c 100644
+--- a/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute_2.c
++++ b/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute_2.c
+@@ -25,5 +25,8 @@ uint32_t restored ()
+   return bar();
+ }
+ 
+-/* { dg-final { scan-assembler-times {\.fpu\s+vfpv4} 1 } } */
+-/* { dg-final { scan-assembler-times {\.fpu\s+vfpv3-d16} 1 } } */
++/* We can't tell exactly how many times the following tests will match because
++   command-line options may cause additional instances to be generated, but
++   each must be present at least once.  */
++/* { dg-final { scan-assembler {\.fpu\s+vfpv4\n} } } */
++/* { dg-final { scan-assembler {\.fpu\s+vfpv3-d16\n} } } */
+diff --git a/gcc/testsuite/gcc.target/i386/avx512f-pr101471.c b/gcc/testsuite/gcc.target/i386/avx512f-pr101471.c
+new file mode 100644
+index 00000000000..4a0057b241e
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/avx512f-pr101471.c
+@@ -0,0 +1,18 @@
++/* { dg-do run } */
++/* { dg-options "-mavx512dq -O0" } */
++/* { dg-require-effective-target avx512dq } */
++
++#include "avx512f-check.h"
++
++static void
++avx512f_test (void)
++{
++  __m512 x = {
++      1, 1, 1, 1,
++      1, 1, 1, 1,
++      0, 0, 0, 0,
++      0, 0, 0, 0,  };
++  int ret = _mm512_fpclass_ps_mask(x, 0x26);
++  if (ret != 65280)
++    __builtin_abort();
++}
 diff --git a/gcc/testsuite/gcc.target/i386/pr101175.c b/gcc/testsuite/gcc.target/i386/pr101175.c
 new file mode 100644
 index 00000000000..ed7a08110a5
