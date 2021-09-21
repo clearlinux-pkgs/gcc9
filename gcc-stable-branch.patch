@@ -5,7 +5,26 @@ Bill Schmidt (2):
 Christophe Lyon (1):
       arm: Fix pr69245.c testcase for reorder assembler architecture directives [PR101723]
 
-GCC Administrator (94):
+Eric Botcazou (3):
+      Fix internal error on pointer-to-pointer binding in LTO mode
+      Fix inaccurate bounds in debug info for vector array types
+      Fix PR rtl-optimization/102306
+
+GCC Administrator (108):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -117,7 +136,7 @@ Iain Buclaw (10):
       d: Wrong evaluation order of binary expressions (PR101640)
       d: Ensure casting from bool results in either 0 or 1 (PR96435)
 
-Jonathan Wakely (16):
+Jonathan Wakely (17):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -134,6 +153,7 @@ Jonathan Wakely (16):
       libstdc++: Add more tests for filesystem::create_directory [PR101510]
       libstdc++: Fix create_directories to resolve symlinks [PR101510]
       libstdc++: Fix test that fails randomly [PR101866]
+      c++: Fix docs on assignment of virtual bases [PR60318]
 
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
@@ -143,11 +163,16 @@ Martin Liska (3):
       Add mklog.py.
       sanitizer: cherry pick 414482751452e54710f16bae58458c66298aaf69
 
-Paul Thomas (4):
+Paul Thomas (9):
       Fortran: Allow pointer deferred length associate selectors. [PR93794]
       Fortran: Fix ICE due to elemental procedure pointers [PR93924/5].
       Fortran: Fix for class defined operators [PR99125].
       Fortran: Assumed and explicit size class arrays [PR46691/99819].
+      Fortran: Fix host associated PDT entity initialization
+      Fortran: Fix ICE due to elemental procedure pointers [PR98472].
+      Fortran: Improve resolution of associate variables. [PR93701].
+      Fortran: Fix for class functions as associated target [PR98565].
+      Fortran: Correct missing structure constructor comps. [PR97612].
 
 Richard Biener (1):
       Bump BASE-VER to 9.4.1
@@ -1123,10 +1148,25 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..201abaaf49c 100644
+index 7558c0a369e..dcb829bf820 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,158 @@
+@@ -1,3 +1,173 @@
++2021-09-17  Eric Botcazou  <ebotcazou@adacore.com>
++
++	PR rtl-optimization/102306
++	* combine.c (try_combine): Abort the combination if we are about to
++	duplicate volatile references.
++
++2021-09-08  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-09-08  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR c++/60318
++	* doc/trouble.texi (Copy Assignment): Fix description of
++	behaviour and fix code in example.
++
 +2021-08-31  Thomas Schwinge  <thomas@codesourcery.com>
 +
 +	Backported from master:
@@ -1285,11 +1325,89 @@ index 7558c0a369e..201abaaf49c 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/ada/ChangeLog b/gcc/ada/ChangeLog
+index 75713e9bfba..9c6ac5447f5 100644
+--- a/gcc/ada/ChangeLog
++++ b/gcc/ada/ChangeLog
+@@ -1,3 +1,13 @@
++2021-09-14  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc-interface/decl.c (gnat_to_gnu_entity): For vector types, make
++	the representative array the debug type.
++
++2021-09-14  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc-interface/utils.c (update_pointer_to): Set TYPE_CANONICAL on
++	pointer and reference types.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
+diff --git a/gcc/ada/gcc-interface/decl.c b/gcc/ada/gcc-interface/decl.c
+index de43c66b77c..0af1c7112ed 100644
+--- a/gcc/ada/gcc-interface/decl.c
++++ b/gcc/ada/gcc-interface/decl.c
+@@ -4646,6 +4646,14 @@ gnat_to_gnu_entity (Entity_Id gnat_entity, tree gnu_expr, bool definition)
+       else
+ 	gnu_decl = create_type_decl (gnu_entity_name, gnu_type, artificial_p,
+ 				     debug_info_p, gnat_entity);
++
++      /* For vector types, make the representative array the debug type.  */
++      if (VECTOR_TYPE_P (gnu_type))
++	{
++	  tree rep = TYPE_REPRESENTATIVE_ARRAY (gnu_type);
++	  TYPE_NAME (rep) = DECL_NAME (gnu_decl);
++	  SET_TYPE_DEBUG_TYPE (gnu_type, rep);
++	}
+     }
+ 
+   /* Otherwise, for a type reusing an existing DECL, back-annotate values.  */
+diff --git a/gcc/ada/gcc-interface/utils.c b/gcc/ada/gcc-interface/utils.c
+index 882802a19e4..acfb60c3e37 100644
+--- a/gcc/ada/gcc-interface/utils.c
++++ b/gcc/ada/gcc-interface/utils.c
+@@ -4144,6 +4144,7 @@ update_pointer_to (tree old_type, tree new_type)
+ 	    TREE_TYPE (t) = new_type;
+ 	    if (TYPE_NULL_BOUNDS (t))
+ 	      TREE_TYPE (TREE_OPERAND (TYPE_NULL_BOUNDS (t), 0)) = new_type;
++	    TYPE_CANONICAL (t) = TYPE_CANONICAL (TYPE_POINTER_TO (new_type));
+ 	  }
+ 
+       /* Chain REF and its variants at the end.  */
+@@ -4160,7 +4161,10 @@ update_pointer_to (tree old_type, tree new_type)
+       /* Now adjust them.  */
+       for (; ref; ref = TYPE_NEXT_REF_TO (ref))
+ 	for (t = TYPE_MAIN_VARIANT (ref); t; t = TYPE_NEXT_VARIANT (t))
+-	  TREE_TYPE (t) = new_type;
++	  {
++	    TREE_TYPE (t) = new_type;
++	    TYPE_CANONICAL (t) = TYPE_CANONICAL (TYPE_REFERENCE_TO (new_type));
++	  }
+ 
+       TYPE_POINTER_TO (old_type) = NULL_TREE;
+       TYPE_REFERENCE_TO (old_type) = NULL_TREE;
 diff --git a/gcc/combine.c b/gcc/combine.c
-index d82161e5161..fe31bb59c82 100644
+index d82161e5161..9fc3c8d5e00 100644
 --- a/gcc/combine.c
 +++ b/gcc/combine.c
-@@ -14392,6 +14392,11 @@ distribute_notes (rtx notes, rtx_insn *from_insn, rtx_insn *i3, rtx_insn *i2,
+@@ -3222,6 +3222,16 @@ try_combine (rtx_insn *i3, rtx_insn *i2, rtx_insn *i1, rtx_insn *i0,
+       return 0;
+     }
+ 
++  /* We cannot safely duplicate volatile references in any case.  */
++
++  if ((added_sets_2 && volatile_refs_p (PATTERN (i2)))
++      || (added_sets_1 && volatile_refs_p (PATTERN (i1)))
++      || (added_sets_0 && volatile_refs_p (PATTERN (i0))))
++    {
++      undo_all ();
++      return 0;
++    }
++
+   /* Count how many auto_inc expressions there were in the original insns;
+      we need to have the same number in the resulting patterns.  */
+ 
+@@ -14392,6 +14402,11 @@ distribute_notes (rtx notes, rtx_insn *from_insn, rtx_insn *i3, rtx_insn *i2,
  	     we keep notes from i2 or i1 if they will turn into REG_DEAD
  	     notes.  */
  
@@ -3178,11 +3296,89 @@ index 7b5f6e03d9f..7226c9cc4af 100644
  @item -moverride=@var{string}
  @opindex moverride
  Override tuning decisions made by the back-end in response to a
+diff --git a/gcc/doc/trouble.texi b/gcc/doc/trouble.texi
+index 693912ea355..aaee8fba6bb 100644
+--- a/gcc/doc/trouble.texi
++++ b/gcc/doc/trouble.texi
+@@ -865,10 +865,11 @@ objects behave unspecified when being assigned.  For example:
+ @smallexample
+ struct Base@{
+   char *name;
+-  Base(char *n) : name(strdup(n))@{@}
++  Base(const char *n) : name(strdup(n))@{@}
+   Base& operator= (const Base& other)@{
+    free (name);
+    name = strdup (other.name);
++   return *this;
+   @}
+ @};
+ 
+@@ -901,8 +902,8 @@ inside @samp{func} in the example).
+ G++ implements the ``intuitive'' algorithm for copy-assignment: assign all
+ direct bases, then assign all members.  In that algorithm, the virtual
+ base subobject can be encountered more than once.  In the example, copying
+-proceeds in the following order: @samp{val}, @samp{name} (via
+-@code{strdup}), @samp{bval}, and @samp{name} again.
++proceeds in the following order: @samp{name} (via @code{strdup}),
++@samp{val}, @samp{name} again, and @samp{bval}.
+ 
+ If application code relies on copy-assignment, a user-defined
+ copy-assignment operator removes any uncertainties.  With such an
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..5582db1ed1c 100644
+index f1d66e38980..4a5351dcbda 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,87 @@
+@@ -1,3 +1,137 @@
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2020-12-29  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/97612
++	* primary.c (build_actual_constructor): Missing allocatable
++	components are set unallocated using EXPR_NULL. Then missing
++	components are tested for a default initializer.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-01-22  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/98565
++	* trans-intrinsic.c (gfc_conv_associated): Do not add a _data
++	component for scalar class function targets. Instead, fix the
++	function result and access the _data from that.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-01-07  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/93701
++	* resolve.c (find_array_spec): Put static prototype for
++	resolve_assoc_var before this function and call for associate
++	variables.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-01-27  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/98472
++	* trans-array.c (gfc_conv_expr_descriptor): Include elemental
++	procedure pointers in the assert under the comment 'elemental
++	function' and eliminate the second, spurious assert.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-04-20  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/100110
++	* trans-decl.c (gfc_get_symbol_decl): Replace test for host
++	association with a check that the current and symbol namespaces
++	are the same.
++
 +2021-09-06  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backported from master:
@@ -3363,8 +3559,87 @@ index ff71b44b409..46be96c1a22 100644
    ns = insert_block ();
  
    /* Assign the type of the zero expression for initializing the resulting
+diff --git a/gcc/fortran/primary.c b/gcc/fortran/primary.c
+index cbd84bb0abc..1e1f16ebacf 100644
+--- a/gcc/fortran/primary.c
++++ b/gcc/fortran/primary.c
+@@ -3023,26 +3023,36 @@ build_actual_constructor (gfc_structure_ctor_component **comp_head,
+ 	  continue;
+ 	}
+ 
+-      /* If it was not found, try the default initializer if there's any;
++      /* If it was not found, apply NULL expression to set the component as
++	 unallocated. Then try the default initializer if there's any;
+ 	 otherwise, it's an error unless this is a deferred parameter.  */
+       if (!comp_iter)
+ 	{
+-	  if (comp->initializer)
+-	    {
+-	      if (!gfc_notify_std (GFC_STD_F2003, "Structure constructor "
+-				   "with missing optional arguments at %C"))
+-		return false;
+-	      value = gfc_copy_expr (comp->initializer);
+-	    }
+-	  else if (comp->attr.allocatable
+-		   || (comp->ts.type == BT_CLASS
+-		       && CLASS_DATA (comp)->attr.allocatable))
++	  /* F2018 7.5.10: If an allocatable component has no corresponding
++	     component-data-source, then that component has an allocation
++	     status of unallocated....  */
++	  if (comp->attr.allocatable
++	      || (comp->ts.type == BT_CLASS
++		  && CLASS_DATA (comp)->attr.allocatable))
+ 	    {
+ 	      if (!gfc_notify_std (GFC_STD_F2008, "No initializer for "
+ 				   "allocatable component %qs given in the "
+ 				   "structure constructor at %C", comp->name))
+ 		return false;
++	      value = gfc_get_null_expr (&gfc_current_locus);
++	    }
++	  /* ....(Preceeding sentence) If a component with default
++	     initialization has no corresponding component-data-source, then
++	     the default initialization is applied to that component.  */
++	  else if (comp->initializer)
++	    {
++	      if (!gfc_notify_std (GFC_STD_F2003, "Structure constructor "
++				   "with missing optional arguments at %C"))
++		return false;
++	      value = gfc_copy_expr (comp->initializer);
+ 	    }
++	  /* Do not trap components such as the string length for deferred
++	     length character components.  */
+ 	  else if (!comp->attr.artificial)
+ 	    {
+ 	      gfc_error ("No initializer for component %qs given in the"
+diff --git a/gcc/fortran/resolve.c b/gcc/fortran/resolve.c
+index 1c72e0db9ea..9181a6fa2ac 100644
+--- a/gcc/fortran/resolve.c
++++ b/gcc/fortran/resolve.c
+@@ -4736,6 +4736,8 @@ gfc_resolve_dim_arg (gfc_expr *dim)
+    base symbol.  We traverse the list of reference structures, setting
+    the stored reference to references.  Component references can
+    provide an additional array specification.  */
++static void
++resolve_assoc_var (gfc_symbol* sym, bool resolve_target);
+ 
+ static void
+ find_array_spec (gfc_expr *e)
+@@ -4745,6 +4747,13 @@ find_array_spec (gfc_expr *e)
+   gfc_ref *ref;
+   bool class_as = false;
+ 
++  if (e->symtree->n.sym->assoc)
++    {
++      if (e->symtree->n.sym->assoc->target)
++	gfc_resolve_expr (e->symtree->n.sym->assoc->target);
++      resolve_assoc_var (e->symtree->n.sym, false);
++    }
++
+   if (e->symtree->n.sym->ts.type == BT_CLASS)
+     {
+       as = CLASS_DATA (e->symtree->n.sym)->as;
 diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
-index c6efe95e236..7b45c58c4b4 100644
+index c6efe95e236..d6315624f2c 100644
 --- a/gcc/fortran/trans-array.c
 +++ b/gcc/fortran/trans-array.c
 @@ -6609,7 +6609,14 @@ gfc_trans_g77_array (gfc_symbol * sym, gfc_wrapped_block * block)
@@ -3393,6 +3668,18 @@ index c6efe95e236..7b45c58c4b4 100644
  	       && (gfc_option.rtcheck & GFC_RTCHECK_BOUNDS));
  
    no_repack = !(GFC_DECL_PACKED_ARRAY (tmpdesc)
+@@ -7521,9 +7529,9 @@ gfc_conv_expr_descriptor (gfc_se *se, gfc_expr *expr)
+ 			 && expr->value.function.esym->attr.elemental)
+ 			|| (expr->value.function.isym != NULL
+ 			    && expr->value.function.isym->elemental)
++			|| (gfc_expr_attr (expr).proc_pointer
++			    && gfc_expr_attr (expr).elemental)
+ 			|| gfc_inline_intrinsic_function_p (expr));
+-	  else
+-	    gcc_assert (ss_type == GFC_SS_INTRINSIC);
+ 
+ 	  need_tmp = 1;
+ 	  if (expr->ts.type == BT_CHARACTER
 @@ -7712,15 +7720,21 @@ gfc_conv_expr_descriptor (gfc_se *se, gfc_expr *expr)
        /* Set the string_length for a character array.  */
        if (expr->ts.type == BT_CHARACTER)
@@ -3417,6 +3704,20 @@ index c6efe95e236..7b45c58c4b4 100644
  	}
  
        /* If we have an array section or are assigning make sure that
+diff --git a/gcc/fortran/trans-decl.c b/gcc/fortran/trans-decl.c
+index fb957d187d3..99772db9ca1 100644
+--- a/gcc/fortran/trans-decl.c
++++ b/gcc/fortran/trans-decl.c
+@@ -1506,7 +1506,8 @@ gfc_get_symbol_decl (gfc_symbol * sym)
+      declaration of the entity and memory allocated/deallocated.  */
+   if ((sym->ts.type == BT_DERIVED || sym->ts.type == BT_CLASS)
+       && sym->param_list != NULL
+-      && !(sym->attr.host_assoc || sym->attr.use_assoc || sym->attr.dummy))
++      && gfc_current_ns == sym->ns
++      && !(sym->attr.use_assoc || sym->attr.dummy))
+     gfc_defer_symbol_init (sym);
+ 
+   /* Dummy PDT 'len' parameters should be checked when they are explicit.  */
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
 index 9be8dd185bf..d703005d816 100644
 --- a/gcc/fortran/trans-expr.c
@@ -3487,11 +3788,85 @@ index 9be8dd185bf..d703005d816 100644
  
    realloc_flag = flag_realloc_lhs
  		 && gfc_is_reallocatable_lhs (expr1)
+diff --git a/gcc/fortran/trans-intrinsic.c b/gcc/fortran/trans-intrinsic.c
+index 1b51e870f04..729f933ac11 100644
+--- a/gcc/fortran/trans-intrinsic.c
++++ b/gcc/fortran/trans-intrinsic.c
+@@ -8473,7 +8473,8 @@ gfc_conv_associated (gfc_se *se, gfc_expr *expr)
+   else
+     {
+       /* An optional target.  */
+-      if (arg2->expr->ts.type == BT_CLASS)
++      if (arg2->expr->ts.type == BT_CLASS
++	  && arg2->expr->expr_type != EXPR_FUNCTION)
+ 	gfc_add_data_component (arg2->expr);
+ 
+       nonzero_charlen = NULL_TREE;
+@@ -8501,6 +8502,11 @@ gfc_conv_associated (gfc_se *se, gfc_expr *expr)
+ 	      && arg2->expr->symtree->n.sym->attr.dummy)
+ 	    arg2se.expr = build_fold_indirect_ref_loc (input_location,
+ 						       arg2se.expr);
++	  if (arg2->expr->ts.type == BT_CLASS)
++	    {
++	      arg2se.expr = gfc_evaluate_now (arg2se.expr, &arg2se.pre);
++	      arg2se.expr = gfc_class_data_get (arg2se.expr);
++	    }
+ 	  gfc_add_block_to_block (&se->pre, &arg1se.pre);
+ 	  gfc_add_block_to_block (&se->post, &arg1se.post);
+ 	  gfc_add_block_to_block (&se->pre, &arg2se.pre);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..9fb6983079f 100644
+index 47eac19a1f6..116ed920743 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,219 @@
+@@ -1,3 +1,267 @@
++2021-09-17  Eric Botcazou  <ebotcazou@adacore.com>
++
++	* gcc.target/sparc/20210917-1.c: New test.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2020-12-29  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/97612
++	* gfortran.dg/structure_constructor_17.f90: New test.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-01-22  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/98565
++	* gfortran.dg/associated_target_7.f90 : New test.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-01-07  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/93701
++	* gfortran.dg/associate_54.f90: New test.
++	* gfortran.dg/associate_55.f90: New test.
++	* gfortran.dg/associate_56.f90: New test.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-01-27  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/98472
++	* gfortran.dg/elemental_function_5.f90 : New test.
++
++2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
++
++	Backported from master:
++	2021-04-20  Paul Thomas  <pault@gcc.gnu.org>
++
++	PR fortran/100110
++	* gfortran.dg/pdt_31.f03: New test.
++	* gfortran.dg/pdt_26.f03: Reduce 'builtin_malloc' count from 9
++	to 8.
++
 +2021-09-06  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backported from master:
@@ -4001,6 +4376,31 @@ index 00000000000..6b8e5a9b597
 +    if (x[i] != 0) __builtin_abort();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/sparc/20210917-1.c b/gcc/testsuite/gcc.target/sparc/20210917-1.c
+new file mode 100644
+index 00000000000..03e8bc58db9
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/sparc/20210917-1.c
+@@ -0,0 +1,19 @@
++/* PR rtl-optimization/102306 */
++/* Reported by Daniel Cederman <cederman@gaisler.com> */
++
++/* { dg-do compile } */
++/* { dg-require-effective-target ilp32 } */
++/* { dg-options "-O -mcpu=v8" } */
++
++extern void foo (void);
++
++void test (volatile unsigned char *a) 
++{ 
++  char b = *a;
++  if (!b)
++    return;
++  if (b & 2)
++    foo ();
++}
++
++/* { dg-final { scan-assembler-times "ldub" 1 } } */
 diff --git a/gcc/testsuite/gdc.dg/pr100882a.d b/gcc/testsuite/gdc.dg/pr100882a.d
 new file mode 100644
 index 00000000000..d94baff97ac
@@ -4465,6 +4865,222 @@ index 00000000000..0fc54d5331c
 +   if (any (x%a(2:3) .ne. ['23 56 89','34 67 90'])) stop 1
 +   if (any (x%a(2:3)(4:5) .ne. ['56','67'])) stop 2 ! Bizarrely this worked.
 +end
+diff --git a/gcc/testsuite/gfortran.dg/associate_54.f90 b/gcc/testsuite/gfortran.dg/associate_54.f90
+new file mode 100644
+index 00000000000..003175a47fd
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/associate_54.f90
+@@ -0,0 +1,34 @@
++! { dg-do compile }
++!
++! Test the fix for PR93701.
++!
++! Contributed by Simon Brass  <simon.brass@desy.de>
++!
++module test
++  implicit none
++
++  integer, parameter :: N_STATE = 1, &
++       TEST_STATE = 1
++
++  type :: test_t
++     integer, dimension(:), allocatable :: state
++  end type test_t
++
++contains
++
++  subroutine test_allocate (obj)
++    class(test_t), intent(out) :: obj
++    allocate (obj%state(N_STATE))
++  end subroutine test_allocate
++
++  subroutine test_alter_state1 (obj, a)
++    class(test_t), intent(inout) :: obj
++    integer, intent(in) :: a
++    associate (state => obj%state(TEST_STATES)) ! { dg-error "is used as array" }
++!      state = a
++      state(TEST_STATE) = a
++    end associate
++  end subroutine test_alter_state1
++
++end module test
++
+diff --git a/gcc/testsuite/gfortran.dg/associate_55.f90 b/gcc/testsuite/gfortran.dg/associate_55.f90
+new file mode 100644
+index 00000000000..2b9e8c727f9
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/associate_55.f90
+@@ -0,0 +1,35 @@
++! { dg-do compile }
++!
++! Test the fix for PR93701.
++!
++! Contributed by Simon Brass  <simon.brass@desy.de>
++!
++module test
++  implicit none
++
++  integer, parameter :: N_STATE = 1, &
++       TEST_STATE = 1
++
++  type :: test_t
++     integer, dimension(:), allocatable :: state
++  end type test_t
++
++contains
++
++  subroutine test_allocate (obj)
++    class(test_t), intent(out) :: obj
++    allocate (obj%state(N_STATE))
++  end subroutine test_allocate
++
++
++  subroutine test_alter_state2 (obj, a)
++    class(test_t), intent(inout) :: obj
++    integer, intent(in) :: a
++    associate (state => obj%state(TEST_STATES)) ! { dg-error "no IMPLICIT type" }
++      state = a                                 ! { dg-error "vector-indexed target" }
++!      state(TEST_STATE) = a
++    end associate
++  end subroutine test_alter_state2
++
++end module test
++
+diff --git a/gcc/testsuite/gfortran.dg/associate_56.f90 b/gcc/testsuite/gfortran.dg/associate_56.f90
+new file mode 100644
+index 00000000000..429f129da6e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/associate_56.f90
+@@ -0,0 +1,36 @@
++! { dg-do compile }
++!
++! Test the fix for PR93701.
++!
++! Contributed by Simon Brass  <simon.brass@desy.de>
++!
++module test
++  implicit none
++
++  integer, parameter :: N_STATE = 1, &
++       TEST_STATE = 1
++
++  type :: test_t
++     integer, dimension(:), allocatable :: state
++  end type test_t
++
++contains
++
++  subroutine test_allocate (obj)
++    class(test_t), intent(out) :: obj
++    allocate (obj%state(N_STATE))
++  end subroutine test_allocate
++
++
++  subroutine test_alter_state2 (obj, a)
++    class(test_t), intent(inout) :: obj
++    integer, intent(in) :: a
++    integer, dimension(2) :: TEST_STATES = [1,2]
++    associate (state => obj%state(TEST_STATES))
++      state = a                                 ! { dg-error "vector-indexed target" }
++      state(TEST_STATE) = a                     ! { dg-error "vector-indexed target" }
++    end associate
++  end subroutine test_alter_state2
++
++end module test
++
+diff --git a/gcc/testsuite/gfortran.dg/associated_target_7.f90 b/gcc/testsuite/gfortran.dg/associated_target_7.f90
+new file mode 100644
+index 00000000000..97f93b3c742
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/associated_target_7.f90
+@@ -0,0 +1,87 @@
++! { dg-do run }
++!
++! associated_target_7.f90: Test the fix for PR98565.
++!
++! Contributed by Yves Secretan  <yves.secretan@ete.inrs.ca>
++!
++MODULE PS_SN0N_M
++
++   IMPLICIT NONE
++   PRIVATE
++
++   TYPE, PUBLIC :: DT_GRID_T
++       INTEGER :: NNT
++   CONTAINS
++       ! PASS
++   END TYPE DT_GRID_T
++
++   TYPE, PUBLIC :: LM_ELEM_T
++       CLASS(DT_GRID_T), POINTER :: PGRID
++   CONTAINS
++       PROCEDURE, PUBLIC :: REQPGRID => LM_ELEM_REGPGRID
++   END TYPE LM_ELEM_T
++
++   TYPE, PUBLIC :: PS_SN0N_T
++      CLASS(DT_GRID_T), POINTER :: PGRID
++
++   CONTAINS
++      PROCEDURE, PUBLIC :: ASGOELE  => PS_SN0N_ASGOELE
++   END TYPE PS_SN0N_T
++
++
++CONTAINS
++   !------------------------------------------------------------------------
++   !------------------------------------------------------------------------
++   FUNCTION LM_ELEM_REGPGRID(SELF) RESULT(PGRID)
++   CLASS(DT_GRID_T), POINTER :: PGRID
++   CLASS(LM_ELEM_T), INTENT(IN) :: SELF
++   PGRID => SELF%PGRID
++   RETURN
++   END FUNCTION LM_ELEM_REGPGRID
++
++   !------------------------------------------------------------------------
++   !------------------------------------------------------------------------
++   FUNCTION PS_SN0N_ASGOELE(SELF, OELE) RESULT(ERMSG)
++
++   INTEGER :: ERMSG
++   CLASS(PS_SN0N_T), INTENT(IN) :: SELF
++   CLASS(LM_ELEM_T), INTENT(IN) :: OELE
++
++   !CLASS(DT_GRID_T), POINTER :: PGRID
++   LOGICAL :: ISOK
++   !------------------------------------------------------------------------
++
++   ! ASSOCIATED with temp variable compiles
++   !PGRID => OELE%REQPGRID()
++   !ISOK = ASSOCIATED(SELF%PGRID, PGRID)
++
++   ! ASSOCIATE without temp variable crashes with ICE
++   ISOK = ASSOCIATED(SELF%PGRID, OELE%REQPGRID())
++   ERMSG = 0
++   IF (ISOK) ERMSG = 1
++
++   RETURN
++   END FUNCTION PS_SN0N_ASGOELE
++
++END MODULE PS_SN0N_M
++
++
++   USE PS_SN0N_M
++   CLASS(PS_SN0N_T), ALLOCATABLE :: SELF
++   CLASS(LM_ELEM_T), ALLOCATABLE :: OELE
++   TYPE (DT_GRID_T), TARGET :: GRID1 = DT_GRID_T (42)
++   TYPE (DT_GRID_T), TARGET :: GRID2 = DT_GRID_T (84)
++
++   ALLOCATE (PS_SN0N_T :: SELF)
++   ALLOCATE (LM_ELEM_T :: OELE)
++   SELF%PGRID => GRID1
++
++   OELE%PGRID => NULL ()
++   IF (SELF%ASGOELE (OELE) .NE. 0) STOP 1
++
++   OELE%PGRID => GRID2
++   IF (SELF%ASGOELE (OELE) .NE. 0) STOP 2
++
++   OELE%PGRID => GRID1
++   IF (SELF%ASGOELE (OELE) .NE. 1) STOP 3
++END
 diff --git a/gcc/testsuite/gfortran.dg/class_dummy_6.f90 b/gcc/testsuite/gfortran.dg/class_dummy_6.f90
 new file mode 100644
 index 00000000000..79f6e86daa7
@@ -4626,6 +5242,58 @@ index 00000000000..c28f52f79ff
 +      print *, y
 +   end associate
 +end
+diff --git a/gcc/testsuite/gfortran.dg/elemental_function_5.f90 b/gcc/testsuite/gfortran.dg/elemental_function_5.f90
+new file mode 100644
+index 00000000000..315ff9162b3
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/elemental_function_5.f90
+@@ -0,0 +1,46 @@
++! { dg-do compile }
++!
++! Test the fix for PR98472.
++!
++! Contributed by Rui Coelho  <ruicoelhopedro@hotmail.com>
++!
++module a
++        type, abstract :: base
++        contains
++                procedure(elem_func), deferred, nopass :: add
++        end type base
++
++        type, extends(base) :: derived
++        contains
++                procedure, nopass :: add => add_derived
++        end type derived
++
++        abstract interface
++                elemental function elem_func(x, y) result(out)
++                        integer, intent(in) :: x, y
++                        integer :: out
++                end function elem_func
++        end interface
++
++contains
++        elemental function add_derived(x, y) result(out)
++                integer, intent(in) :: x, y
++                integer :: out
++                out = x + y
++        end function add_derived
++end module a
++
++program main
++        use a
++        call foo
++contains
++        subroutine foo
++               integer, dimension(:), allocatable :: vec
++               class(base), allocatable :: instance
++               allocate(derived :: instance)
++               allocate(vec, source=instance%add([1, 2], [1, 2])) ! ICE here
++               if (any (vec .ne. [2, 4])) stop 1
++        end
++end program main
++
++
 diff --git a/gcc/testsuite/gfortran.dg/implied_do_io_7.f90 b/gcc/testsuite/gfortran.dg/implied_do_io_7.f90
 new file mode 100644
 index 00000000000..63927aafea9
@@ -4663,6 +5331,57 @@ index 00000000000..df8ad06c123
 +  class(*), allocatable :: z(:, :)
 +  z = matmul(x, x)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/pdt_26.f03 b/gcc/testsuite/gfortran.dg/pdt_26.f03
+index bf1273743d3..59ddcfb6cc4 100644
+--- a/gcc/testsuite/gfortran.dg/pdt_26.f03
++++ b/gcc/testsuite/gfortran.dg/pdt_26.f03
+@@ -2,7 +2,7 @@
+ ! { dg-options "-fdump-tree-original" }
+ !
+ ! Test the fix for PR83567 in which the parameterized component 'foo' was
+-! being deallocated before return from 'addw', with consequent segfault in 
++! being deallocated before return from 'addw', with consequent segfault in
+ ! the main program.
+ !
+ ! Contributed by Berke Durak  <berke.durak@gmail.com>
+@@ -43,4 +43,4 @@ program test_pdt
+   if (any (c(1)%foo .ne. [13,15,17])) STOP 2
+ end program test_pdt
+ ! { dg-final { scan-tree-dump-times "__builtin_free" 8 "original" } }
+-! { dg-final { scan-tree-dump-times "__builtin_malloc" 9 "original" } }
++! { dg-final { scan-tree-dump-times "__builtin_malloc" 8 "original" } }
+diff --git a/gcc/testsuite/gfortran.dg/pdt_31.f03 b/gcc/testsuite/gfortran.dg/pdt_31.f03
+new file mode 100644
+index 00000000000..708c9454217
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pdt_31.f03
+@@ -0,0 +1,26 @@
++! { dg-do run }
++!
++! Test the fix for PR100110, in which 'obj' was not being initialized.
++!
++! Contributed by Xiao Liu  <xiao.liu@compiler-dev.com>
++!
++program p
++  implicit none
++  type t(n)
++    integer, len :: n
++    integer :: arr(n, n)
++  end type
++
++  type(t(2)) :: obj
++
++  obj%arr = reshape ([1,2,3,4],[2,2])
++  if (obj%n .ne. 2) stop 1
++  if (any (shape(obj%arr) .ne. [2,2])) stop 2
++  call test()
++contains
++  subroutine test()
++    if (obj%n .ne. 2) stop 3
++    if (any (shape(obj%arr) .ne. [2,2])) stop 4
++    if (any (reshape (obj%arr, [4]) .ne. [1,2,3,4])) stop 5
++  end subroutine
++end program
 diff --git a/gcc/testsuite/gfortran.dg/pr100949.f90 b/gcc/testsuite/gfortran.dg/pr100949.f90
 new file mode 100644
 index 00000000000..6c736fd7f72
@@ -4757,6 +5476,33 @@ index 00000000000..cb7cf7040a9
 +if (x .ne. y) stop 2
 +
 +end program classStar_map
+diff --git a/gcc/testsuite/gfortran.dg/structure_constructor_17.f90 b/gcc/testsuite/gfortran.dg/structure_constructor_17.f90
+new file mode 100644
+index 00000000000..8b8230c6f7e
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/structure_constructor_17.f90
+@@ -0,0 +1,21 @@
++! { dg-do compile }
++!
++! Test the fix for PR97612.
++!
++! Contributed by Martin Stein  <mscfd@gmx.net>
++!
++program constructor_allocatable
++  implicit none
++
++  type :: s
++    integer, dimension(:), allocatable :: u
++  end type s
++
++  type :: t
++    type(s), dimension(:), allocatable :: x
++  end type t
++
++  type(t) :: a = t()
++  if (allocated (a%x)) stop 1
++
++end program constructor_allocatable
 diff --git a/gcc/tree.c b/gcc/tree.c
 index be311754393..99f4318306a 100644
 --- a/gcc/tree.c
