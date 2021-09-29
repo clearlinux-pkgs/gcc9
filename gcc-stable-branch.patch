@@ -10,7 +10,15 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (108):
+GCC Administrator (116):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -120,9 +128,11 @@ GCC Administrator (108):
       Daily bump.
       Daily bump.
 
-Harald Anlauf (2):
+Harald Anlauf (4):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
+      Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
+      Fortran - fix handling of substring start and end indices
 
 Iain Buclaw (10):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -154,6 +164,9 @@ Jonathan Wakely (17):
       libstdc++: Fix create_directories to resolve symlinks [PR101510]
       libstdc++: Fix test that fails randomly [PR101866]
       c++: Fix docs on assignment of virtual bases [PR60318]
+
+Kewen Lin (1):
+      ipa-fnsummary: Remove inconsistent bp_pack_value
 
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
@@ -1148,10 +1161,18 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..dcb829bf820 100644
+index 7558c0a369e..4eaf576d392 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,173 @@
+@@ -1,3 +1,181 @@
++2021-09-22  Kewen Lin  <linkw@linux.ibm.com>
++
++	Backported from master:
++	2021-09-22  Kewen Lin  <linkw@linux.ibm.com>
++
++	* ipa-fnsummary.c (inline_read_section): Unpack a dummy bit
++	to keep consistent with the side of streaming out.
++
 +2021-09-17  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	PR rtl-optimization/102306
@@ -3325,10 +3346,29 @@ index 693912ea355..aaee8fba6bb 100644
  If application code relies on copy-assignment, a user-defined
  copy-assignment operator removes any uncertainties.  With such an
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..4a5351dcbda 100644
+index f1d66e38980..fecfa2c315f 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,137 @@
+@@ -1,3 +1,156 @@
++2021-09-21  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-13  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/85130
++	* expr.c (find_substring_ref): Handle given substring start and
++	end indices as signed integers, not unsigned.
++
++2021-09-21  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-16  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/102287
++	* trans-expr.c (gfc_conv_procedure_call): Wrap deallocation of
++	allocatable components of optional allocatable derived type
++	procedure arguments with INTENT(OUT) into a presence check.
++
 +2021-09-10  Paul Thomas  <pault@gcc.gnu.org>
 +
 +	Backported from master:
@@ -3524,6 +3564,21 @@ index 1a5bcfae3c0..928a50a6cd1 100644
    if (fclass == NULL)
      {
        gfc_symtree *st;
+diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
+index 019245a3ab8..9627ad3b653 100644
+--- a/gcc/fortran/expr.c
++++ b/gcc/fortran/expr.c
+@@ -1718,8 +1718,8 @@ find_substring_ref (gfc_expr *p, gfc_expr **newp)
+   *newp = gfc_copy_expr (p);
+   free ((*newp)->value.character.string);
+ 
+-  end = (gfc_charlen_t) mpz_get_ui (p->ref->u.ss.end->value.integer);
+-  start = (gfc_charlen_t) mpz_get_ui (p->ref->u.ss.start->value.integer);
++  end = (gfc_charlen_t) mpz_get_si (p->ref->u.ss.end->value.integer);
++  start = (gfc_charlen_t) mpz_get_si (p->ref->u.ss.start->value.integer);
+   if (end >= start)
+     length = end - start + 1;
+   else
 diff --git a/gcc/fortran/frontend-passes.c b/gcc/fortran/frontend-passes.c
 index ff71b44b409..46be96c1a22 100644
 --- a/gcc/fortran/frontend-passes.c
@@ -3719,7 +3774,7 @@ index fb957d187d3..99772db9ca1 100644
  
    /* Dummy PDT 'len' parameters should be checked when they are explicit.  */
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index 9be8dd185bf..d703005d816 100644
+index 9be8dd185bf..722149493b6 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -1655,8 +1655,9 @@ gfc_trans_class_init_assign (gfc_code *code)
@@ -3778,7 +3833,25 @@ index 9be8dd185bf..d703005d816 100644
  	      else if (gfc_is_class_array_ref (e, NULL)
  		       && fsym && fsym->ts.type == BT_DERIVED)
  		/* The actual argument is a component reference to an
-@@ -10806,7 +10817,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -6229,6 +6240,17 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+ 		    // deallocate the components first
+ 		    tmp = gfc_deallocate_alloc_comp (fsym->ts.u.derived,
+ 						     parmse.expr, e->rank);
++		    /* But check whether dummy argument is optional.  */
++		    if (tmp != NULL_TREE
++			&& fsym->attr.optional
++			&& e->expr_type == EXPR_VARIABLE
++			&& e->symtree->n.sym->attr.optional)
++		      {
++			tree present;
++			present = gfc_conv_expr_present (e->symtree->n.sym);
++			tmp = build3_v (COND_EXPR, present, tmp,
++					build_empty_stmt (input_location));
++		      }
+ 		    if (tmp != NULL_TREE)
+ 		      gfc_add_expr_to_block (&se->pre, tmp);
+ 		  }
+@@ -10806,7 +10828,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  		       || gfc_is_class_array_ref (expr1, NULL)
  		       || gfc_is_class_scalar_expr (expr1)
  		       || gfc_is_class_array_ref (expr2, NULL)
@@ -3814,11 +3887,57 @@ index 1b51e870f04..729f933ac11 100644
  	  gfc_add_block_to_block (&se->pre, &arg1se.pre);
  	  gfc_add_block_to_block (&se->post, &arg1se.post);
  	  gfc_add_block_to_block (&se->pre, &arg2se.pre);
+diff --git a/gcc/ipa-fnsummary.c b/gcc/ipa-fnsummary.c
+index 7c5562ad801..2b8c21ddd4f 100644
+--- a/gcc/ipa-fnsummary.c
++++ b/gcc/ipa-fnsummary.c
+@@ -3319,13 +3319,20 @@ inline_read_section (struct lto_file_decl_data *file_data, const char *data,
+       bp = streamer_read_bitpack (&ib);
+       if (info)
+ 	{
+-          info->inlinable = bp_unpack_value (&bp, 1);
+-          info->fp_expressions = bp_unpack_value (&bp, 1);
++	  info->inlinable = bp_unpack_value (&bp, 1);
++	  /* On the side of streaming out, there is still one bit
++	     streamed out between inlinable and fp_expressions bits,
++	     which was used for cilk+ before but now always false.
++	     To remove the bit packing need to bump LTO minor version,
++	     so unpack a dummy bit here to keep consistent instead.  */
++	  bp_unpack_value (&bp, 1);
++	  info->fp_expressions = bp_unpack_value (&bp, 1);
+ 	}
+       else
+ 	{
+-          bp_unpack_value (&bp, 1);
+-          bp_unpack_value (&bp, 1);
++	  bp_unpack_value (&bp, 1);
++	  bp_unpack_value (&bp, 1);
++	  bp_unpack_value (&bp, 1);
+ 	}
+ 
+       count2 = streamer_read_uhwi (&ib);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..116ed920743 100644
+index 47eac19a1f6..f0996b3062b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,267 @@
+@@ -1,3 +1,284 @@
++2021-09-21  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-13  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/85130
++	* gfortran.dg/substr_6.f90: Revert commit r8-7574, adding again
++	test that was erroneously considered as illegal.
++
++2021-09-21  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-16  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/102287
++	* gfortran.dg/intent_out_14.f90: New test.
++
 +2021-09-17  Eric Botcazou  <ebotcazou@adacore.com>
 +
 +	* gcc.target/sparc/20210917-1.c: New test.
@@ -5331,6 +5450,36 @@ index 00000000000..df8ad06c123
 +  class(*), allocatable :: z(:, :)
 +  z = matmul(x, x)
 +end
+diff --git a/gcc/testsuite/gfortran.dg/intent_out_14.f90 b/gcc/testsuite/gfortran.dg/intent_out_14.f90
+new file mode 100644
+index 00000000000..e5994635008
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/intent_out_14.f90
+@@ -0,0 +1,24 @@
++! { dg-do run }
++! PR fortran/102287 - optional allocatable DT array arguments (intent out)
++
++module m
++  type t
++     integer, allocatable :: a
++  end type t
++contains
++  subroutine a (x, v)
++    type(t), optional, allocatable, intent(out) :: x(:)
++    type(t), optional,              intent(out) :: v(:)
++    call b (x, v)
++  end subroutine a
++
++  subroutine b (y, w)
++    type(t), optional, allocatable, intent(out) :: y(:)
++    type(t), optional,              intent(out) :: w(:)
++  end subroutine b
++end module m
++
++program p
++  use m
++  call a ()
++end
 diff --git a/gcc/testsuite/gfortran.dg/pdt_26.f03 b/gcc/testsuite/gfortran.dg/pdt_26.f03
 index bf1273743d3..59ddcfb6cc4 100644
 --- a/gcc/testsuite/gfortran.dg/pdt_26.f03
@@ -5503,6 +5652,19 @@ index 00000000000..8b8230c6f7e
 +  if (allocated (a%x)) stop 1
 +
 +end program constructor_allocatable
+diff --git a/gcc/testsuite/gfortran.dg/substr_6.f90 b/gcc/testsuite/gfortran.dg/substr_6.f90
+index 0d5e3d75e88..83e788a55a6 100644
+--- a/gcc/testsuite/gfortran.dg/substr_6.f90
++++ b/gcc/testsuite/gfortran.dg/substr_6.f90
+@@ -6,6 +6,8 @@ CHARACTER(5), parameter :: c0(1) = (/ "123" // ACHAR(0) // "5" /)
+ CHARACTER*5 c(1)
+ CHARACTER(1), parameter :: c1(5) = (/ "1", "2", "3", ACHAR(0), "5" /)
+ 
++c = c0(1)(-5:-8)
++if (c(1) /= "     ") STOP 1
+ c = (/ c0(1)(1:5) /)
+ do i=1,5
+    if (c(1)(i:i) /= c1(i)) STOP 2
 diff --git a/gcc/tree.c b/gcc/tree.c
 index be311754393..99f4318306a 100644
 --- a/gcc/tree.c
