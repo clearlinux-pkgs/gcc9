@@ -10,7 +10,10 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (116):
+GCC Administrator (119):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -128,11 +131,14 @@ GCC Administrator (116):
       Daily bump.
       Daily bump.
 
-Harald Anlauf (4):
+Harald Anlauf (7):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
       Fortran - fix handling of substring start and end indices
+      Fortran - ensure simplification of bounds of array-valued named constants
+      Fortran - out of bounds in array constructor with implied do loop
+      Fortran - improve error recovery determining array element from constructor
 
 Iain Buclaw (10):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -3346,10 +3352,39 @@ index 693912ea355..aaee8fba6bb 100644
  If application code relies on copy-assignment, a user-defined
  copy-assignment operator removes any uncertainties.  With such an
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..fecfa2c315f 100644
+index f1d66e38980..e9e647c1349 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,156 @@
+@@ -1,3 +1,185 @@
++2021-09-30  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-07  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/101327
++	* expr.c (find_array_element): When bounds cannot be determined as
++	constant, return error instead of aborting.
++
++2021-09-30  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-09  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/98490
++	* trans-expr.c (gfc_conv_substring): Do not generate substring
++	bounds check for implied do loop index variable before it actually
++	becomes defined.
++
++2021-09-30  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-13  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/82314
++	* decl.c (add_init_expr_to_sym): For proper initialization of
++	array-valued named constants the array bounds need to be
++	simplified before adding the initializer.
++
 +2021-09-21  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -3564,11 +3599,61 @@ index 1a5bcfae3c0..928a50a6cd1 100644
    if (fclass == NULL)
      {
        gfc_symtree *st;
+diff --git a/gcc/fortran/decl.c b/gcc/fortran/decl.c
+index 00321da827e..51238e49fb1 100644
+--- a/gcc/fortran/decl.c
++++ b/gcc/fortran/decl.c
+@@ -2043,6 +2043,24 @@ add_init_expr_to_sym (const char *name, gfc_expr **initp, locus *var_locus)
+ 	  sym->as->type = AS_EXPLICIT;
+ 	}
+ 
++      /* Ensure that explicit bounds are simplified.  */
++      if (sym->attr.flavor == FL_PARAMETER && sym->attr.dimension
++	  && sym->as->type == AS_EXPLICIT)
++	{
++	  for (int dim = 0; dim < sym->as->rank; ++dim)
++	    {
++	      gfc_expr *e;
++
++	      e = sym->as->lower[dim];
++	      if (e->expr_type != EXPR_CONSTANT)
++		gfc_reduce_init_expr (e);
++
++	      e = sym->as->upper[dim];
++	      if (e->expr_type != EXPR_CONSTANT)
++		gfc_reduce_init_expr (e);
++	    }
++	}
++
+       /* Need to check if the expression we initialized this
+ 	 to was one of the iso_c_binding named constants.  If so,
+ 	 and we're a parameter (constant), let it be iso_c.
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 019245a3ab8..9627ad3b653 100644
+index 019245a3ab8..f099da98ab0 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
-@@ -1718,8 +1718,8 @@ find_substring_ref (gfc_expr *p, gfc_expr **newp)
+@@ -1330,7 +1330,9 @@ find_array_element (gfc_constructor_base base, gfc_array_ref *ar,
+   for (i = 0; i < ar->dimen; i++)
+     {
+       if (!gfc_reduce_init_expr (ar->as->lower[i])
+-	  || !gfc_reduce_init_expr (ar->as->upper[i]))
++	  || !gfc_reduce_init_expr (ar->as->upper[i])
++	  || ar->as->upper[i]->expr_type != EXPR_CONSTANT
++	  || ar->as->lower[i]->expr_type != EXPR_CONSTANT)
+ 	{
+ 	  t = false;
+ 	  cons = NULL;
+@@ -1344,9 +1346,6 @@ find_array_element (gfc_constructor_base base, gfc_array_ref *ar,
+ 	  goto depart;
+ 	}
+ 
+-      gcc_assert (ar->as->upper[i]->expr_type == EXPR_CONSTANT
+-		  && ar->as->lower[i]->expr_type == EXPR_CONSTANT);
+-
+       /* Check the bounds.  */
+       if ((ar->as->upper[i]
+ 	   && mpz_cmp (e->value.integer,
+@@ -1718,8 +1717,8 @@ find_substring_ref (gfc_expr *p, gfc_expr **newp)
    *newp = gfc_copy_expr (p);
    free ((*newp)->value.character.string);
  
@@ -3774,7 +3859,7 @@ index fb957d187d3..99772db9ca1 100644
  
    /* Dummy PDT 'len' parameters should be checked when they are explicit.  */
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index 9be8dd185bf..722149493b6 100644
+index 9be8dd185bf..e240441ac2c 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -1655,8 +1655,9 @@ gfc_trans_class_init_assign (gfc_code *code)
@@ -3798,7 +3883,18 @@ index 9be8dd185bf..722149493b6 100644
      gfc_add_modify (pblock, cl->backend_decl, se.expr);
    else
      cl->backend_decl = gfc_evaluate_now (se.expr, pblock);
-@@ -2663,7 +2664,7 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
+@@ -2530,7 +2531,9 @@ gfc_conv_substring (gfc_se * se, gfc_ref * ref, int kind,
+   if (!CONSTANT_CLASS_P (tmp) && !DECL_P (tmp))
+     end.expr = gfc_evaluate_now (end.expr, &se->pre);
+ 
+-  if (gfc_option.rtcheck & GFC_RTCHECK_BOUNDS)
++  if ((gfc_option.rtcheck & GFC_RTCHECK_BOUNDS)
++      && (ref->u.ss.start->symtree
++	  && !ref->u.ss.start->symtree->n.sym->attr.implied_index))
+     {
+       tree nonempty = fold_build2_loc (input_location, LE_EXPR,
+ 				       logical_type_node, start.expr,
+@@ -2663,7 +2666,7 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
    /* Allocatable deferred char arrays are to be handled by the gfc_deferred_
       strlen () conditional below.  */
    if (c->ts.type == BT_CHARACTER && !c->attr.proc_pointer
@@ -3807,7 +3903,7 @@ index 9be8dd185bf..722149493b6 100644
        && !c->attr.pdt_string)
      {
        tmp = c->ts.u.cl->backend_decl;
-@@ -5566,7 +5567,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -5566,7 +5569,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  				     CLASS_DATA (fsym)->attr.class_pointer
  				     || CLASS_DATA (fsym)->attr.allocatable);
  	}
@@ -3817,7 +3913,7 @@ index 9be8dd185bf..722149493b6 100644
  	{
  	  /* The intrinsic type needs to be converted to a temporary
  	     CLASS object for the unlimited polymorphic formal.  */
-@@ -6159,6 +6161,15 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -6159,6 +6163,15 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  				fsym ? fsym->attr.intent : INTENT_INOUT,
  				fsym && fsym->attr.pointer);
  
@@ -3833,7 +3929,7 @@ index 9be8dd185bf..722149493b6 100644
  	      else if (gfc_is_class_array_ref (e, NULL)
  		       && fsym && fsym->ts.type == BT_DERIVED)
  		/* The actual argument is a component reference to an
-@@ -6229,6 +6240,17 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
+@@ -6229,6 +6242,17 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
  		    // deallocate the components first
  		    tmp = gfc_deallocate_alloc_comp (fsym->ts.u.derived,
  						     parmse.expr, e->rank);
@@ -3851,7 +3947,7 @@ index 9be8dd185bf..722149493b6 100644
  		    if (tmp != NULL_TREE)
  		      gfc_add_expr_to_block (&se->pre, tmp);
  		  }
-@@ -10806,7 +10828,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
+@@ -10806,7 +10830,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  		       || gfc_is_class_array_ref (expr1, NULL)
  		       || gfc_is_class_scalar_expr (expr1)
  		       || gfc_is_class_array_ref (expr2, NULL)
@@ -3917,10 +4013,34 @@ index 7c5562ad801..2b8c21ddd4f 100644
  
        count2 = streamer_read_uhwi (&ib);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..f0996b3062b 100644
+index 47eac19a1f6..d1875af8239 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,284 @@
+@@ -1,3 +1,308 @@
++2021-09-30  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-07  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/101327
++	* gfortran.dg/pr101327.f90: New test.
++
++2021-09-30  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-09  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/98490
++	* gfortran.dg/bounds_check_23.f90: New test.
++
++2021-09-30  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-09-13  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/82314
++	* gfortran.dg/pr82314.f90: New test.
++
 +2021-09-21  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -5200,6 +5320,30 @@ index 00000000000..97f93b3c742
 +   OELE%PGRID => GRID1
 +   IF (SELF%ASGOELE (OELE) .NE. 1) STOP 3
 +END
+diff --git a/gcc/testsuite/gfortran.dg/bounds_check_23.f90 b/gcc/testsuite/gfortran.dg/bounds_check_23.f90
+new file mode 100644
+index 00000000000..8de90c77c01
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/bounds_check_23.f90
+@@ -0,0 +1,18 @@
++! { dg-do run }
++! { dg-options "-fcheck=bounds -fdump-tree-original" }
++! PR fortran/98490 - out of bounds in array constructor with implied do loop
++
++program test
++  implicit none
++  call sub('Lorem ipsum')
++contains
++  subroutine sub( text )
++    character(len=*), intent(in)  :: text
++    character(len=1), allocatable :: c(:)
++    integer :: i
++    c = [ ( text(i:i), i = 1, len(text) ) ]
++    if (c(1) /= 'L') stop 1
++  end subroutine sub
++end program test
++
++! { dg-final { scan-tree-dump-times "Substring out of bounds:" 2 "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/class_dummy_6.f90 b/gcc/testsuite/gfortran.dg/class_dummy_6.f90
 new file mode 100644
 index 00000000000..79f6e86daa7
@@ -5546,6 +5690,40 @@ index 00000000000..6c736fd7f72
 +  end type
 +  class(t), allocatable :: y, z
 +  allocate (z, mold=y)
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr101327.f90 b/gcc/testsuite/gfortran.dg/pr101327.f90
+new file mode 100644
+index 00000000000..f4377aabe7a
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr101327.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! PR fortran/101327 - ICE in find_array_element, at fortran/expr.c:1355
++
++subroutine s
++  integer, parameter :: n([2]) = [1, 2] ! { dg-error "must be scalar" }
++  type t
++     integer :: a(n(1):n(2))
++  end type
++end
++
++! { dg-error "cannot be automatic or of deferred shape" " " { target *-*-* } 5 }
+diff --git a/gcc/testsuite/gfortran.dg/pr82314.f90 b/gcc/testsuite/gfortran.dg/pr82314.f90
+new file mode 100644
+index 00000000000..3a147e22711
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr82314.f90
+@@ -0,0 +1,11 @@
++! { dg-do run }
++! PR fortran/82314 - ICE in gfc_conv_expr_descriptor
++
++program p
++  implicit none
++  integer, parameter :: karray(merge(3,7,.true.):merge(3,7,.false.)) = 1
++  integer, parameter :: i = size   (karray)
++  integer, parameter :: l = lbound (karray,1)
++  integer, parameter :: u = ubound (karray,1)
++  if (l /= 3 .or. u /= 7 .or. i /= 5) stop 1
 +end
 diff --git a/gcc/testsuite/gfortran.dg/proc_ptr_52.f90 b/gcc/testsuite/gfortran.dg/proc_ptr_52.f90
 new file mode 100644
