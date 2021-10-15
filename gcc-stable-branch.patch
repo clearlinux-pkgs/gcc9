@@ -1,3 +1,6 @@
+Andrew Pinski (1):
+      [GCC 10 branch] tree-optimization: [PR102622]: wrong code due to signed one bit integer and "a?-1:0"
+
 Bill Schmidt (2):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
       rs6000: Add int128 target check to pr101129.c (PR101531)
@@ -5,12 +8,28 @@ Bill Schmidt (2):
 Christophe Lyon (1):
       arm: Fix pr69245.c testcase for reorder assembler architecture directives [PR101723]
 
+Diane Meirowitz (1):
+      doc: improve -fsanitize=undefined description
+
 Eric Botcazou (3):
       Fix internal error on pointer-to-pointer binding in LTO mode
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (119):
+GCC Administrator (132):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -140,7 +159,7 @@ Harald Anlauf (7):
       Fortran - out of bounds in array constructor with implied do loop
       Fortran - improve error recovery determining array element from constructor
 
-Iain Buclaw (10):
+Iain Buclaw (11):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
       d: Respect explicit align(N) type alignment (PR100935)
       d: TypeInfo error when using slice copy on Structs (PR100964)
@@ -151,8 +170,14 @@ Iain Buclaw (10):
       d: fix ICE at convert_expr(tree_node*, Type*, Type*) (PR101490)
       d: Wrong evaluation order of binary expressions (PR101640)
       d: Ensure casting from bool results in either 0 or 1 (PR96435)
+      d: gdc driver ignores -static-libstdc++ when automatically linking libstdc++ library
 
-Jonathan Wakely (17):
+John David Anglin (3):
+      Add support for 32-bit hppa targets in muldi3 expander
+      Fix TARGET_SOFT_FLOAT patterns in pa.md
+      Consistently use "rG" constraint for copy instruction in move patterns
+
+Jonathan Wakely (25):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -170,6 +195,14 @@ Jonathan Wakely (17):
       libstdc++: Fix create_directories to resolve symlinks [PR101510]
       libstdc++: Fix test that fails randomly [PR101866]
       c++: Fix docs on assignment of virtual bases [PR60318]
+      libstdc++: Fix std::match_results::end() for failed matches [PR102667]
+      libstdc++: Clear up directories created by tests
+      libstdc++: Install GDB pretty printers for debug library
+      libstdc++: Add pretty printer for std::error_code and std::error_condition
+      libstdc++: std::system_category should know meaning of zero [PR102425]
+      libstdc++: Remove non-deducible parameter for std::advance overload
+      libstdc++: Rename tests with incorrect extension
+      libstdc++: Rename file with the wrong extension
 
 Kewen Lin (1):
       ipa-fnsummary: Remove inconsistent bp_pack_value
@@ -193,8 +226,13 @@ Paul Thomas (9):
       Fortran: Fix for class functions as associated target [PR98565].
       Fortran: Correct missing structure constructor comps. [PR97612].
 
-Richard Biener (1):
+Richard Biener (6):
       Bump BASE-VER to 9.4.1
+      middle-end/100509 - avoid folding constant to aggregate type
+      tree-optimization/100934 - properly mark irreducible regions for DOM
+      tree-optimization/101105 - fix runtime alias test optimization
+      tree-optimization/101394 - fix PRE full redundancy wrt abnormals
+      tree-optimization/101173 - fix interchange dependence checking
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -1167,10 +1205,84 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..4eaf576d392 100644
+index 7558c0a369e..2b1488bf105 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,181 @@
+@@ -1,3 +1,255 @@
++2021-10-14  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.md (cbranchsf4): Disable if TARGET_SOFT_FLOAT.
++	(cbranchdf4): Likewise.
++	Add missing move patterns for TARGET_SOFT_FLOAT.
++
++2021-10-13  John David Anglin  <danglin@gcc.gnu.org>
++
++	* config/pa/pa.md (muldi3): Add support for inlining 64-bit
++	multiplication on 32-bit PA 1.1 and 2.0 targets.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-07-07  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101173
++	PR tree-optimization/101280
++	* gimple-loop-interchange.cc
++	(tree_loop_interchange::valid_data_dependences): Properly
++	guard all dependence checks with DDR_REVERSED_P or its
++	inverse.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-07-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101394
++	* tree-ssa-pre.c (do_pre_regular_insertion): Avoid inserting
++	copies from abnormals for a full redundancy.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101105
++	* tree-vect-data-refs.c (vect_prune_runtime_alias_test_list):
++	Only ignore steps when they are equal or scalar order is preserved.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-06-14  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100934
++	* tree-ssa-dom.c (pass_dominator::execute): Properly
++	mark irreducible regions.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-05-11  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/100509
++	* gimple-fold.c (fold_gimple_assign): Only call
++	get_symbol_constant_value on register type symbols.
++
++2021-10-11  Andrew Pinski  <apinski@marvell.com>
++
++	Backported from master:
++	2021-10-11  Andrew Pinski  <apinski@marvell.com>
++
++	PR tree-optimization/102622
++	* tree-ssa-phiopt.c (conditional_replacement): Set neg
++	to false for one bit signed types.
++
++2021-10-11  Diane Meirowitz  <diane.meirowitz@oracle.com>
++
++	Backported from master:
++	2021-10-11  Diane Meirowitz  <diane.meirowitz@oracle.com>
++
++	* doc/invoke.texi: Add link to UndefinedBehaviorSanitizer
++	documentation, mention UBSAN_OPTIONS, similar to what is done
++	for AddressSanitizer.
++
 +2021-09-22  Kewen Lin  <linkw@linux.ibm.com>
 +
 +	Backported from master:
@@ -2356,6 +2468,347 @@ index d758fbf1be6..1e3ea6b5f43 100644
    tree set_fcsr_update_call = build_call_expr (set_fcsr, 1, fcsr_orig_var);
    *update = build2 (COMPOUND_EXPR, void_type_node, *update,
  		    set_fcsr_update_call);
+diff --git a/gcc/config/pa/pa.md b/gcc/config/pa/pa.md
+index 18f8e127d3d..05e0212b1cd 100644
+--- a/gcc/config/pa/pa.md
++++ b/gcc/config/pa/pa.md
+@@ -1383,7 +1383,7 @@
+                         (match_operand:SF 2 "reg_or_0_operand" "")])
+ 		      (label_ref (match_operand 3 "" ""))
+ 		      (pc)))]
+-  ""
++  "! TARGET_SOFT_FLOAT"
+   "
+ {
+   pa_emit_bcond_fp (operands);
+@@ -1398,7 +1398,7 @@
+                         (match_operand:DF 2 "reg_or_0_operand" "")])
+ 		      (label_ref (match_operand 3 "" ""))
+ 		      (pc)))]
+-  ""
++  "! TARGET_SOFT_FLOAT"
+   "
+ {
+   pa_emit_bcond_fp (operands);
+@@ -2186,14 +2186,14 @@
+   [(set (match_operand:SI 0 "move_dest_operand"
+ 			  "=r,r,r,r,r,r,Q,!*q,!r,!*f,*f,T,?r,?*f")
+ 	(match_operand:SI 1 "move_src_operand"
+-			  "A,r,J,N,K,RQ,rM,!rM,!*q,!*fM,RT,*f,*f,r"))]
++			  "A,rG,J,N,K,RQ,rM,!rM,!*q,!*fM,RT,*f,*f,r"))]
+   "(register_operand (operands[0], SImode)
+     || reg_or_0_operand (operands[1], SImode))
+    && !TARGET_SOFT_FLOAT
+    && !TARGET_64BIT"
+   "@
+    ldw RT'%A1,%0
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    {zdepi|depwi,z} %Z1,%0
+@@ -2214,14 +2214,14 @@
+   [(set (match_operand:SI 0 "move_dest_operand"
+ 			  "=r,r,r,r,r,r,Q,!*q,!r,!*f,*f,T")
+ 	(match_operand:SI 1 "move_src_operand"
+-			  "A,r,J,N,K,RQ,rM,!rM,!*q,!*fM,RT,*f"))]
++			  "A,rG,J,N,K,RQ,rM,!rM,!*q,!*fM,RT,*f"))]
+   "(register_operand (operands[0], SImode)
+     || reg_or_0_operand (operands[1], SImode))
+    && !TARGET_SOFT_FLOAT
+    && TARGET_64BIT"
+   "@
+    ldw RT'%A1,%0
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    {zdepi|depwi,z} %Z1,%0
+@@ -2236,6 +2236,29 @@
+    (set_attr "pa_combine_type" "addmove")
+    (set_attr "length" "4,4,4,4,4,4,4,4,4,4,4,4")])
+ 
++(define_insn ""
++  [(set (match_operand:SI 0 "move_dest_operand"
++			  "=r,r,r,r,r,r,Q,!*q,!r")
++	(match_operand:SI 1 "move_src_operand"
++			  "A,rG,J,N,K,RQ,rM,!rM,!*q"))]
++  "(register_operand (operands[0], SImode)
++    || reg_or_0_operand (operands[1], SImode))
++   && TARGET_SOFT_FLOAT
++   && TARGET_64BIT"
++  "@
++   ldw RT'%A1,%0
++   copy %r1,%0
++   ldi %1,%0
++   ldil L'%1,%0
++   {zdepi|depwi,z} %Z1,%0
++   ldw%M1 %1,%0
++   stw%M0 %r1,%0
++   mtsar %r1
++   {mfctl|mfctl,w} %%sar,%0"
++  [(set_attr "type" "load,move,move,move,shift,load,store,move,move")
++   (set_attr "pa_combine_type" "addmove")
++   (set_attr "length" "4,4,4,4,4,4,4,4,4")])
++
+ (define_insn ""
+   [(set (match_operand:SI 0 "indexed_memory_operand" "=R")
+ 	(match_operand:SI 1 "register_operand" "f"))]
+@@ -2358,13 +2381,13 @@
+   [(set (match_operand:SI 0 "move_dest_operand"
+ 			  "=r,r,r,r,r,r,Q,!*q,!r")
+ 	(match_operand:SI 1 "move_src_operand"
+-			  "A,r,J,N,K,RQ,rM,!rM,!*q"))]
++			  "A,rG,J,N,K,RQ,rM,!rM,!*q"))]
+   "(register_operand (operands[0], SImode)
+     || reg_or_0_operand (operands[1], SImode))
+    && TARGET_SOFT_FLOAT"
+   "@
+    ldw RT'%A1,%0
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    {zdepi|depwi,z} %Z1,%0
+@@ -2886,11 +2909,11 @@
+   [(set (match_operand:HI 0 "move_dest_operand"
+ 	 		  "=r,r,r,r,r,Q,!*q,!r")
+ 	(match_operand:HI 1 "move_src_operand"
+-			  "r,J,N,K,RQ,rM,!rM,!*q"))]
++			  "rG,J,N,K,RQ,rM,!rM,!*q"))]
+   "(register_operand (operands[0], HImode)
+     || reg_or_0_operand (operands[1], HImode))"
+   "@
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    {zdepi|depwi,z} %Z1,%0
+@@ -3046,11 +3069,11 @@
+   [(set (match_operand:QI 0 "move_dest_operand"
+ 			  "=r,r,r,r,r,Q,!*q,!r")
+ 	(match_operand:QI 1 "move_src_operand"
+-			  "r,J,N,K,RQ,rM,!rM,!*q"))]
++			  "rG,J,N,K,RQ,rM,!rM,!*q"))]
+   "(register_operand (operands[0], QImode)
+     || reg_or_0_operand (operands[1], QImode))"
+   "@
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    {zdepi|depwi,z} %Z1,%0
+@@ -4024,12 +4047,12 @@
+   [(set (match_operand:DF 0 "move_dest_operand"
+ 			  "=!*r,*r,*r,*r,*r,Q,f,f,T")
+ 	(match_operand:DF 1 "move_src_operand"
+-			  "!*r,J,N,K,RQ,*rG,fG,RT,f"))]
++			  "!*rG,J,N,K,RQ,*rG,fG,RT,f"))]
+   "(register_operand (operands[0], DFmode)
+     || reg_or_0_operand (operands[1], DFmode))
+    && !TARGET_SOFT_FLOAT && TARGET_64BIT"
+   "@
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    depdi,z %z1,%0
+@@ -4042,6 +4065,25 @@
+    (set_attr "pa_combine_type" "addmove")
+    (set_attr "length" "4,4,4,4,4,4,4,4,4")])
+ 
++(define_insn ""
++  [(set (match_operand:DF 0 "move_dest_operand"
++			  "=!*r,*r,*r,*r,*r,Q")
++	(match_operand:DF 1 "move_src_operand"
++			  "!*rG,J,N,K,RQ,*rG"))]
++  "(register_operand (operands[0], DFmode)
++    || reg_or_0_operand (operands[1], DFmode))
++   && TARGET_SOFT_FLOAT && TARGET_64BIT"
++  "@
++   copy %r1,%0
++   ldi %1,%0
++   ldil L'%1,%0
++   depdi,z %z1,%0
++   ldd%M1 %1,%0
++   std%M0 %r1,%0"
++  [(set_attr "type" "move,move,move,shift,load,store")
++   (set_attr "pa_combine_type" "addmove")
++   (set_attr "length" "4,4,4,4,4,4")])
++
+ 
+ (define_expand "movdi"
+   [(set (match_operand:DI 0 "general_operand" "")
+@@ -4179,13 +4221,13 @@
+   [(set (match_operand:DI 0 "move_dest_operand"
+ 			  "=r,r,r,r,r,r,Q,!*q,!r,!*f,*f,T")
+ 	(match_operand:DI 1 "move_src_operand"
+-			  "A,r,J,N,K,RQ,rM,!rM,!*q,!*fM,RT,*f"))]
++			  "A,rG,J,N,K,RQ,rM,!rM,!*q,!*fM,RT,*f"))]
+   "(register_operand (operands[0], DImode)
+     || reg_or_0_operand (operands[1], DImode))
+    && !TARGET_SOFT_FLOAT && TARGET_64BIT"
+   "@
+    ldd RT'%A1,%0
+-   copy %1,%0
++   copy %r1,%0
+    ldi %1,%0
+    ldil L'%1,%0
+    depdi,z %z1,%0
+@@ -4200,6 +4242,28 @@
+    (set_attr "pa_combine_type" "addmove")
+    (set_attr "length" "4,4,4,4,4,4,4,4,4,4,4,4")])
+ 
++(define_insn ""
++  [(set (match_operand:DI 0 "move_dest_operand"
++			  "=r,r,r,r,r,r,Q,!*q,!r")
++	(match_operand:DI 1 "move_src_operand"
++			  "A,rG,J,N,K,RQ,rM,!rM,!*q"))]
++  "(register_operand (operands[0], DImode)
++    || reg_or_0_operand (operands[1], DImode))
++   && TARGET_SOFT_FLOAT && TARGET_64BIT"
++  "@
++   ldd RT'%A1,%0
++   copy %r1,%0
++   ldi %1,%0
++   ldil L'%1,%0
++   depdi,z %z1,%0
++   ldd%M1 %1,%0
++   std%M0 %r1,%0
++   mtsar %r1
++   {mfctl|mfctl,w} %%sar,%0"
++  [(set_attr "type" "load,move,move,move,shift,load,store,move,move")
++   (set_attr "pa_combine_type" "addmove")
++   (set_attr "length" "4,4,4,4,4,4,4,4,4")])
++
+ (define_insn ""
+   [(set (match_operand:DI 0 "indexed_memory_operand" "=R")
+ 	(match_operand:DI 1 "register_operand" "f"))]
+@@ -4405,6 +4469,23 @@
+    (set_attr "pa_combine_type" "addmove")
+    (set_attr "length" "4,4,4,4,4,4")])
+ 
++(define_insn ""
++  [(set (match_operand:SF 0 "move_dest_operand"
++			  "=!*r,*r,Q")
++	(match_operand:SF 1 "reg_or_0_or_nonsymb_mem_operand"
++			  "!*rG,RQ,*rG"))]
++  "(register_operand (operands[0], SFmode)
++    || reg_or_0_operand (operands[1], SFmode))
++   && TARGET_SOFT_FLOAT
++   && TARGET_64BIT"
++  "@
++   copy %r1,%0
++   ldw%M1 %1,%0
++   stw%M0 %r1,%0"
++  [(set_attr "type" "move,load,store")
++   (set_attr "pa_combine_type" "addmove")
++   (set_attr "length" "4,4,4")])
++
+ (define_insn ""
+   [(set (match_operand:SF 0 "indexed_memory_operand" "=R")
+ 	(match_operand:SF 1 "register_operand" "f"))]
+@@ -5374,32 +5455,38 @@
+   [(set (match_operand:DI 0 "register_operand" "")
+         (mult:DI (match_operand:DI 1 "register_operand" "")
+ 		 (match_operand:DI 2 "register_operand" "")))]
+-  "TARGET_64BIT && ! TARGET_DISABLE_FPREGS && ! TARGET_SOFT_FLOAT"
++  "! optimize_size
++   && TARGET_PA_11
++   && ! TARGET_DISABLE_FPREGS
++   && ! TARGET_SOFT_FLOAT"
+   "
+ {
+   rtx low_product = gen_reg_rtx (DImode);
+   rtx cross_product1 = gen_reg_rtx (DImode);
+   rtx cross_product2 = gen_reg_rtx (DImode);
+-  rtx cross_scratch = gen_reg_rtx (DImode);
+-  rtx cross_product = gen_reg_rtx (DImode);
+   rtx op1l, op1r, op2l, op2r;
+-  rtx op1shifted, op2shifted;
+-
+-  op1shifted = gen_reg_rtx (DImode);
+-  op2shifted = gen_reg_rtx (DImode);
+-  op1l = gen_reg_rtx (SImode);
+-  op1r = gen_reg_rtx (SImode);
+-  op2l = gen_reg_rtx (SImode);
+-  op2r = gen_reg_rtx (SImode);
+-
+-  emit_move_insn (op1shifted, gen_rtx_LSHIFTRT (DImode, operands[1],
+-						GEN_INT (32)));
+-  emit_move_insn (op2shifted, gen_rtx_LSHIFTRT (DImode, operands[2],
+-						GEN_INT (32)));
+-  op1r = force_reg (SImode, gen_rtx_SUBREG (SImode, operands[1], 4));
+-  op2r = force_reg (SImode, gen_rtx_SUBREG (SImode, operands[2], 4));
+-  op1l = force_reg (SImode, gen_rtx_SUBREG (SImode, op1shifted, 4));
+-  op2l = force_reg (SImode, gen_rtx_SUBREG (SImode, op2shifted, 4));
++
++  if (TARGET_64BIT)
++    {
++      rtx op1shifted = gen_reg_rtx (DImode);
++      rtx op2shifted = gen_reg_rtx (DImode);
++
++      emit_move_insn (op1shifted, gen_rtx_LSHIFTRT (DImode, operands[1],
++						    GEN_INT (32)));
++      emit_move_insn (op2shifted, gen_rtx_LSHIFTRT (DImode, operands[2],
++						    GEN_INT (32)));
++      op1r = force_reg (SImode, gen_rtx_SUBREG (SImode, operands[1], 4));
++      op2r = force_reg (SImode, gen_rtx_SUBREG (SImode, operands[2], 4));
++      op1l = force_reg (SImode, gen_rtx_SUBREG (SImode, op1shifted, 4));
++      op2l = force_reg (SImode, gen_rtx_SUBREG (SImode, op2shifted, 4));
++    }
++  else
++    {
++      op1r = force_reg (SImode, gen_lowpart (SImode, operands[1]));
++      op2r = force_reg (SImode, gen_lowpart (SImode, operands[2]));
++      op1l = force_reg (SImode, gen_highpart (SImode, operands[1]));
++      op2l = force_reg (SImode, gen_highpart (SImode, operands[2]));
++    }
+ 
+   /* Emit multiplies for the cross products.  */
+   emit_insn (gen_umulsidi3 (cross_product1, op2r, op1l));
+@@ -5408,13 +5495,35 @@
+   /* Emit a multiply for the low sub-word.  */
+   emit_insn (gen_umulsidi3 (low_product, copy_rtx (op2r), copy_rtx (op1r)));
+ 
+-  /* Sum the cross products and shift them into proper position.  */
+-  emit_insn (gen_adddi3 (cross_scratch, cross_product1, cross_product2));
+-  emit_insn (gen_ashldi3 (cross_product, cross_scratch, GEN_INT (32)));
++  if (TARGET_64BIT)
++    {
++      rtx cross_scratch = gen_reg_rtx (DImode);
++      rtx cross_product = gen_reg_rtx (DImode);
+ 
+-  /* Add the cross product to the low product and store the result
+-     into the output operand .  */
+-  emit_insn (gen_adddi3 (operands[0], cross_product, low_product));
++      /* Sum the cross products and shift them into proper position.  */
++      emit_insn (gen_adddi3 (cross_scratch, cross_product1, cross_product2));
++      emit_insn (gen_ashldi3 (cross_product, cross_scratch, GEN_INT (32)));
++
++      /* Add the cross product to the low product and store the result
++	 into the output operand .  */
++      emit_insn (gen_adddi3 (operands[0], cross_product, low_product));
++    }
++  else
++    {
++      rtx cross_scratch = gen_reg_rtx (SImode);
++
++      /* Sum cross products.  */
++      emit_move_insn (cross_scratch,
++		      gen_rtx_PLUS (SImode,
++				    gen_lowpart (SImode, cross_product1),
++				    gen_lowpart (SImode, cross_product2)));
++      emit_move_insn (gen_lowpart (SImode, operands[0]),
++		      gen_lowpart (SImode, low_product));
++      emit_move_insn (gen_highpart (SImode, operands[0]),
++		      gen_rtx_PLUS (SImode,
++				    gen_highpart (SImode, low_product),
++				    cross_scratch));
++    }
+   DONE;
+ }")
+ 
 diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
 index d30e5dec980..d8fc8a74e77 100644
 --- a/gcc/config/rs6000/rs6000-p8swap.c
@@ -2409,10 +2862,19 @@ index d7a4ae64c36..788175e1543 100644
    (__vector unsigned char)__builtin_s390_vlrlr((L),(X))
  #define vec_store_len_r(X,Y,L) \
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index b0e68a99a73..947bf2b46b4 100644
+index b0e68a99a73..51722aff2a8 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,120 @@
+@@ -1,3 +1,129 @@
++2021-10-04  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-10-04  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	PR d/102574
++	* d-spec.cc (lang_specific_driver): Link libstdc++ statically if
++	-static-libstdc++ was given on command-line.
++
 +2021-07-29  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -2796,6 +3258,75 @@ index 62a8ddd69b2..322a93ee139 100644
  #define LANG_HOOKS_REGISTER_BUILTIN_TYPE    d_register_builtin_type
  #define LANG_HOOKS_FINISH_INCOMPLETE_DECL   d_finish_incomplete_decl
  #define LANG_HOOKS_GIMPLIFY_EXPR	    d_gimplify_expr
+diff --git a/gcc/d/d-spec.cc b/gcc/d/d-spec.cc
+index 9eba6902bb9..cf55c76250c 100644
+--- a/gcc/d/d-spec.cc
++++ b/gcc/d/d-spec.cc
+@@ -94,6 +94,9 @@ lang_specific_driver (cl_decoded_option **in_decoded_options,
+   /* "-lstdc++" if it appears on the command line.  */
+   const cl_decoded_option *saw_libcxx = 0;
+ 
++  /* True if we saw `-static-libstdc++'.  */
++  bool saw_static_libcxx = false;
++
+   /* Whether we need the C++ STD library.  */
+   bool need_stdcxx = false;
+ 
+@@ -259,6 +262,11 @@ lang_specific_driver (cl_decoded_option **in_decoded_options,
+ 	  shared_libgcc = false;
+ 	  break;
+ 
++	case OPT_static_libstdc__:
++	  saw_static_libcxx = true;
++	  args[i] |= SKIPOPT;
++	  break;
++
+ 	case OPT_static_libphobos:
+ 	  if (phobos_library != PHOBOS_NOLINK)
+ 	    phobos_library = PHOBOS_STATIC;
+@@ -476,16 +484,33 @@ lang_specific_driver (cl_decoded_option **in_decoded_options,
+       added_libraries++;
+     }
+ 
+-  if (saw_libcxx)
+-    new_decoded_options[j++] = *saw_libcxx;
+-  else if (need_stdcxx)
++  if (saw_libcxx || need_stdcxx)
+     {
+-      generate_option (OPT_l,
+-		       (saw_profile_flag
+-			? LIBSTDCXX_PROFILE
+-			: LIBSTDCXX),
+-		       1, CL_DRIVER, &new_decoded_options[j++]);
+-      added_libraries++;
++#ifdef HAVE_LD_STATIC_DYNAMIC
++      if (saw_static_libcxx && !static_link)
++	{
++	  generate_option (OPT_Wl_, LD_STATIC_OPTION, 1, CL_DRIVER,
++			   &new_decoded_options[j++]);
++	}
++#endif
++      if (saw_libcxx)
++	new_decoded_options[j++] = *saw_libcxx;
++      else if (need_stdcxx)
++	{
++	  generate_option (OPT_l,
++			   (saw_profile_flag
++			    ? LIBSTDCXX_PROFILE
++			    : LIBSTDCXX),
++			   1, CL_DRIVER, &new_decoded_options[j++]);
++	  added_libraries++;
++	}
++#ifdef HAVE_LD_STATIC_DYNAMIC
++      if (saw_static_libcxx && !static_link)
++	{
++	  generate_option (OPT_Wl_, LD_DYNAMIC_OPTION, 1, CL_DRIVER,
++			   &new_decoded_options[j++]);
++	}
++#endif
+     }
+ 
+   if (shared_libgcc && !static_link)
 diff --git a/gcc/d/d-tree.h b/gcc/d/d-tree.h
 index 7a54dfbc59e..ad8e25fa45d 100644
 --- a/gcc/d/d-tree.h
@@ -3279,10 +3810,20 @@ index 0b19bcf7f34..117a5bd1592 100644
    Type *t = type->merge2 ();
    Identifier *ident;
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 7b5f6e03d9f..7226c9cc4af 100644
+index 7b5f6e03d9f..977fe4574ec 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
-@@ -15858,6 +15858,7 @@ performance of the code.  Permissible values for this option are:
+@@ -12484,7 +12484,8 @@ The option cannot be combined with @option{-fsanitize=thread}.
+ @opindex fsanitize=undefined
+ Enable UndefinedBehaviorSanitizer, a fast undefined behavior detector.
+ Various computations are instrumented to detect undefined behavior
+-at runtime.  Current suboptions are:
++at runtime.  See @uref{https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html} for more details.   The run-time behavior can be influenced using the
++@env{UBSAN_OPTIONS} environment variable.  Current suboptions are:
+ 
+ @table @gcctabopt
+ 
+@@ -15858,6 +15859,7 @@ performance of the code.  Permissible values for this option are:
  @samp{cortex-a57}, @samp{cortex-a72}, @samp{cortex-a73}, @samp{cortex-a75},
  @samp{cortex-a76}, @samp{ares}, @samp{exynos-m1}, @samp{emag}, @samp{falkor},
  @samp{neoverse-e1}, @samp{neoverse-n1}, @samp{neoverse-n2}, @samp{neoverse-v1},
@@ -3290,7 +3831,7 @@ index 7b5f6e03d9f..7226c9cc4af 100644
  @samp{qdf24xx}, @samp{saphira}, @samp{phecda}, @samp{xgene1}, @samp{vulcan},
  @samp{octeontx}, @samp{octeontx81},  @samp{octeontx83},
  @samp{a64fx},
-@@ -15874,6 +15875,15 @@ The values @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
+@@ -15874,6 +15876,15 @@ The values @samp{cortex-a57.cortex-a53}, @samp{cortex-a72.cortex-a53},
  @samp{cortex-a75.cortex-a55}, @samp{cortex-a76.cortex-a55} specify that GCC
  should tune for a big.LITTLE system.
  
@@ -3306,7 +3847,7 @@ index 7b5f6e03d9f..7226c9cc4af 100644
  Additionally on native AArch64 GNU/Linux systems the value
  @samp{native} tunes performance to the host system.  This option has no effect
  if the compiler is unable to recognize the processor of the host system.
-@@ -15903,6 +15913,16 @@ by @option{-mtune}).  Where this option is used in conjunction
+@@ -15903,6 +15914,16 @@ by @option{-mtune}).  Where this option is used in conjunction
  with @option{-march} or @option{-mtune}, those options take precedence
  over the appropriate part of this option.
  
@@ -3983,6 +4524,36 @@ index 1b51e870f04..729f933ac11 100644
  	  gfc_add_block_to_block (&se->pre, &arg1se.pre);
  	  gfc_add_block_to_block (&se->post, &arg1se.post);
  	  gfc_add_block_to_block (&se->pre, &arg2se.pre);
+diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
+index 408b93b2200..aea4ea0c6e8 100644
+--- a/gcc/gimple-fold.c
++++ b/gcc/gimple-fold.c
+@@ -434,7 +434,8 @@ fold_gimple_assign (gimple_stmt_iterator *si)
+ 					   CONSTRUCTOR_ELTS (rhs));
+ 	  }
+ 
+-	else if (DECL_P (rhs))
++	else if (DECL_P (rhs)
++		 && is_gimple_reg_type (TREE_TYPE (rhs)))
+ 	  return get_symbol_constant_value (rhs);
+       }
+       break;
+diff --git a/gcc/gimple-loop-interchange.cc b/gcc/gimple-loop-interchange.cc
+index b188ce86d5e..d10089b8c22 100644
+--- a/gcc/gimple-loop-interchange.cc
++++ b/gcc/gimple-loop-interchange.cc
+@@ -1042,7 +1042,10 @@ tree_loop_interchange::valid_data_dependences (unsigned i_idx, unsigned o_idx,
+ 
+ 	  /* Be conservative, skip case if either direction at i_idx/o_idx
+ 	     levels is not '=' or '<'.  */
+-	  if (dist_vect[i_idx] < 0 || dist_vect[o_idx] < 0)
++	  if ((!DDR_REVERSED_P (ddr) && dist_vect[i_idx] < 0)
++	      || (DDR_REVERSED_P (ddr) && dist_vect[i_idx] > 0)
++	      || (!DDR_REVERSED_P (ddr) && dist_vect[o_idx] < 0)
++	      || (DDR_REVERSED_P (ddr) && dist_vect[o_idx] > 0))
+ 	    return false;
+ 	}
+     }
 diff --git a/gcc/ipa-fnsummary.c b/gcc/ipa-fnsummary.c
 index 7c5562ad801..2b8c21ddd4f 100644
 --- a/gcc/ipa-fnsummary.c
@@ -4013,10 +4584,57 @@ index 7c5562ad801..2b8c21ddd4f 100644
  
        count2 = streamer_read_uhwi (&ib);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..d1875af8239 100644
+index 47eac19a1f6..1e7519dc70d 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,308 @@
+@@ -1,3 +1,355 @@
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-07-07  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101173
++	PR tree-optimization/101280
++	* gcc.dg/torture/pr101173.c: New testcase.
++	* gcc.dg/tree-ssa/loop-interchange-16.c: New file.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-07-12  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101394
++	* gcc.dg/torture/pr101394.c: New testcase.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101105
++	* gcc.dg/torture/pr101105.c: New testcase.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-06-14  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/100934
++	* gcc.dg/torture/pr100934.c: New testcase.
++
++2021-10-13  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-05-11  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/100509
++	* gcc.dg/pr100509.c: New testcase.
++
++2021-10-11  Andrew Pinski  <apinski@marvell.com>
++
++	Backported from master:
++	2021-10-11  Andrew Pinski  <apinski@marvell.com>
++
++	PR tree-optimization/102622
++	* gcc.c-torture/execute/bitfld-10.c: New test.
++
 +2021-09-30  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -4325,6 +4943,51 @@ index 47eac19a1f6..d1875af8239 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/testsuite/gcc.c-torture/execute/bitfld-10.c b/gcc/testsuite/gcc.c-torture/execute/bitfld-10.c
+new file mode 100644
+index 00000000000..bdbf5733ce7
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/bitfld-10.c
+@@ -0,0 +1,24 @@
++/* PR tree-optimization/102622 */
++/* Wrong code introduced due to phi-opt
++   introducing undefined signed interger overflow
++   with one bit signed integer negation. */
++
++struct f{signed t:1;};
++int g(struct f *a, int t) __attribute__((noipa));
++int g(struct f *a, int t)
++{
++    if (t)
++      a->t = -1;
++    else
++      a->t = 0;
++    int t1 = a->t;
++    if (t1) return 1;
++    return t1;
++}
++
++int main(void)
++{
++    struct f a;
++    if (!g(&a, 1))  __builtin_abort();
++    return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr100509.c b/gcc/testsuite/gcc.dg/pr100509.c
+new file mode 100644
+index 00000000000..9405e2a27df
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr100509.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++/* { dg-options "-O" } */
++
++struct X {
++  int a;
++};
++const int a = 0;
++static struct X A __attribute__((alias("a")));
++void foo() { struct X b = A; }
 diff --git a/gcc/testsuite/gcc.dg/pr78213.c b/gcc/testsuite/gcc.dg/pr78213.c
 index ebc2cce78f4..04bf0381f76 100644
 --- a/gcc/testsuite/gcc.dg/pr78213.c
@@ -4350,6 +5013,134 @@ index ebc2cce78f4..04bf0381f76 100644
 -/* { dg-message "fself\-test: " "-fself-test" { target *-*-* } 0 } */
 +
 +/* { dg-regexp {^-fself-test: [0-9]+ pass\(es\) in [.0-9]+ seconds$|.*: note: self-tests are not enabled in this build$} } */
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100934.c b/gcc/testsuite/gcc.dg/torture/pr100934.c
+new file mode 100644
+index 00000000000..43b78849895
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr100934.c
+@@ -0,0 +1,21 @@
++/* { dg-do run } */
++
++int a, b, c, d, e;
++int main()
++{
++  int f = 0, g = 0;
++  for (; f < 2; f++)
++    {
++      int h, i;
++      for (h = 0; h < 2; h++)
++	{
++	  b = e = g ? a % g : 0;
++	  c = d;
++	  for (i = 0; i < 1; i++)
++	    g = 0;
++	  for (; g < 2; g++)
++	    ;
++	}
++    }
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr101105.c b/gcc/testsuite/gcc.dg/torture/pr101105.c
+new file mode 100644
+index 00000000000..9222351683d
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr101105.c
+@@ -0,0 +1,19 @@
++/* { dg-do run } */
++
++short a;
++int b[5][4] = {2, 2};
++int d;
++short e(int f) { return f == 0 || a && f == 1 ? 0 : a; }
++int main() {
++  int g, h;
++  g = 3;
++  for (; g >= 0; g--) {
++    h = 3;
++    for (; h >= 0; h--)
++      b[g][h] = b[0][1] && e(1);
++  }
++  d = b[0][1];
++  if (d != 0)
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr101173.c b/gcc/testsuite/gcc.dg/torture/pr101173.c
+new file mode 100644
+index 00000000000..0c9090d6686
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr101173.c
+@@ -0,0 +1,18 @@
++/* { dg-do run } */
++/* { dg-additional-options "-floop-interchange" } */
++
++int a[6][9];
++int main()
++{
++  a[1][3] = 8;
++  for (int b = 1; b <= 5; b++)
++    for (int d = 0; d <= 5; d++)
++#pragma GCC unroll 0
++      for (int c = 0; c <= 5; c++)
++        a[b][c] = a[b][c + 2] & 216;
++  for (int e = 0; e < 6; e++)
++    for (int f = 0; f < 9; f++)
++      if (a[e][f] != 0)
++        __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr101394.c b/gcc/testsuite/gcc.dg/torture/pr101394.c
+new file mode 100644
+index 00000000000..87fbdadc152
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr101394.c
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++
++int a, b, c, d;
++void h();
++int e() __attribute__((returns_twice));
++void f() {
++  int *g = (int *)(__INTPTR_TYPE__)c;
++  if (b) {
++    h();
++    g--;
++    if (a)
++      if (d)
++        h();
++  }
++  if (g++)
++    e();
++  c = (__INTPTR_TYPE__)g;
++}
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c b/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c
+new file mode 100644
+index 00000000000..781555e085d
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c
+@@ -0,0 +1,22 @@
++/* PR/101280 */
++/* { dg-do compile } */
++/* { dg-options "-O3 -fdump-tree-linterchange-details" } */
++
++void dummy (double *, double *);
++#define LEN_2D 32
++double aa[LEN_2D][LEN_2D], bb[LEN_2D][LEN_2D];
++double s231(int iterations)
++{
++//    loop interchange
++//    loop with data dependency
++    for (int nl = 0; nl < 100*(iterations/LEN_2D); nl++) {
++        for (int i = 0; i < LEN_2D; ++i) {
++            for (int j = 1; j < LEN_2D; j++) {
++                aa[j][i] = aa[j - 1][i] + bb[j][i];
++            }
++        }
++        dummy(aa[0],bb[0]);
++    }
++}
++
++/* { dg-final { scan-tree-dump "loops interchanged" "linterchange" } } */
 diff --git a/gcc/testsuite/gcc.target/arm/attr-neon.c b/gcc/testsuite/gcc.target/arm/attr-neon.c
 index 225fb8dc3db..e8e3086247d 100644
 --- a/gcc/testsuite/gcc.target/arm/attr-neon.c
@@ -5843,6 +6634,91 @@ index 0d5e3d75e88..83e788a55a6 100644
  c = (/ c0(1)(1:5) /)
  do i=1,5
     if (c(1)(i:i) /= c1(i)) STOP 2
+diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
+index b0d56fcf3e3..5bb337b5417 100644
+--- a/gcc/tree-ssa-dom.c
++++ b/gcc/tree-ssa-dom.c
+@@ -695,7 +695,8 @@ pass_dominator::execute (function *fun)
+      gcc.dg/tree-ssa/pr21417.c can't be threaded if loop preheader is
+      missing.  We should improve jump threading in future then
+      LOOPS_HAVE_PREHEADERS won't be needed here.  */
+-  loop_optimizer_init (LOOPS_HAVE_PREHEADERS | LOOPS_HAVE_SIMPLE_LATCHES);
++  loop_optimizer_init (LOOPS_HAVE_PREHEADERS | LOOPS_HAVE_SIMPLE_LATCHES
++		       | LOOPS_HAVE_MARKED_IRREDUCIBLE_REGIONS);
+ 
+   /* Initialize the value-handle array.  */
+   threadedge_initialize_values ();
+diff --git a/gcc/tree-ssa-phiopt.c b/gcc/tree-ssa-phiopt.c
+index e5a47c6614b..ca1003361bb 100644
+--- a/gcc/tree-ssa-phiopt.c
++++ b/gcc/tree-ssa-phiopt.c
+@@ -753,9 +753,12 @@ conditional_replacement (basic_block cond_bb, basic_block middle_bb,
+   if ((integer_zerop (arg0) && integer_onep (arg1))
+       || (integer_zerop (arg1) && integer_onep (arg0)))
+     neg = false;
++  /* For signed one bit types, the negation is not needed and
++     should be avoided and is the same as 1 case for non-signed
++     one bit types.  */
+   else if ((integer_zerop (arg0) && integer_all_onesp (arg1))
+ 	   || (integer_zerop (arg1) && integer_all_onesp (arg0)))
+-    neg = true;
++    neg = TYPE_PRECISION (TREE_TYPE (arg0)) != 1;
+   else
+     return false;
+ 
+diff --git a/gcc/tree-ssa-pre.c b/gcc/tree-ssa-pre.c
+index c163c3823c2..076fa18aa78 100644
+--- a/gcc/tree-ssa-pre.c
++++ b/gcc/tree-ssa-pre.c
+@@ -3302,7 +3302,11 @@ do_pre_regular_insertion (basic_block block, basic_block dom)
+ 	  /* If all edges produce the same value and that value is
+ 	     an invariant, then the PHI has the same value on all
+ 	     edges.  Note this.  */
+-	  else if (!cant_insert && all_same)
++	  else if (!cant_insert
++		   && all_same
++		   && (edoubleprime->kind != NAME
++		       || !SSA_NAME_OCCURS_IN_ABNORMAL_PHI
++			     (PRE_EXPR_NAME (edoubleprime))))
+ 	    {
+ 	      gcc_assert (edoubleprime->kind == CONSTANT
+ 			  || edoubleprime->kind == NAME);
+diff --git a/gcc/tree-vect-data-refs.c b/gcc/tree-vect-data-refs.c
+index f2e1766432b..151bffa7714 100644
+--- a/gcc/tree-vect-data-refs.c
++++ b/gcc/tree-vect-data-refs.c
+@@ -3424,9 +3424,9 @@ vect_prune_runtime_alias_test_list (loop_vec_info loop_vinfo)
+   /* Step values are irrelevant for aliasing if the number of vector
+      iterations is equal to the number of scalar iterations (which can
+      happen for fully-SLP loops).  */
+-  bool ignore_step_p = known_eq (LOOP_VINFO_VECT_FACTOR (loop_vinfo), 1U);
++  bool vf_one_p = known_eq (LOOP_VINFO_VECT_FACTOR (loop_vinfo), 1U);
+ 
+-  if (!ignore_step_p)
++  if (!vf_one_p)
+     {
+       /* Convert the checks for nonzero steps into bound tests.  */
+       tree value;
+@@ -3478,10 +3478,18 @@ vect_prune_runtime_alias_test_list (loop_vec_info loop_vinfo)
+       dr_vec_info *dr_info_b = loop_vinfo->lookup_dr (DDR_B (ddr));
+       stmt_vec_info stmt_info_b = dr_info_b->stmt;
+ 
++      bool preserves_scalar_order_p
++	= vect_preserves_scalar_order_p (dr_info_a, dr_info_b);
++      bool ignore_step_p
++	  = (vf_one_p
++	     && (preserves_scalar_order_p
++		 || operand_equal_p (DR_STEP (dr_info_a->dr),
++				     DR_STEP (dr_info_b->dr), 0)));
++
+       /* Skip the pair if inter-iteration dependencies are irrelevant
+ 	 and intra-iteration dependencies are guaranteed to be honored.  */
+       if (ignore_step_p
+-	  && (vect_preserves_scalar_order_p (dr_info_a, dr_info_b)
++	  && (preserves_scalar_order_p
+ 	      || vectorizable_with_step_bound_p (dr_info_a, dr_info_b,
+ 						 &lower_bound)))
+ 	{
 diff --git a/gcc/tree.c b/gcc/tree.c
 index be311754393..99f4318306a 100644
 --- a/gcc/tree.c
@@ -6012,10 +6888,84 @@ index 1917e29ced2..8c8aa75004e 100644
  
  void SetAlternateSignalStack() {
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 4a898cd27d7..5d85512b194 100644
+index 4a898cd27d7..1ff32a13515 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,188 @@
+@@ -1,3 +1,262 @@
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/28_regex/match_results/102667.C: Moved to...
++	* testsuite/28_regex/match_results/102667.cc: ...here.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-09-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/26_numerics/valarray/dr630-3.C: Moved to...
++	* testsuite/26_numerics/valarray/dr630-3.cc: ...here.
++	* testsuite/27_io/basic_iostream/cons/16251.C: Moved to...
++	* testsuite/27_io/basic_iostream/cons/16251.cc: ...here.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-09-16  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/fs_path.h (advance): Remove non-deducible
++	template parameter.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-09-23  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/102425
++	* src/c++11/system_error.cc
++	(system_error_category::default_error_condition): Add 0 to
++	switch.
++	* testsuite/19_diagnostics/error_category/102425.cc: New test.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-08-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	* python/libstdcxx/v6/printers.py (StdErrorCodePrinter): Define.
++	(build_libstdcxx_dictionary): Register printer for
++	std::error_code and std::error_condition.
++	* testsuite/libstdc++-prettyprinters/cxx11.cc: Test it.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-08-16  Jonathan Wakely  <jwakely@redhat.com>
++
++	* python/Makefile.am [GLIBCXX_BUILD_DEBUG] (install-data-local):
++	Install another copy of the GDB hook.
++	* python/Makefile.in: Regenerate.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/27_io/filesystem/operations/remove_all.cc: Remove
++	test directory after making it writable again.
++	* testsuite/experimental/filesystem/operations/remove_all.cc:
++	Likewise.
++
++2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-10-11  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/102667
++	* include/bits/regex.h (match_result::empty()): Optimize by
++	calling the base function directly.
++	(match_results::end()): Check _Base_type::empty() not empty().
++	* testsuite/28_regex/match_results/102667.C: New test.
++
 +2021-08-11  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -6227,7 +7177,7 @@ index 50bd25eb2df..4c7b84e357f 100644
      {
  #ifdef _GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
-index 13eb18c0652..8b801c6787c 100644
+index 13eb18c0652..f4fa9f3719d 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
 +++ b/libstdc++-v3/include/bits/fs_path.h
 @@ -110,7 +110,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
@@ -6239,6 +7189,37 @@ index 13eb18c0652..8b801c6787c 100644
        { };
  
      template<typename _Tp1, typename _Tp2 = void>
+@@ -1274,7 +1274,7 @@ inline ptrdiff_t
+ distance(filesystem::path::iterator __first, filesystem::path::iterator __last)
+ { return __path_iter_distance(__first, __last); }
+ 
+-template<typename _InputIterator, typename _Distance>
++template<typename _Distance>
+   void
+   advance(filesystem::path::iterator& __i, _Distance __n)
+   { __path_iter_advance(__i, static_cast<ptrdiff_t>(__n)); }
+diff --git a/libstdc++-v3/include/bits/regex.h b/libstdc++-v3/include/bits/regex.h
+index 8fb89071461..9ca4cf8a815 100644
+--- a/libstdc++-v3/include/bits/regex.h
++++ b/libstdc++-v3/include/bits/regex.h
+@@ -1707,7 +1707,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+        */
+       _GLIBCXX_NODISCARD bool
+       empty() const noexcept
+-      { return size() == 0; }
++      { return _Base_type::size() <= 3; }
+ 
+       ///@}
+ 
+@@ -1825,7 +1825,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+        */
+       const_iterator
+       end() const noexcept
+-      { return _Base_type::end() - (empty() ? 0 : 3); }
++      { return _Base_type::end() - (_Base_type::empty() ? 0 : 3); }
+ 
+       /**
+        * @brief Gets an iterator to one-past-the-end of the collection.
 diff --git a/libstdc++-v3/include/bits/shared_ptr.h b/libstdc++-v3/include/bits/shared_ptr.h
 index 281600b2901..4ddc52ae723 100644
 --- a/libstdc++-v3/include/bits/shared_ptr.h
@@ -6635,10 +7616,72 @@ index 5d8ac5ca0ba..b469f62a43d 100644
  
  # Use special rules for the C++17 sources so that the proper flags are passed.
  new_opa.lo: new_opa.cc
+diff --git a/libstdc++-v3/python/Makefile.am b/libstdc++-v3/python/Makefile.am
+index 44d0b3e7fb4..c3dd4e8b406 100644
+--- a/libstdc++-v3/python/Makefile.am
++++ b/libstdc++-v3/python/Makefile.am
+@@ -29,6 +29,12 @@ else
+ pythondir = $(datadir)/gcc-$(gcc_version)/python
+ endif
+ 
++if GLIBCXX_BUILD_DEBUG
++debug_gdb_py = YES
++else
++debug_gdb_py =
++endif
++
+ all-local: gdb.py
+ 
+ nobase_python_DATA = \
+@@ -61,4 +67,8 @@ install-data-local: gdb.py
+ 	  done; \
+ 	cd $$here; \
+ 	echo " $(INSTALL_DATA) gdb.py $(DESTDIR)$(toolexeclibdir)/$$libname-gdb.py"; \
+-	$(INSTALL_DATA) gdb.py $(DESTDIR)$(toolexeclibdir)/$$libname-gdb.py
++	$(INSTALL_DATA) gdb.py $(DESTDIR)$(toolexeclibdir)/$$libname-gdb.py ; \
++	if [ -n "$(debug_gdb_py)" ]; then \
++	  sed "/^libdir = /s;'$$;/debug';" gdb.py > debug-gdb.py ; \
++	  $(INSTALL_DATA) debug-gdb.py $(DESTDIR)$(toolexeclibdir)/debug/$$libname-gdb.py ; \
++	fi
+diff --git a/libstdc++-v3/python/Makefile.in b/libstdc++-v3/python/Makefile.in
+index 7b51946c49a..22dfc703e49 100644
+--- a/libstdc++-v3/python/Makefile.in
++++ b/libstdc++-v3/python/Makefile.in
+@@ -397,6 +397,8 @@ WARN_CXXFLAGS = \
+ AM_CPPFLAGS = $(GLIBCXX_INCLUDES) $(CPPFLAGS)
+ @ENABLE_PYTHONDIR_FALSE@pythondir = $(datadir)/gcc-$(gcc_version)/python
+ @ENABLE_PYTHONDIR_TRUE@pythondir = $(prefix)/$(python_mod_dir)
++@GLIBCXX_BUILD_DEBUG_FALSE@debug_gdb_py = 
++@GLIBCXX_BUILD_DEBUG_TRUE@debug_gdb_py = YES
+ nobase_python_DATA = \
+     libstdcxx/v6/printers.py \
+     libstdcxx/v6/xmethods.py \
+@@ -614,7 +616,11 @@ install-data-local: gdb.py
+ 	  done; \
+ 	cd $$here; \
+ 	echo " $(INSTALL_DATA) gdb.py $(DESTDIR)$(toolexeclibdir)/$$libname-gdb.py"; \
+-	$(INSTALL_DATA) gdb.py $(DESTDIR)$(toolexeclibdir)/$$libname-gdb.py
++	$(INSTALL_DATA) gdb.py $(DESTDIR)$(toolexeclibdir)/$$libname-gdb.py ; \
++	if [ -n "$(debug_gdb_py)" ]; then \
++	  sed "/^libdir = /s;'$$;/debug';" gdb.py > debug-gdb.py ; \
++	  $(INSTALL_DATA) debug-gdb.py $(DESTDIR)$(toolexeclibdir)/debug/$$libname-gdb.py ; \
++	fi
+ 
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+ # Otherwise a system limit (for SysV at least) may be exceeded.
 diff --git a/libstdc++-v3/python/libstdcxx/v6/printers.py b/libstdc++-v3/python/libstdcxx/v6/printers.py
-index 32b8210414a..0c94a038437 100644
+index 32b8210414a..25d9d2e1868 100644
 --- a/libstdc++-v3/python/libstdcxx/v6/printers.py
 +++ b/libstdc++-v3/python/libstdcxx/v6/printers.py
+@@ -18,7 +18,7 @@
+ import gdb
+ import itertools
+ import re
+-import sys
++import sys, os, errno
+ 
+ ### Python 2 + Python 3 compatibility code
+ 
 @@ -85,8 +85,8 @@ except ImportError:
  def find_type(orig, name):
      typ = orig.strip_typedefs()
@@ -6650,6 +7693,82 @@ index 32b8210414a..0c94a038437 100644
          try:
              return gdb.lookup_type(search)
          except RuntimeError:
+@@ -1449,6 +1449,45 @@ class StdPairPrinter:
+         return None
+ 
+ 
++class StdErrorCodePrinter:
++    "Print a std::error_code or std::error_condition"
++
++    _errno_categories = None # List of categories that use errno values
++
++    def __init__ (self, typename, val):
++        self.val = val
++        self.typename = typename
++        # Do this only once ...
++        if StdErrorCodePrinter._errno_categories is None:
++            StdErrorCodePrinter._errno_categories = ['generic']
++            try:
++                import posix
++                StdErrorCodePrinter._errno_categories.append('system')
++            except ImportError:
++                pass
++
++    @staticmethod
++    def _category_name(cat):
++        "Call the virtual function that overrides std::error_category::name()"
++        gdb.set_convenience_variable('__cat', cat)
++        return gdb.parse_and_eval('$__cat->name()').string()
++
++    def to_string (self):
++        value = self.val['_M_value']
++        category = self._category_name(self.val['_M_cat'])
++        strval = str(value)
++        if value == 0:
++            default_cats = {'error_code':'system', 'error_condition':'generic'}
++            unqualified = self.typename.split('::')[-1]
++            if category == default_cats[unqualified]:
++                return self.typename + ' = { }' # default-constructed value
++        if value > 0 and category in StdErrorCodePrinter._errno_categories:
++            try:
++                strval = errno.errorcode[int(value)]
++            except:
++                pass
++        return '%s = {"%s": %s}' % (self.typename, category, strval)
++
+ # A "regular expression" printer which conforms to the
+ # "SubPrettyPrinter" protocol from gdb.printing.
+ class RxPrinter(object):
+@@ -1846,6 +1885,8 @@ def build_libstdcxx_dictionary ():
+     libstdcxx_printer.add_version('std::__cxx11::', 'basic_string', StdStringPrinter)
+     libstdcxx_printer.add_container('std::', 'bitset', StdBitsetPrinter)
+     libstdcxx_printer.add_container('std::', 'deque', StdDequePrinter)
++    libstdcxx_printer.add_version('std::', 'error_code', StdErrorCodePrinter)
++    libstdcxx_printer.add_version('std::', 'error_condition', StdErrorCodePrinter)
+     libstdcxx_printer.add_container('std::', 'list', StdListPrinter)
+     libstdcxx_printer.add_container('std::__cxx11::', 'list', StdListPrinter)
+     libstdcxx_printer.add_container('std::', 'map', StdMapPrinter)
+diff --git a/libstdc++-v3/src/c++11/system_error.cc b/libstdc++-v3/src/c++11/system_error.cc
+index d67e3a4f975..3c8f32d8eab 100644
+--- a/libstdc++-v3/src/c++11/system_error.cc
++++ b/libstdc++-v3/src/c++11/system_error.cc
+@@ -70,6 +70,8 @@ namespace
+     virtual std::error_condition
+     default_error_condition(int ev) const noexcept
+     {
++      // Use generic category for all known POSIX errno values (including zero)
++      // and system category otherwise.
+       switch (ev)
+       {
+       // List of errno macros from [cerrno.syn].
+@@ -309,6 +311,7 @@ namespace
+ #ifdef EXDEV
+       case EXDEV:
+ #endif
++      case 0:
+         return std::error_condition(ev, std::generic_category());
+ 
+       /* Additional system-dependent mappings from non-standard error codes
 diff --git a/libstdc++-v3/src/c++17/fs_ops.cc b/libstdc++-v3/src/c++17/fs_ops.cc
 index f744d2f7b56..f37d5497075 100644
 --- a/libstdc++-v3/src/c++17/fs_ops.cc
@@ -6803,6 +7922,30 @@ index 00000000000..61572668385
 +
 +int
 +main()
++{
++  test01();
++}
+diff --git a/libstdc++-v3/testsuite/19_diagnostics/error_category/102425.cc b/libstdc++-v3/testsuite/19_diagnostics/error_category/102425.cc
+new file mode 100644
+index 00000000000..069b5e284e1
+--- /dev/null
++++ b/libstdc++-v3/testsuite/19_diagnostics/error_category/102425.cc
+@@ -0,0 +1,18 @@
++// { dg-do run { target c++11 } }
++#include <system_error>
++#include <testsuite_hooks.h>
++
++void test01()
++{
++  // PR libstdc++/102425
++  VERIFY( std::error_code() == std::error_condition() );
++
++  auto zero = std::system_category().default_error_condition(0);
++  // This is the condition that the equality above relies on:
++  VERIFY( zero.category() == std::generic_category() );
++}
++
++int main()
 +{
 +  test01();
 +}
@@ -7130,6 +8273,14 @@ index 00000000000..cf4644f53c9
 +
 +B b;
 +A a = std::reduce(&b, &b + 1, A{}, binop{});
+diff --git a/libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.C b/libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.cc
+similarity index 100%
+rename from libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.C
+rename to libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.cc
+diff --git a/libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.C b/libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.cc
+similarity index 100%
+rename from libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.C
+rename to libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.cc
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/create_directories.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/create_directories.cc
 index c4411dfc1e7..7dd9c209b40 100644
 --- a/libstdc++-v3/testsuite/27_io/filesystem/operations/create_directories.cc
@@ -7210,6 +8361,19 @@ index da78fb2de87..9555280e8c6 100644
    remove_all(p, ec);
  }
  
+diff --git a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
+index b0b176fc656..aef29cc71a0 100644
+--- a/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
++++ b/libstdc++-v3/testsuite/27_io/filesystem/operations/remove_all.cc
+@@ -169,6 +169,8 @@ test04()
+   }
+ 
+   fs::permissions(dir, fs::perms::owner_write, fs::perm_options::add);
++  fs::remove_all(dir, ec);
++  f.path.clear();
+ #endif
+ }
+ 
 diff --git a/libstdc++-v3/testsuite/27_io/filesystem/path/construct/100630.cc b/libstdc++-v3/testsuite/27_io/filesystem/path/construct/100630.cc
 new file mode 100644
 index 00000000000..eb8473e600e
@@ -7229,6 +8393,51 @@ index 00000000000..eb8473e600e
 +{
 +  volatile bool b = true;
 +  f(b);
++}
+diff --git a/libstdc++-v3/testsuite/28_regex/match_results/102667.cc b/libstdc++-v3/testsuite/28_regex/match_results/102667.cc
+new file mode 100644
+index 00000000000..9e38c9edaa4
+--- /dev/null
++++ b/libstdc++-v3/testsuite/28_regex/match_results/102667.cc
+@@ -0,0 +1,39 @@
++// { dg-do run { target c++11 } }
++
++#include <regex>
++#include <testsuite_hooks.h>
++
++void
++test01()
++{
++  std::cmatch sm;
++  VERIFY( sm.empty() );
++  VERIFY( sm.size() == 0 );
++  VERIFY( sm.begin() == sm.end() );  // PR libstdc++/83600
++
++  bool matched = std::regex_match("a", sm, std::regex("b"));
++  VERIFY( ! matched );
++  VERIFY( sm.ready() );
++  VERIFY( sm.empty() );
++  VERIFY( sm.size() == 0 );
++  VERIFY( sm.begin() == sm.end() ); // PR libstdc++/102667
++
++  matched = std::regex_match("a", sm, std::regex("a"));
++  VERIFY( matched );
++  VERIFY( sm.ready() );
++  VERIFY( ! sm.empty() );
++  VERIFY( sm.size() == 1 );
++  VERIFY( (sm.end() - sm.begin()) == 1 );
++
++  matched = std::regex_search("abcd", sm, std::regex("(b)(c)"));
++  VERIFY( matched );
++  VERIFY( sm.ready() );
++  VERIFY( ! sm.empty() );
++  VERIFY( sm.size() == 3 );
++  VERIFY( (sm.end() - sm.begin()) == 3 );
++}
++
++int main()
++{
++  test01();
 +}
 diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/create_directories.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/create_directories.cc
 index b6909b630d4..6cfa7800860 100644
@@ -7317,6 +8526,19 @@ index 3a79d6622b9..20701ae4fcc 100644
    remove_all(p, ec);
  }
  
+diff --git a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc b/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
+index 9d51a66c71f..c233b60c550 100644
+--- a/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
++++ b/libstdc++-v3/testsuite/experimental/filesystem/operations/remove_all.cc
+@@ -137,6 +137,8 @@ test04()
+   }
+ 
+   fs::permissions(dir, fs::perms::owner_write|fs::perms::add_perms);
++  fs::remove_all(dir, ec);
++  f.path.clear();
+ #endif
+ }
+ 
 diff --git a/libstdc++-v3/testsuite/experimental/filesystem/path/construct/100630.cc b/libstdc++-v3/testsuite/experimental/filesystem/path/construct/100630.cc
 new file mode 100644
 index 00000000000..b2428ff74cf
@@ -7391,3 +8613,33 @@ index cd2a48845aa..f34c4fd107e 100644
 +// C++20 uniform container erasure causes more errors
 +// { dg-prune-output "expected nested-name-specifier before" }
 +// { dg-prune-output "expected initializer before" }
+diff --git a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
+index 71a50988924..bff9d1b27de 100644
+--- a/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
++++ b/libstdc++-v3/testsuite/libstdc++-prettyprinters/cxx11.cc
+@@ -161,6 +161,25 @@ main()
+ // { dg-final { note-test tpl {std::tuple containing = {[1] = 6, [2] = 7}} } }
+   ExTuple &rtpl = tpl;
+ // { dg-final { note-test rtpl {std::tuple containing = {[1] = 6, [2] = 7}} } }
++
++  std::error_code e0;
++  // { dg-final { note-test e0 {std::error_code = { }} } }
++  std::error_condition ec0;
++  // { dg-final { note-test ec0 {std::error_condition = { }} } }
++  std::error_code einval = std::make_error_code(std::errc::invalid_argument);
++  // { dg-final { note-test einval {std::error_code = {"generic": EINVAL}} } }
++  std::error_condition ecinval = std::make_error_condition(std::errc::invalid_argument);
++  // { dg-final { note-test ecinval {std::error_condition = {"generic": EINVAL}} } }
++
++  struct custom_cat : std::error_category {
++    const char* name() const noexcept { return "miaow"; }
++    std::string message(int) const { return ""; }
++  } cat;
++  std::error_code emiaow(42, cat);
++  // { dg-final { note-test emiaow {std::error_code = {"miaow": 42}} } }
++  std::error_condition ecmiaow(42, cat);
++  // { dg-final { note-test ecmiaow {std::error_condition = {"miaow": 42}} } }
++
+   placeholder(""); // Mark SPOT
+   use(efl);
+   use(fl);
