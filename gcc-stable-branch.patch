@@ -16,7 +16,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (142):
+GCC Administrator (143):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -239,6 +240,9 @@ Paul Thomas (9):
       Fortran: Improve resolution of associate variables. [PR93701].
       Fortran: Fix for class functions as associated target [PR98565].
       Fortran: Correct missing structure constructor comps. [PR97612].
+
+Piotr Kubaj (1):
+      gcc/configure: Check for powerpc64le*-*-freebsd*
 
 Richard Biener (6):
       Bump BASE-VER to 9.4.1
@@ -2799,6 +2803,32 @@ index d7a4ae64c36..788175e1543 100644
  #define vec_load_len_r(X,L)				\
    (__vector unsigned char)__builtin_s390_vlrlr((L),(X))
  #define vec_store_len_r(X,Y,L) \
+diff --git a/gcc/configure b/gcc/configure
+index 9e4c8693966..8c25a18fa08 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -28944,7 +28944,7 @@ $as_echo "#define HAVE_LD_PPC_GNU_ATTR_LONG_DOUBLE 1" >>confdefs.h
+ esac
+ 
+ case "$target:$tm_file" in
+-  powerpc64-*-freebsd* | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
++  powerpc64*-*-freebsd* | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
+   case "$target" in
+      *le-*-linux*)
+      emul_name="-melf64lppc"
+diff --git a/gcc/configure.ac b/gcc/configure.ac
+index ec10dbeb3e9..d67f72df8a2 100644
+--- a/gcc/configure.ac
++++ b/gcc/configure.ac
+@@ -5671,7 +5671,7 @@ EOF
+ esac
+ 
+ case "$target:$tm_file" in
+-  powerpc64-*-freebsd* | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
++  powerpc64*-*-freebsd* | powerpc64*-*-linux* | powerpc*-*-linux*rs6000/biarch64.h*)
+   case "$target" in
+      *le-*-linux*)
+      emul_name="-melf64lppc"
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index b0e68a99a73..51722aff2a8 100644
 --- a/gcc/d/ChangeLog
