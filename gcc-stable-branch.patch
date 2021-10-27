@@ -16,7 +16,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (143):
+GCC Administrator (144):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -1223,10 +1224,19 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..2cce20dab62 100644
+index 7558c0a369e..cc5303a6a7d 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,273 @@
+@@ -1,3 +1,282 @@
++2021-10-26  Piotr Kubaj  <pkubaj@FreeBSD.org>
++
++	Backported from master:
++	2021-10-16  Piotr Kubaj  <pkubaj@FreeBSD.org>
++
++	* configure.ac: Treat powerpc64*-*-freebsd* the same as
++	powerpc64-*-freebsd*.
++	* configure: Regenerate.
++
 +2021-10-24  John David Anglin  <danglin@gcc.gnu.org>
 +
 +	* config/pa/pa.md: Don't use 'G' constraint in integer move patterns.
