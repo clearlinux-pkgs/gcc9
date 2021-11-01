@@ -16,7 +16,11 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (145):
+GCC Administrator (149):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -195,7 +199,7 @@ John David Anglin (5):
       Don't use 'G' constraint in integer move patterns
       Fix warnings building linux-atomic.c and fptr.c on hppa64-linux
 
-Jonathan Wakely (25):
+Jonathan Wakely (26):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -221,6 +225,7 @@ Jonathan Wakely (25):
       libstdc++: Remove non-deducible parameter for std::advance overload
       libstdc++: Rename tests with incorrect extension
       libstdc++: Rename file with the wrong extension
+      libstdc++: Fix range access for empty std::valarray [PR103022]
 
 Kewen Lin (1):
       ipa-fnsummary: Remove inconsistent bp_pack_value
@@ -7671,6 +7676,64 @@ index 503d859bee6..0b264f49a2a 100644
  			    __not_<__converts_from_optional<_Tp, _Up>>,
  			    __not_<__assigns_from_optional<_Tp, _Up>>>,
  		    optional&>
+diff --git a/libstdc++-v3/include/std/valarray b/libstdc++-v3/include/std/valarray
+index 10b294ba012..25b534c27f3 100644
+--- a/libstdc++-v3/include/std/valarray
++++ b/libstdc++-v3/include/std/valarray
+@@ -1211,8 +1211,8 @@ _DEFINE_BINARY_OPERATOR(>=, __greater_equal)
+    */
+   template<class _Tp>
+     inline _Tp*
+-    begin(valarray<_Tp>& __va)
+-    { return std::__addressof(__va[0]); }
++    begin(valarray<_Tp>& __va) noexcept
++    { return __va.size() ? std::__addressof(__va[0]) : nullptr; }
+ 
+   /**
+    *  @brief  Return an iterator pointing to the first element of
+@@ -1221,8 +1221,8 @@ _DEFINE_BINARY_OPERATOR(>=, __greater_equal)
+    */
+   template<class _Tp>
+     inline const _Tp*
+-    begin(const valarray<_Tp>& __va)
+-    { return std::__addressof(__va[0]); }
++    begin(const valarray<_Tp>& __va) noexcept
++    { return __va.size() ? std::__addressof(__va[0]) : nullptr; }
+ 
+   /**
+    *  @brief  Return an iterator pointing to one past the last element of
+@@ -1231,8 +1231,13 @@ _DEFINE_BINARY_OPERATOR(>=, __greater_equal)
+    */
+   template<class _Tp>
+     inline _Tp*
+-    end(valarray<_Tp>& __va)
+-    { return std::__addressof(__va[0]) + __va.size(); }
++    end(valarray<_Tp>& __va) noexcept
++    {
++      if (auto __n = __va.size())
++	return std::__addressof(__va[0]) + __n;
++      else
++	return nullptr;
++    }
+ 
+   /**
+    *  @brief  Return an iterator pointing to one past the last element of
+@@ -1241,8 +1246,13 @@ _DEFINE_BINARY_OPERATOR(>=, __greater_equal)
+    */
+   template<class _Tp>
+     inline const _Tp*
+-    end(const valarray<_Tp>& __va)
+-    { return std::__addressof(__va[0]) + __va.size(); }
++    end(const valarray<_Tp>& __va) noexcept
++    {
++      if (auto __n = __va.size())
++	return std::__addressof(__va[0]) + __n;
++      else
++	return nullptr;
++    }
+ #endif // C++11
+ 
+   /// @} group numeric_arrays
 diff --git a/libstdc++-v3/include/std/variant b/libstdc++-v3/include/std/variant
 index 321228753cd..99a35cc5915 100644
 --- a/libstdc++-v3/include/std/variant
@@ -8456,10 +8519,138 @@ index 00000000000..cf4644f53c9
 +
 +B b;
 +A a = std::reduce(&b, &b + 1, A{}, binop{});
+diff --git a/libstdc++-v3/testsuite/26_numerics/valarray/103022.cc b/libstdc++-v3/testsuite/26_numerics/valarray/103022.cc
+new file mode 100644
+index 00000000000..d2e346760dd
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/valarray/103022.cc
+@@ -0,0 +1,15 @@
++// { dg-options "-D_GLIBCXX_DEBUG" }
++// { dg-do compile { target c++11 } }
++
++#include <valarray>
++
++int main()
++{
++  // PR libstdc++/103022
++  std::valarray<double> va;
++  (void) std::begin(va);
++  (void) std::end(va);
++  const auto& cva = va;
++  (void) std::begin(cva);
++  (void) std::end(cva);
++}
 diff --git a/libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.C b/libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.cc
 similarity index 100%
 rename from libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.C
 rename to libstdc++-v3/testsuite/26_numerics/valarray/dr630-3.cc
+diff --git a/libstdc++-v3/testsuite/26_numerics/valarray/range_access.cc b/libstdc++-v3/testsuite/26_numerics/valarray/range_access.cc
+index 352f0e53c9f..e5791e04ffe 100644
+--- a/libstdc++-v3/testsuite/26_numerics/valarray/range_access.cc
++++ b/libstdc++-v3/testsuite/26_numerics/valarray/range_access.cc
+@@ -1,4 +1,4 @@
+-// { dg-do compile { target c++11 } }
++// { dg-do run { target c++11 } }
+ 
+ // Copyright (C) 2010-2019 Free Software Foundation, Inc.
+ //
+@@ -17,7 +17,7 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
+-// 26.6.10 valarray range access: [valarray.range]
++// C++11 26.6.10 valarray range access: [valarray.range]
+ 
+ #include <valarray>
+ 
+@@ -25,9 +25,42 @@ void
+ test01()
+ {
+   std::valarray<double> va{1.0, 2.0, 3.0};
+-  std::begin(va);
+-  std::end(va);
++  (void) std::begin(va);
++  (void) std::end(va);
+   const auto& cva = va;
+-  std::begin(cva);
+-  std::end(cva);
++  (void) std::begin(cva);
++  (void) std::end(cva);
++
++  using Iter = decltype(std::begin(va));
++  using IterTraits = std::iterator_traits<Iter>;
++  static_assert( std::is_same<Iter, decltype(std::end(va))>::value, "" );
++  static_assert( std::is_same<IterTraits::iterator_category,
++			      std::random_access_iterator_tag>::value, "" );
++  static_assert( std::is_same<IterTraits::value_type, double>::value, "" );
++  static_assert( std::is_same<IterTraits::reference, double&>::value, "" );
++  using CIter = decltype(std::begin(cva));
++  using CIterTraits = std::iterator_traits<CIter>;
++  static_assert( std::is_same<CIter, decltype(std::end(cva))>::value, "" );
++  static_assert( std::is_same<CIterTraits::iterator_category,
++			      std::random_access_iterator_tag>::value, "" );
++  static_assert( std::is_same<CIterTraits::value_type, double>::value, "" );
++  static_assert( std::is_same<CIterTraits::reference, const double&>::value, "" );
++}
++
++// PR libstdc++/103022
++void
++test02()
++{
++  std::valarray<double> va;
++  (void) std::begin(va);
++  (void) std::end(va);
++  const auto& cva = va;
++  (void) std::begin(cva);
++  (void) std::end(cva);
++}
++
++int main()
++{
++  test01();
++  test02();
+ }
+diff --git a/libstdc++-v3/testsuite/26_numerics/valarray/range_access2.cc b/libstdc++-v3/testsuite/26_numerics/valarray/range_access2.cc
+index c0d87c68132..538a3864c05 100644
+--- a/libstdc++-v3/testsuite/26_numerics/valarray/range_access2.cc
++++ b/libstdc++-v3/testsuite/26_numerics/valarray/range_access2.cc
+@@ -1,4 +1,4 @@
+-// { dg-do compile { target c++14 } }
++// { dg-do run { target c++14 } }
+ 
+ // Copyright (C) 2015-2019 Free Software Foundation, Inc.
+ //
+@@ -17,7 +17,7 @@
+ // with this library; see the file COPYING3.  If not see
+ // <http://www.gnu.org/licenses/>.
+ 
+-// 26.6.10 valarray range access: [valarray.range]
++// C++11 26.6.10 valarray range access: [valarray.range]
+ 
+ #include <iterator>
+ #include <valarray>
+@@ -33,3 +33,21 @@ test01()
+   std::cbegin(cva);
+   std::cend(cva);
+ }
++
++// PR libstdc++/103022
++void
++test02()
++{
++  std::valarray<double> va;
++  (void) std::cbegin(va);
++  (void) std::cend(va);
++  const auto& cva = va;
++  (void) std::cbegin(cva);
++  (void) std::cend(cva);
++}
++
++int main()
++{
++  test01();
++  test02();
++}
 diff --git a/libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.C b/libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.cc
 similarity index 100%
 rename from libstdc++-v3/testsuite/27_io/basic_iostream/cons/16251.C
