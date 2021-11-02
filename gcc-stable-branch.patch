@@ -16,7 +16,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (149):
+GCC Administrator (150):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -7076,10 +7077,23 @@ index 1917e29ced2..8c8aa75004e 100644
  
  void SetAlternateSignalStack() {
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 4a898cd27d7..1ff32a13515 100644
+index 4a898cd27d7..9010f72fe3b 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,262 @@
+@@ -1,3 +1,275 @@
++2021-11-01  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-11-01  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103022
++	* include/std/valarray (begin, end): Do not dereference an empty
++	valarray. Add noexcept.
++	* testsuite/26_numerics/valarray/range_access.cc: Check empty
++	valarray. Check iterator properties. Run as well as compiling.
++	* testsuite/26_numerics/valarray/range_access2.cc: Likewise.
++	* testsuite/26_numerics/valarray/103022.cc: New test.
++
 +2021-10-13  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
