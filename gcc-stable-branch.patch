@@ -262,7 +262,7 @@ Paul Thomas (9):
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
 
-Richard Biener (8):
+Richard Biener (9):
       Bump BASE-VER to 9.4.1
       middle-end/100509 - avoid folding constant to aggregate type
       tree-optimization/100934 - properly mark irreducible regions for DOM
@@ -271,6 +271,7 @@ Richard Biener (8):
       tree-optimization/101173 - fix interchange dependence checking
       middle-end/101824 - properly handle volatiles in nested fn lowering
       tree-optimization/101868 - avoid PRE of trapping mems across calls
+      middle-end/100672 - fix bogus right shift folding
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -4380,6 +4381,28 @@ index 693912ea355..aaee8fba6bb 100644
  
  If application code relies on copy-assignment, a user-defined
  copy-assignment operator removes any uncertainties.  With such an
+diff --git a/gcc/fold-const.c b/gcc/fold-const.c
+index a7eff832ff6..04087938276 100644
+--- a/gcc/fold-const.c
++++ b/gcc/fold-const.c
+@@ -510,7 +510,7 @@ negate_expr_p (tree t)
+       if (TREE_CODE (TREE_OPERAND (t, 1)) == INTEGER_CST)
+ 	{
+ 	  tree op1 = TREE_OPERAND (t, 1);
+-	  if (wi::to_wide (op1) == TYPE_PRECISION (type) - 1)
++	  if (wi::to_wide (op1) == element_precision (type) - 1)
+ 	    return true;
+ 	}
+       break;
+@@ -703,7 +703,7 @@ fold_negate_expr_1 (location_t loc, tree t)
+       if (TREE_CODE (TREE_OPERAND (t, 1)) == INTEGER_CST)
+ 	{
+ 	  tree op1 = TREE_OPERAND (t, 1);
+-	  if (wi::to_wide (op1) == TYPE_PRECISION (type) - 1)
++	  if (wi::to_wide (op1) == element_precision (type) - 1)
+ 	    {
+ 	      tree ntype = TYPE_UNSIGNED (type)
+ 			   ? signed_type_for (type)
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
 index f1d66e38980..e9e647c1349 100644
 --- a/gcc/fortran/ChangeLog
@@ -5620,6 +5643,31 @@ index ebc2cce78f4..04bf0381f76 100644
 -/* { dg-message "fself\-test: " "-fself-test" { target *-*-* } 0 } */
 +
 +/* { dg-regexp {^-fself-test: [0-9]+ pass\(es\) in [.0-9]+ seconds$|.*: note: self-tests are not enabled in this build$} } */
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100672.c b/gcc/testsuite/gcc.dg/torture/pr100672.c
+new file mode 100644
+index 00000000000..cc62e71f9a3
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr100672.c
+@@ -0,0 +1,19 @@
++/* { dg-do run } */
++/* { dg-additional-options "-w -Wno-psabi" } */
++
++typedef long long __attribute__((__vector_size__ (4 * sizeof (long long)))) V;
++
++V
++foo (V v)
++{
++  return -(v >> 1);
++}
++
++int
++main (void)
++{
++  V v = foo ((V) { -2, -4, -6, -8 });
++  if (v[0] != 1 || v[1] != 2 || v[2] != 3 || v[3] != 4)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr100934.c b/gcc/testsuite/gcc.dg/torture/pr100934.c
 new file mode 100644
 index 00000000000..43b78849895
