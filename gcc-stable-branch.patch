@@ -16,7 +16,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (156):
+GCC Administrator (157):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -304,10 +305,19 @@ konglin1 (1):
       i386: Fix _mm512_fpclass_ps_mask in O0 [PR 101471]
 
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index 7ab95a2466e..fdaf498c25f 100644
+index 7ab95a2466e..b0498105e73 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,12 @@
+@@ -1,3 +1,21 @@
++2021-11-08  Martin Liska  <mliska@suse.cz>
++
++	* gcc-changelog/git_check_commit.py: Sync from master.
++	* gcc-changelog/git_commit.py: Likewise.
++	* gcc-changelog/git_email.py: Likewise.
++	* gcc-changelog/git_update_version.py: Likewise.
++	* gcc-changelog/test_email.py: Likewise.
++	* gcc-changelog/test_patches.txt: Likewise.
++
 +2021-06-23  Martin Liska  <mliska@suse.cz>
 +
 +	* mklog.py: New file.
@@ -1686,10 +1696,38 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..cc5303a6a7d 100644
+index 7558c0a369e..b538f0bf3c9 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,282 @@
+@@ -1,3 +1,310 @@
++2021-11-08  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-08-17  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101373
++	PR tree-optimization/101868
++	* tree-ssa-pre.c (prune_clobbered_mems): Also prune trapping
++	references when the BB may not return.
++
++2021-11-08  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-08-10  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/101824
++	* tree-nested.c (get_frame_field): Mark the COMPONENT_REF as
++	volatile in case the variable was.
++
++2021-11-08  Kewen Lin  <linkw@linux.ibm.com>
++
++	Backported from master:
++	2021-10-26  Kewen Lin  <linkw@linux.ibm.com>
++
++	PR tree-optimization/102789
++	* tree-vect-loop-manip.c (vect_update_inits_of_drs): Do not
++	update inits of simd_lane_access.
++
 +2021-10-26  Piotr Kubaj  <pkubaj@FreeBSD.org>
 +
 +	Backported from master:
@@ -5034,10 +5072,30 @@ index 7c5562ad801..2b8c21ddd4f 100644
  
        count2 = streamer_read_uhwi (&ib);
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..1e7519dc70d 100644
+index 47eac19a1f6..f39a2bd0d79 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,355 @@
+@@ -1,3 +1,375 @@
++2021-11-08  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-08-17  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/101373
++	PR tree-optimization/101868
++	* gcc.dg/lto/pr101868_0.c: New testcase.
++	* gcc.dg/lto/pr101868_1.c: Likewise.
++	* gcc.dg/lto/pr101868_2.c: Likewise.
++	* gcc.dg/lto/pr101868_3.c: Likewise.
++
++2021-11-08  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-08-10  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/101824
++	* gcc.dg/tree-ssa/pr101824.c: New testcase.
++
 +2021-10-13  Richard Biener  <rguenther@suse.de>
 +
 +	Backported from master:
