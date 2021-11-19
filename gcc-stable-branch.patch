@@ -16,7 +16,16 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (158):
+GCC Administrator (167):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -188,7 +197,7 @@ Harald Anlauf (7):
       Fortran - out of bounds in array constructor with implied do loop
       Fortran - improve error recovery determining array element from constructor
 
-Iain Buclaw (11):
+Iain Buclaw (14):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
       d: Respect explicit align(N) type alignment (PR100935)
       d: TypeInfo error when using slice copy on Structs (PR100964)
@@ -200,6 +209,9 @@ Iain Buclaw (11):
       d: Wrong evaluation order of binary expressions (PR101640)
       d: Ensure casting from bool results in either 0 or 1 (PR96435)
       d: gdc driver ignores -static-libstdc++ when automatically linking libstdc++ library
+      d: Use HOST_WIDE_INT for type size temporaries.
+      libphobos: Don't call __gthread_key_delete in the emutls destroy function.
+      libphobos: Increase size of defaultStackPages on OSX X86_64 targets.
 
 John David Anglin (5):
       Add support for 32-bit hppa targets in muldi3 expander
@@ -3351,10 +3363,18 @@ index ec10dbeb3e9..d67f72df8a2 100644
       *le-*-linux*)
       emul_name="-melf64lppc"
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
-index b0e68a99a73..51722aff2a8 100644
+index b0e68a99a73..717b8288b9c 100644
 --- a/gcc/d/ChangeLog
 +++ b/gcc/d/ChangeLog
-@@ -1,3 +1,129 @@
+@@ -1,3 +1,137 @@
++2021-11-18  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	Backported from master:
++	2021-11-18  Iain Buclaw  <ibuclaw@gdcproject.org>
++
++	* decl.cc (d_finish_decl): Use HOST_WIDE_INT for type size
++	temporaries.
++
 +2021-10-04  Iain Buclaw  <ibuclaw@gdcproject.org>
 +
 +	Backported from master:
@@ -3844,6 +3864,22 @@ index 7a54dfbc59e..ad8e25fa45d 100644
  extern tree build_typeinfo (const Loc &, Type *);
  extern void create_typeinfo (Type *, Module *);
  extern void create_tinfo_types (Module *);
+diff --git a/gcc/d/decl.cc b/gcc/d/decl.cc
+index d24f5dcd958..506de51b742 100644
+--- a/gcc/d/decl.cc
++++ b/gcc/d/decl.cc
+@@ -1559,8 +1559,9 @@ d_finish_decl (tree decl)
+   if (flag_checking && DECL_INITIAL (decl))
+     {
+       /* Initializer must never be bigger than symbol size.  */
+-      dinteger_t tsize = int_size_in_bytes (TREE_TYPE (decl));
+-      dinteger_t dtsize = int_size_in_bytes (TREE_TYPE (DECL_INITIAL (decl)));
++      HOST_WIDE_INT tsize = int_size_in_bytes (TREE_TYPE (decl));
++      HOST_WIDE_INT dtsize =
++	int_size_in_bytes (TREE_TYPE (DECL_INITIAL (decl)));
+ 
+       if (tsize < dtsize)
+ 	{
 diff --git a/gcc/d/dmd/dcast.c b/gcc/d/dmd/dcast.c
 index a3df701c341..905aed72625 100644
 --- a/gcc/d/dmd/dcast.c
@@ -7785,6 +7821,77 @@ index 00000000000..e9e82bd1ce2
 +int main() {
 +    return std::char_traits<char>::length("");
 +}
+diff --git a/libphobos/libdruntime/core/thread.d b/libphobos/libdruntime/core/thread.d
+index 3d2cd287a2e..feac50eb7f2 100644
+--- a/libphobos/libdruntime/core/thread.d
++++ b/libphobos/libdruntime/core/thread.d
+@@ -4144,6 +4144,24 @@ class Fiber
+     // Initialization
+     ///////////////////////////////////////////////////////////////////////////
+ 
++    version (Windows)
++        // exception handling walks the stack, invoking DbgHelp.dll which
++        // needs up to 16k of stack space depending on the version of DbgHelp.dll,
++        // the existence of debug symbols and other conditions. Avoid causing
++        // stack overflows by defaulting to a larger stack size
++        enum defaultStackPages = 8;
++    else version (OSX)
++    {
++        version (X86_64)
++            // libunwind on macOS 11 now requires more stack space than 16k, so
++            // default to a larger stack size. This is only applied to X86 as
++            // the PAGESIZE is still 4k, however on AArch64 it is 16k.
++            enum defaultStackPages = 8;
++        else
++            enum defaultStackPages = 4;
++    }
++    else
++        enum defaultStackPages = 4;
+ 
+     /**
+      * Initializes a fiber object which is associated with a static
+@@ -4158,7 +4176,7 @@ class Fiber
+      * In:
+      *  fn must not be null.
+      */
+-    this( void function() fn, size_t sz = PAGESIZE*4,
++    this( void function() fn, size_t sz = PAGESIZE * defaultStackPages,
+           size_t guardPageSize = PAGESIZE ) nothrow
+     in
+     {
+@@ -4184,7 +4202,7 @@ class Fiber
+      * In:
+      *  dg must not be null.
+      */
+-    this( void delegate() dg, size_t sz = PAGESIZE*4,
++    this( void delegate() dg, size_t sz = PAGESIZE * defaultStackPages,
+           size_t guardPageSize = PAGESIZE ) nothrow
+     in
+     {
+diff --git a/libphobos/libdruntime/gcc/emutls.d b/libphobos/libdruntime/gcc/emutls.d
+index 461f20d9e28..72376ecda0f 100644
+--- a/libphobos/libdruntime/gcc/emutls.d
++++ b/libphobos/libdruntime/gcc/emutls.d
+@@ -229,9 +229,6 @@ void** emutlsAlloc(shared __emutls_object* obj) nothrow @nogc
+ extern (C) void emutlsDestroyThread(void* ptr) nothrow @nogc
+ {
+     auto arr = cast(TlsArray*) ptr;
+-    emutlsMutex.lock_nothrow();
+-    emutlsArrays.remove(arr);
+-    emutlsMutex.unlock_nothrow();
+ 
+     foreach (entry; *arr)
+     {
+@@ -308,9 +305,6 @@ void _d_emutls_scan(scope void delegate(void* pbeg, void* pend) nothrow cb) noth
+ // Call this after druntime has been unloaded
+ void _d_emutls_destroy() nothrow @nogc
+ {
+-    if (__gthread_key_delete(emutlsKey) != 0)
+-        abort();
+-
+     (cast(Mutex) _emutlsMutex.ptr).__dtor();
+     destroy(emutlsArrays);
+ }
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
 index d8c2f6b863a..a82ac090821 100644
 --- a/libsanitizer/ChangeLog
