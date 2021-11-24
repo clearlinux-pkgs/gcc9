@@ -1,9 +1,10 @@
 Andrew Pinski (1):
       [GCC 10 branch] tree-optimization: [PR102622]: wrong code due to signed one bit integer and "a?-1:0"
 
-Bill Schmidt (2):
+Bill Schmidt (3):
       rs6000: Don't let swaps pass break multiply low-part (PR101129)
       rs6000: Add int128 target check to pr101129.c (PR101531)
+      rs6000: Fix vec_cpsgn parameter order (PR101985)
 
 Christophe Lyon (1):
       arm: Fix pr69245.c testcase for reorder assembler architecture directives [PR101723]
@@ -16,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (171):
+GCC Administrator (172):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -224,7 +226,7 @@ John David Anglin (5):
       Don't use 'G' constraint in integer move patterns
       Fix warnings building linux-atomic.c and fptr.c on hppa64-linux
 
-Jonathan Wakely (26):
+Jonathan Wakely (27):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -251,6 +253,7 @@ Jonathan Wakely (26):
       libstdc++: Rename tests with incorrect extension
       libstdc++: Rename file with the wrong extension
       libstdc++: Fix range access for empty std::valarray [PR103022]
+      libstdc++: Fix circular dependency for bitmap_allocator [PR103381]
 
 Kewen Lin (2):
       ipa-fnsummary: Remove inconsistent bp_pack_value
@@ -259,11 +262,12 @@ Kewen Lin (2):
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
 
-Martin Liska (4):
+Martin Liska (5):
       contrib: add git-commit-mklog wrapper
       Add mklog.py.
       sanitizer: cherry pick 414482751452e54710f16bae58458c66298aaf69
       gcc-changelog: sync from master
+      jit: Initialize function::m_blocks in ctor
 
 Paul Thomas (9):
       Fortran: Allow pointer deferred length associate selectors. [PR93794]
@@ -1717,10 +1721,15 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..36700305fb7 100644
+index 7558c0a369e..8f4fa88f4cf 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,328 @@
+@@ -1,3 +1,333 @@
++2021-11-23  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/101985
++	* config/rs6000/altivec.h (vec_cpsgn): Swap operand order.
++
 +2021-11-22  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
 +
 +	Backported from master:
@@ -3300,6 +3309,19 @@ index 18f8e127d3d..e0ed18c73fc 100644
    DONE;
  }")
  
+diff --git a/gcc/config/rs6000/altivec.h b/gcc/config/rs6000/altivec.h
+index cb887eba521..beb3f0d0952 100644
+--- a/gcc/config/rs6000/altivec.h
++++ b/gcc/config/rs6000/altivec.h
+@@ -127,7 +127,7 @@
+ #define vec_vcfux __builtin_vec_vcfux
+ #define vec_cts __builtin_vec_cts
+ #define vec_ctu __builtin_vec_ctu
+-#define vec_cpsgn __builtin_vec_copysign
++#define vec_cpsgn(x,y) __builtin_vec_copysign(y,x)
+ #define vec_double __builtin_vec_double
+ #define vec_doublee __builtin_vec_doublee
+ #define vec_doubleo __builtin_vec_doubleo
 diff --git a/gcc/config/rs6000/rs6000-p8swap.c b/gcc/config/rs6000/rs6000-p8swap.c
 index d30e5dec980..d8fc8a74e77 100644
 --- a/gcc/config/rs6000/rs6000-p8swap.c
@@ -5169,11 +5191,31 @@ index 7c5562ad801..2b8c21ddd4f 100644
  	}
  
        count2 = streamer_read_uhwi (&ib);
+diff --git a/gcc/jit/jit-playback.c b/gcc/jit/jit-playback.c
+index b74495c58b2..ebdb56cbc6d 100644
+--- a/gcc/jit/jit-playback.c
++++ b/gcc/jit/jit-playback.c
+@@ -1287,7 +1287,8 @@ function (context *ctxt,
+ : m_ctxt(ctxt),
+   m_inner_fndecl (fndecl),
+   m_inner_bind_expr (NULL),
+-  m_kind (kind)
++  m_kind (kind),
++  m_blocks ()
+ {
+   if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
+     {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..8cfc7cf9ec4 100644
+index 47eac19a1f6..40b8e7d3a30 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,390 @@
+@@ -1,3 +1,396 @@
++2021-11-23  Bill Schmidt  <wschmidt@linux.ibm.com>
++
++	PR target/101985
++	* gcc.target/powerpc/pr101985-1.c: New.
++	* gcc.target/powerpc/pr101985-2.c: New.
++
 +2021-11-22  Stefan Schulze Frielinghaus  <stefansf@linux.ibm.com>
 +
 +	Backported from master:
@@ -6174,6 +6216,54 @@ index 00000000000..6b8e5a9b597
 +  foo0 (7, &x);
 +  for (unsigned i = 0; i < sizeof (x); i++)
 +    if (x[i] != 0) __builtin_abort();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr101985-1.c b/gcc/testsuite/gcc.target/powerpc/pr101985-1.c
+new file mode 100644
+index 00000000000..b4753ab83d7
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr101985-1.c
+@@ -0,0 +1,18 @@
++/* PR target/101985 */
++/* { dg-do run } */
++/* { dg-require-effective-target vsx_hw } */
++/* { dg-options "-O2 -mvsx" } */
++
++#include <altivec.h>
++
++int
++main (void)
++{
++  vector float a = {  1,  2, - 3, - 4};
++  vector float b = {-10, 20, -30,  40};
++  vector float c = { 10, 20, -30, -40};
++  a = vec_cpsgn (a, b);
++  if (! vec_all_eq (a, c))
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr101985-2.c b/gcc/testsuite/gcc.target/powerpc/pr101985-2.c
+new file mode 100644
+index 00000000000..148ad657366
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr101985-2.c
+@@ -0,0 +1,18 @@
++/* PR target/101985 */
++/* { dg-do run } */
++/* { dg-require-effective-target vsx_hw } */
++/* { dg-options "-O2 -mvsx" } */
++
++#include <altivec.h>
++
++int
++main (void)
++{
++  vector double a = {   1,  -4};
++  vector double b = { -10,  40};
++  vector double c = {  10, -40};
++  a = vec_cpsgn (a, b);
++  if (! vec_all_eq (a, c))
++    __builtin_abort ();
 +  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.target/s390/20211119.c b/gcc/testsuite/gcc.target/s390/20211119.c
@@ -8005,10 +8095,19 @@ index 1917e29ced2..8c8aa75004e 100644
  
  void SetAlternateSignalStack() {
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 4a898cd27d7..9010f72fe3b 100644
+index 4a898cd27d7..3cf67c719cf 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,275 @@
+@@ -1,3 +1,284 @@
++2021-11-23  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-11-23  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103381
++	* include/ext/bitmap_allocator.h: Include <bits/stl_function.h>
++	instead of <functional>.
++
 +2021-11-01  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
@@ -8389,6 +8488,19 @@ index 33a415645d9..ba12b2f1734 100644
        { };
  
      template<typename _Tp1, typename _Tp2 = void,
+diff --git a/libstdc++-v3/include/ext/bitmap_allocator.h b/libstdc++-v3/include/ext/bitmap_allocator.h
+index 532bad295b6..f2f0a38650b 100644
+--- a/libstdc++-v3/include/ext/bitmap_allocator.h
++++ b/libstdc++-v3/include/ext/bitmap_allocator.h
+@@ -31,7 +31,7 @@
+ 
+ #include <utility> // For std::pair.
+ #include <bits/functexcept.h> // For __throw_bad_alloc().
+-#include <functional> // For greater_equal, and less_equal.
++#include <bits/stl_function.h> // For greater_equal, and less_equal.
+ #include <new> // For operator new.
+ #include <debug/debug.h> // _GLIBCXX_DEBUG_ASSERT
+ #include <ext/concurrence.h>
 diff --git a/libstdc++-v3/include/std/any b/libstdc++-v3/include/std/any
 index 91c4c1a7cf1..4957144342c 100644
 --- a/libstdc++-v3/include/std/any
