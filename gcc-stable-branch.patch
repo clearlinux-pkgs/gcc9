@@ -17,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (172):
+GCC Administrator (173):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -218,6 +219,9 @@ Iain Buclaw (14):
       d: Use HOST_WIDE_INT for type size temporaries.
       libphobos: Don't call __gthread_key_delete in the emutls destroy function.
       libphobos: Increase size of defaultStackPages on OSX X86_64 targets.
+
+Jan Hubicka (1):
+      Fix looping flag discovery in ipa-pure-const
 
 John David Anglin (5):
       Add support for 32-bit hppa targets in muldi3 expander
@@ -5191,6 +5195,37 @@ index 7c5562ad801..2b8c21ddd4f 100644
  	}
  
        count2 = streamer_read_uhwi (&ib);
+diff --git a/gcc/ipa-pure-const.c b/gcc/ipa-pure-const.c
+index 0c6f84ff72d..1cc69cd05d7 100644
+--- a/gcc/ipa-pure-const.c
++++ b/gcc/ipa-pure-const.c
+@@ -1654,9 +1654,9 @@ propagate_pure_const (void)
+ 	  if (w_l->state_previously_known != IPA_NEITHER
+ 	      && this_state > w_l->state_previously_known)
+ 	    {
+-              this_state = w_l->state_previously_known;
+ 	      if (this_state == IPA_NEITHER)
+-	        this_looping = w_l->looping_previously_known;
++		this_looping = w_l->looping_previously_known;
++	      this_state = w_l->state_previously_known;
+ 	    }
+ 	  if (!this_looping && self_recursive_p (w))
+ 	    this_looping = true;
+diff --git a/gcc/jit/ChangeLog b/gcc/jit/ChangeLog
+index 56168ba677a..61067c2ff13 100644
+--- a/gcc/jit/ChangeLog
++++ b/gcc/jit/ChangeLog
+@@ -1,3 +1,10 @@
++2021-11-24  Martin Liska  <mliska@suse.cz>
++
++	Backported from master:
++	2021-11-24  Martin Liska  <mliska@suse.cz>
++
++	* jit-playback.c (function): Initialize m_blocks vector.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
 diff --git a/gcc/jit/jit-playback.c b/gcc/jit/jit-playback.c
 index b74495c58b2..ebdb56cbc6d 100644
 --- a/gcc/jit/jit-playback.c
@@ -5635,6 +5670,47 @@ index 00000000000..bdbf5733ce7
 +    struct f a;
 +    if (!g(&a, 1))  __builtin_abort();
 +    return 0;
++}
+diff --git a/gcc/testsuite/gcc.c-torture/execute/pr103052.c b/gcc/testsuite/gcc.c-torture/execute/pr103052.c
+new file mode 100644
+index 00000000000..bef8674a43c
+--- /dev/null
++++ b/gcc/testsuite/gcc.c-torture/execute/pr103052.c
+@@ -0,0 +1,35 @@
++static void js_error(void);
++static int top;
++static void js_throw(void)
++{
++	__builtin_exit(0);
++}
++
++// LOCATION A -- if js_pop is here, the bug is present
++static void js_pop(void)
++{
++	if (++top > 100)
++		js_error();
++}
++
++static void jsC_error(const char *v)
++{
++	if (v[0] == 0)
++		js_error();
++	js_throw();
++}
++static void checkfutureword(const char *exp)
++{
++	if (!__builtin_strcmp(exp, "const"))
++		jsC_error("boom");
++}
++static void js_error(void) {
++	checkfutureword("foo");
++	checkfutureword("bar");
++	js_pop();
++}
++int main(void)
++{
++	checkfutureword("const");
++	__builtin_abort ();
 +}
 diff --git a/gcc/testsuite/gcc.dg/lto/pr101868_0.c b/gcc/testsuite/gcc.dg/lto/pr101868_0.c
 new file mode 100644
