@@ -17,7 +17,13 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (173):
+GCC Administrator (179):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -195,7 +201,7 @@ GCC Administrator (173):
 H.J. Lu (1):
       x86: Document -fcf-protection requires i686 or newer
 
-Harald Anlauf (7):
+Harald Anlauf (8):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
@@ -203,6 +209,7 @@ Harald Anlauf (7):
       Fortran - ensure simplification of bounds of array-valued named constants
       Fortran - out of bounds in array constructor with implied do loop
       Fortran - improve error recovery determining array element from constructor
+      Fortran: do not attempt simplification of [LU]BOUND for pointer/allocatable
 
 Iain Buclaw (14):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -1725,10 +1732,18 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..8f4fa88f4cf 100644
+index 7558c0a369e..4a4846bb307 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,333 @@
+@@ -1,3 +1,341 @@
++2021-11-25  Jan Hubicka  <jh@suse.cz>
++
++	Backported from master:
++	2021-11-20  Jan Hubicka  <hubicka@ucw.cz>
++
++	PR ipa/103052
++	* ipa-pure-const.c (propagate_pure_const): Fix merging of loping flag.
++
 +2021-11-23  Bill Schmidt  <wschmidt@linux.ibm.com>
 +
 +	PR target/101985
@@ -4505,10 +4520,19 @@ index a7eff832ff6..04087938276 100644
  	      tree ntype = TYPE_UNSIGNED (type)
  			   ? signed_type_for (type)
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..e9e647c1349 100644
+index f1d66e38980..2505728243a 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,185 @@
+@@ -1,3 +1,194 @@
++2021-11-26  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-11-23  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/103392
++	* simplify.c (simplify_bound): Do not try to simplify
++	LBOUND/UBOUND for arrays with POINTER or ALLOCATABLE attribute.
++
 +2021-09-30  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -4931,6 +4955,23 @@ index 1c72e0db9ea..9181a6fa2ac 100644
    if (e->symtree->n.sym->ts.type == BT_CLASS)
      {
        as = CLASS_DATA (e->symtree->n.sym)->as;
+diff --git a/gcc/fortran/simplify.c b/gcc/fortran/simplify.c
+index 2004895fbe3..db74925badc 100644
+--- a/gcc/fortran/simplify.c
++++ b/gcc/fortran/simplify.c
+@@ -4197,6 +4197,12 @@ simplify_bound (gfc_expr *array, gfc_expr *dim, gfc_expr *kind, int upper)
+ 	     || (as->type == AS_ASSUMED_SHAPE && upper)))
+     return NULL;
+ 
++  /* 'array' shall not be an unallocated allocatable variable or a pointer that
++     is not associated.  */
++  if (array->expr_type == EXPR_VARIABLE
++      && (gfc_expr_attr (array).allocatable || gfc_expr_attr (array).pointer))
++    return NULL;
++
+   gcc_assert (!as
+ 	      || (as->type != AS_DEFERRED
+ 		  && array->expr_type == EXPR_VARIABLE
 diff --git a/gcc/fortran/trans-array.c b/gcc/fortran/trans-array.c
 index c6efe95e236..d6315624f2c 100644
 --- a/gcc/fortran/trans-array.c
@@ -5241,10 +5282,26 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..40b8e7d3a30 100644
+index 47eac19a1f6..07967be844b 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,396 @@
+@@ -1,3 +1,412 @@
++2021-11-26  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-11-23  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/103392
++	* gfortran.dg/bound_simplification_7.f90: New test.
++
++2021-11-25  Jan Hubicka  <jh@suse.cz>
++
++	Backported from master:
++	2021-11-20  Jan Hubicka  <hubicka@ucw.cz>
++
++	PR ipa/103052
++	* gcc.c-torture/execute/pr103052.c: New test.
++
 +2021-11-23  Bill Schmidt  <wschmidt@linux.ibm.com>
 +
 +	PR target/101985
@@ -7065,6 +7122,30 @@ index 00000000000..97f93b3c742
 +   OELE%PGRID => GRID1
 +   IF (SELF%ASGOELE (OELE) .NE. 1) STOP 3
 +END
+diff --git a/gcc/testsuite/gfortran.dg/bound_simplification_7.f90 b/gcc/testsuite/gfortran.dg/bound_simplification_7.f90
+new file mode 100644
+index 00000000000..3efecdff769
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/bound_simplification_7.f90
+@@ -0,0 +1,18 @@
++! { dg-do compile }
++! PR fortran/103392 - ICE in simplify_bound
++
++program p
++  integer, allocatable :: a(1:1) ! { dg-error "deferred shape or assumed rank" }
++  integer :: b(1) = lbound(a)    ! { dg-error "does not reduce" }
++  integer :: c(1) = ubound(a)    ! { dg-error "does not reduce" }
++end
++
++subroutine s(x, y)
++  type t
++     integer :: i(3)
++  end type t
++  type(t), pointer     :: x(:)
++  type(t), allocatable :: y(:)
++  integer, parameter   :: m(1) = ubound (x(1)% i)
++  integer              :: n(1) = ubound (y(1)% i)
++end subroutine s
 diff --git a/gcc/testsuite/gfortran.dg/bounds_check_23.f90 b/gcc/testsuite/gfortran.dg/bounds_check_23.f90
 new file mode 100644
 index 00000000000..8de90c77c01
