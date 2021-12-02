@@ -17,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (179):
+GCC Administrator (180):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -272,6 +273,9 @@ Kewen Lin (2):
 
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
+
+Martin Jambor (1):
+      ipa-sra: Check also ECF_LOOPING_CONST_OR_PURE when evaluating calls
 
 Martin Liska (5):
       contrib: add git-commit-mklog wrapper
@@ -1732,10 +1736,16 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..4a4846bb307 100644
+index 7558c0a369e..c7b0d0318c0 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,341 @@
+@@ -1,3 +1,347 @@
++2021-12-01  Martin Jambor  <mjambor@suse.cz>
++
++	PR ipa/103267
++	* tree-sra.c (scan_function): Also check ECF_LOOPING_CONST_OR_PURE
++	flag.
++
 +2021-11-25  Jan Hubicka  <jh@suse.cz>
 +
 +	Backported from master:
@@ -7680,6 +7690,20 @@ index dc0cfe27142..a2ae3aefe4a 100644
 +  TREE_THIS_VOLATILE (x) = TREE_THIS_VOLATILE (field);
    return x;
  }
+ 
+diff --git a/gcc/tree-sra.c b/gcc/tree-sra.c
+index 909b4fef9a8..252953b7512 100644
+--- a/gcc/tree-sra.c
++++ b/gcc/tree-sra.c
+@@ -1530,7 +1530,8 @@ scan_function (void)
+ 		    }
+ 
+ 		  if (final_bbs
+-		      && (flags & (ECF_CONST | ECF_PURE)) == 0)
++		      && ((flags & (ECF_CONST | ECF_PURE)) == 0
++			  || (flags & ECF_LOOPING_CONST_OR_PURE)))
+ 		    bitmap_set_bit (final_bbs, bb->index);
+ 		}
  
 diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
 index b0d56fcf3e3..5bb337b5417 100644
