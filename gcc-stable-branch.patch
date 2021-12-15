@@ -17,7 +17,9 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (191):
+GCC Administrator (193):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -280,9 +282,10 @@ Jonathan Wakely (27):
       libstdc++: Fix range access for empty std::valarray [PR103022]
       libstdc++: Fix circular dependency for bitmap_allocator [PR103381]
 
-Kewen Lin (2):
+Kewen Lin (3):
       ipa-fnsummary: Remove inconsistent bp_pack_value
       vect: Don't update inits for simd_lane_access DRs [PR102789]
+      rs6000: Remove builtin mask check from builtin_decl [PR102347]
 
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
@@ -3401,6 +3404,38 @@ index d30e5dec980..d8fc8a74e77 100644
  		  else if (insn_entry[uid].contains_subreg)
  		    insn_entry[uid].special_handling = SH_SUBREG;
  		}
+diff --git a/gcc/config/rs6000/rs6000.c b/gcc/config/rs6000/rs6000.c
+index 62250433c16..a6e683fe2df 100644
+--- a/gcc/config/rs6000/rs6000.c
++++ b/gcc/config/rs6000/rs6000.c
+@@ -17110,23 +17110,17 @@ rs6000_init_builtins (void)
+ #endif
+ }
+ 
+-/* Returns the rs6000 builtin decl for CODE.  */
++/* Returns the rs6000 builtin decl for CODE.  Note that we don't check
++   the builtin mask here since there could be some #pragma/attribute
++   target functions and the rs6000_builtin_mask could be wrong when
++   this checking happens, though it will be updated properly later.  */
+ 
+ static tree
+ rs6000_builtin_decl (unsigned code, bool initialize_p ATTRIBUTE_UNUSED)
+ {
+-  HOST_WIDE_INT fnmask;
+-
+   if (code >= RS6000_BUILTIN_COUNT)
+     return error_mark_node;
+ 
+-  fnmask = rs6000_builtin_info[code].mask;
+-  if ((fnmask & rs6000_builtin_mask) != fnmask)
+-    {
+-      rs6000_invalid_builtin ((enum rs6000_builtins)code);
+-      return error_mark_node;
+-    }
+-
+   return rs6000_builtin_decls[code];
+ }
+ 
 diff --git a/gcc/config/s390/s390.md b/gcc/config/s390/s390.md
 index 5a3496ac92e..68392da4acd 100644
 --- a/gcc/config/s390/s390.md
@@ -6487,6 +6522,31 @@ index 00000000000..148ad657366
 +  if (! vec_all_eq (a, c))
 +    __builtin_abort ();
 +  return 0;
++}
+diff --git a/gcc/testsuite/gcc.target/powerpc/pr102347.c b/gcc/testsuite/gcc.target/powerpc/pr102347.c
+new file mode 100644
+index 00000000000..55e5374bfac
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/powerpc/pr102347.c
+@@ -0,0 +1,19 @@
++/* { dg-do link } */
++/* { dg-skip-if "" { powerpc*-*-aix* } } */
++/* { dg-require-effective-target powerpc_p9modulo_ok } */
++/* { dg-require-effective-target lto } */
++/* { dg-options "-flto -mdejagnu-cpu=power8" } */
++
++/* Verify there are no error messages in LTO mode.  */
++
++#pragma GCC target "cpu=power9"
++int main ()
++{
++  int res;
++#ifdef __LP64__
++  res = (int) __builtin_darn ();
++#else
++  res = __builtin_darn_32 ();
++#endif
++  return res;
 +}
 diff --git a/gcc/testsuite/gcc.target/s390/20211119.c b/gcc/testsuite/gcc.target/s390/20211119.c
 new file mode 100644
