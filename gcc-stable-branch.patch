@@ -17,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (193):
+GCC Administrator (194):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -300,6 +301,9 @@ Martin Liska (5):
       gcc-changelog: sync from master
       jit: Initialize function::m_blocks in ctor
 
+Martin Storsjö (1):
+      mh-mingw: Set __USE_MINGW_ACCESS in missed C++ flags variables
+
 Paul Thomas (9):
       Fortran: Allow pointer deferred length associate selectors. [PR93794]
       Fortran: Fix ICE due to elemental procedure pointers [PR93924/5].
@@ -360,6 +364,20 @@ Xi Ruoyao (1):
 konglin1 (1):
       i386: Fix _mm512_fpclass_ps_mask in O0 [PR 101471]
 
+diff --git a/config/mh-mingw b/config/mh-mingw
+index a795096f038..e91367a7112 100644
+--- a/config/mh-mingw
++++ b/config/mh-mingw
+@@ -1,7 +1,9 @@
+ # Add -D__USE_MINGW_ACCESS to enable the built compiler to work on Windows
+ # Vista (see PR33281 for details).
+ BOOT_CFLAGS += -D__USE_MINGW_ACCESS -Wno-pedantic-ms-format
++BOOT_CXXFLAGS += -D__USE_MINGW_ACCESS -Wno-pedantic-ms-format
+ CFLAGS += -D__USE_MINGW_ACCESS
++CXXFLAGS += -D__USE_MINGW_ACCESS
+ STAGE1_CXXFLAGS += -D__USE_MINGW_ACCESS
+ STAGE2_CXXFLAGS += -D__USE_MINGW_ACCESS
+ STAGE3_CXXFLAGS += -D__USE_MINGW_ACCESS
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
 index 7ab95a2466e..b0498105e73 100644
 --- a/contrib/ChangeLog
@@ -1752,10 +1770,19 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..c7b0d0318c0 100644
+index 7558c0a369e..d3d57e2a2a1 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,347 @@
+@@ -1,3 +1,356 @@
++2021-12-15  Kewen Lin  <linkw@linux.ibm.com>
++
++	Backported from master:
++	2021-11-30  Kewen Lin  <linkw@linux.ibm.com>
++
++	PR target/102347
++	* config/rs6000/rs6000.c (rs6000_builtin_decl): Remove builtin mask
++	check.
++
 +2021-12-01  Martin Jambor  <mjambor@suse.cz>
 +
 +	PR ipa/103267
@@ -5398,10 +5425,18 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..2190ff1a8ea 100644
+index 47eac19a1f6..eee7378fa77 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,420 @@
+@@ -1,3 +1,428 @@
++2021-12-15  Kewen Lin  <linkw@linux.ibm.com>
++
++	Backported from master:
++	2021-11-30  Kewen Lin  <linkw@linux.ibm.com>
++
++	PR target/102347
++	* gcc.target/powerpc/pr102347.c: New test.
++
 +2021-12-10  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
