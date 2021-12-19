@@ -17,7 +17,9 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (195):
+GCC Administrator (197):
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -217,7 +219,7 @@ GCC Administrator (195):
 H.J. Lu (1):
       x86: Document -fcf-protection requires i686 or newer
 
-Harald Anlauf (11):
+Harald Anlauf (12):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
@@ -229,6 +231,7 @@ Harald Anlauf (11):
       Fortran: perform array subscript checks only for valid INTEGER bounds
       Fortran: prevent NULL pointer dereference in check of passed do-loop variable
       Fortran: fix checking of elemental functions of type CLASS
+      Fortran: dimensions of an array have to be non-negative
 
 Iain Buclaw (15):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -4641,10 +4644,19 @@ index a7eff832ff6..04087938276 100644
  	      tree ntype = TYPE_UNSIGNED (type)
  			   ? signed_type_for (type)
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..9c2595e4ecf 100644
+index f1d66e38980..68b9619bde7 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,222 @@
+@@ -1,3 +1,231 @@
++2021-12-17  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-12-08  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/103610
++	* array.c (spec_dimen_size): Fix simplification of SHAPE:
++	dimensions must be non-negative.
++
 +2021-12-16  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -4867,6 +4879,30 @@ index f1d66e38980..9c2595e4ecf 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
+index 017334839ed..2fb4e792ad4 100644
+--- a/gcc/fortran/array.c
++++ b/gcc/fortran/array.c
+@@ -2224,8 +2224,7 @@ gfc_copy_iterator (gfc_iterator *src)
+ /********* Subroutines for determining the size of an array *********/
+ 
+ /* These are needed just to accommodate RESHAPE().  There are no
+-   diagnostics here, we just return a negative number if something
+-   goes wrong.  */
++   diagnostics here, we just return false if something goes wrong.  */
+ 
+ 
+ /* Get the size of single dimension of an array specification.  The
+@@ -2254,6 +2253,9 @@ spec_dimen_size (gfc_array_spec *as, int dimen, mpz_t *result)
+ 
+   mpz_add_ui (*result, *result, 1);
+ 
++  if (mpz_cmp_si (*result, 0) < 0)
++    mpz_set_si (*result, 0);
++
+   return true;
+ }
+ 
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
 index 1a5bcfae3c0..928a50a6cd1 100644
 --- a/gcc/fortran/class.c
@@ -5482,10 +5518,18 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..ac7f778dba7 100644
+index 47eac19a1f6..85f37c5d149 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,444 @@
+@@ -1,3 +1,452 @@
++2021-12-17  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-12-08  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/103610
++	* gfortran.dg/shape_11.f90: New test.
++
 +2021-12-16  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -7949,6 +7993,28 @@ index 00000000000..cb7cf7040a9
 +if (x .ne. y) stop 2
 +
 +end program classStar_map
+diff --git a/gcc/testsuite/gfortran.dg/shape_11.f90 b/gcc/testsuite/gfortran.dg/shape_11.f90
+new file mode 100644
+index 00000000000..127d221e710
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/shape_11.f90
+@@ -0,0 +1,16 @@
++! { dg-do compile }
++! { dg-options "-fdump-tree-original" }
++! PR fortran/103610 - ICE while simplifying SHAPE
++! Contributed by G.Steinmetz
++
++program p
++  integer, parameter :: a(-1) = 1
++  integer, parameter :: b(1)  = maskl(shape(a))
++  integer, parameter :: c(1)  = shape(a)
++  integer, parameter :: d(1)  = maskr(shape(a))
++  if (b(1) /= 0) stop 1
++  if (c(1) /= 0) stop 2
++  if (d(1) /= 0) stop 3
++end
++
++! { dg-final { scan-tree-dump-not "_gfortran_stop_numeric" "original" } }
 diff --git a/gcc/testsuite/gfortran.dg/structure_constructor_17.f90 b/gcc/testsuite/gfortran.dg/structure_constructor_17.f90
 new file mode 100644
 index 00000000000..8b8230c6f7e
