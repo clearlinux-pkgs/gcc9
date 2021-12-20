@@ -17,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (197):
+GCC Administrator (198):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -219,7 +220,7 @@ GCC Administrator (197):
 H.J. Lu (1):
       x86: Document -fcf-protection requires i686 or newer
 
-Harald Anlauf (12):
+Harald Anlauf (13):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
@@ -232,6 +233,7 @@ Harald Anlauf (12):
       Fortran: prevent NULL pointer dereference in check of passed do-loop variable
       Fortran: fix checking of elemental functions of type CLASS
       Fortran: dimensions of an array have to be non-negative
+      Fortran: catch failed simplification of bad stride expression
 
 Iain Buclaw (15):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -4644,10 +4646,19 @@ index a7eff832ff6..04087938276 100644
  	      tree ntype = TYPE_UNSIGNED (type)
  			   ? signed_type_for (type)
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..68b9619bde7 100644
+index f1d66e38980..89b7ea88d9a 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,231 @@
+@@ -1,3 +1,240 @@
++2021-12-19  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-12-07  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/103588
++	* array.c (gfc_ref_dimen_size): Do not generate internal error on
++	failed simplification of stride expression; just return failure.
++
 +2021-12-17  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -4880,7 +4891,7 @@ index f1d66e38980..68b9619bde7 100644
  
  	* GCC 9.4.0 released.
 diff --git a/gcc/fortran/array.c b/gcc/fortran/array.c
-index 017334839ed..2fb4e792ad4 100644
+index 017334839ed..c5d813a2dc3 100644
 --- a/gcc/fortran/array.c
 +++ b/gcc/fortran/array.c
 @@ -2224,8 +2224,7 @@ gfc_copy_iterator (gfc_iterator *src)
@@ -4903,6 +4914,23 @@ index 017334839ed..2fb4e792ad4 100644
    return true;
  }
  
+@@ -2327,12 +2329,11 @@ gfc_ref_dimen_size (gfc_array_ref *ar, int dimen, mpz_t *result, mpz_t *end)
+ 	{
+ 	  stride_expr = gfc_copy_expr(ar->stride[dimen]); 
+ 
+-	  if(!gfc_simplify_expr(stride_expr, 1))
+-	    gfc_internal_error("Simplification error");
+-
+-	  if (stride_expr->expr_type != EXPR_CONSTANT
+-	      || mpz_cmp_ui (stride_expr->value.integer, 0) == 0)
++	  if (!gfc_simplify_expr (stride_expr, 1)
++	     || stride_expr->expr_type != EXPR_CONSTANT
++	     || mpz_cmp_ui (stride_expr->value.integer, 0) == 0)
+ 	    {
++	      gfc_free_expr (stride_expr);
+ 	      mpz_clear (stride);
+ 	      return false;
+ 	    }
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
 index 1a5bcfae3c0..928a50a6cd1 100644
 --- a/gcc/fortran/class.c
@@ -5518,10 +5546,18 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..85f37c5d149 100644
+index 47eac19a1f6..56ced1cca49 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,452 @@
+@@ -1,3 +1,460 @@
++2021-12-19  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-12-07  Harald Anlauf  <anlauf@gmx.de>
++
++	PR fortran/103588
++	* gfortran.dg/pr103588.f90: New test.
++
 +2021-12-17  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -7862,6 +7898,20 @@ index 00000000000..f4377aabe7a
 +end
 +
 +! { dg-error "cannot be automatic or of deferred shape" " " { target *-*-* } 5 }
+diff --git a/gcc/testsuite/gfortran.dg/pr103588.f90 b/gcc/testsuite/gfortran.dg/pr103588.f90
+new file mode 100644
+index 00000000000..198e1766cd2
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr103588.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++! PR fortran/103588 - ICE: Simplification error in gfc_ref_dimen_size
++! Contributed by G.Steinmetz
++
++program p
++  integer, parameter :: a(:) = [1,2] ! { dg-error "cannot be automatic or of deferred shape" }
++  integer :: b(2) = a(::a(1))        ! { dg-error "Invalid" }
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr103606.f90 b/gcc/testsuite/gfortran.dg/pr103606.f90
 new file mode 100644
 index 00000000000..43283184e89
