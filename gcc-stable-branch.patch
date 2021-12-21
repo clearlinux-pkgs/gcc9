@@ -17,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (198):
+GCC Administrator (199):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -235,7 +236,7 @@ Harald Anlauf (13):
       Fortran: dimensions of an array have to be non-negative
       Fortran: catch failed simplification of bad stride expression
 
-Iain Buclaw (15):
+Iain Buclaw (16):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
       d: Respect explicit align(N) type alignment (PR100935)
       d: TypeInfo error when using slice copy on Structs (PR100964)
@@ -251,6 +252,7 @@ Iain Buclaw (15):
       libphobos: Don't call __gthread_key_delete in the emutls destroy function.
       libphobos: Increase size of defaultStackPages on OSX X86_64 targets.
       d: Align methods to MINIMUM_METHOD_BOUNDARY.
+      libphobos: Fix definition of stat_t for MIPS64 (PR103604)
 
 Jan Hubicka (1):
       Fix looping flag discovery in ipa-pure-const
@@ -8597,6 +8599,89 @@ index 5c09737a6c2..2cca8e63aeb 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/libphobos/libdruntime/core/sys/posix/sys/stat.d b/libphobos/libdruntime/core/sys/posix/sys/stat.d
+index f394823767d..6c25bb45c9b 100644
+--- a/libphobos/libdruntime/core/sys/posix/sys/stat.d
++++ b/libphobos/libdruntime/core/sys/posix/sys/stat.d
+@@ -337,26 +337,23 @@ version (CRuntime_Glibc)
+             }
+             c_long[14]  st_pad5;
+         }
++        static if (!__USE_FILE_OFFSET64)
++            static assert(stat_t.sizeof == 144);
++        else
++            static assert(stat_t.sizeof == 160);
+     }
+     else version (MIPS64)
+     {
+         struct stat_t
+         {
+-            c_ulong     st_dev;
++            dev_t       st_dev;
+             int[3]      st_pad1;
+-            static if (!__USE_FILE_OFFSET64)
+-            {
+-                ino_t       st_ino;
+-            }
+-            else
+-            {
+-                c_ulong     st_ino;
+-            }
++            ino_t       st_ino;
+             mode_t      st_mode;
+             nlink_t     st_nlink;
+             uid_t       st_uid;
+             gid_t       st_gid;
+-            c_ulong     st_rdev;
++            dev_t       st_rdev;
+             static if (!__USE_FILE_OFFSET64)
+             {
+                 uint[2]     st_pad2;
+@@ -365,8 +362,8 @@ version (CRuntime_Glibc)
+             }
+             else
+             {
+-                c_long[3]   st_pad2;
+-                c_long      st_size;
++                uint[3]     st_pad2;
++                off_t       st_size;
+             }
+             static if (__USE_MISC || __USE_XOPEN2K8)
+             {
+@@ -391,15 +388,26 @@ version (CRuntime_Glibc)
+             }
+             blksize_t   st_blksize;
+             uint        st_pad4;
++            blkcnt_t    st_blocks;
++            int[14]     st_pad5;
++        }
++        version (MIPS_N32)
++        {
+             static if (!__USE_FILE_OFFSET64)
+-            {
+-                blkcnt_t    st_blocks;
+-            }
++                static assert(stat_t.sizeof == 160);
+             else
+-            {
+-                c_long  st_blocks;
+-            }
+-            c_long[14]  st_pad5;
++                static assert(stat_t.sizeof == 176);
++        }
++        else version (MIPS_O64)
++        {
++            static if (!__USE_FILE_OFFSET64)
++                static assert(stat_t.sizeof == 160);
++            else
++                static assert(stat_t.sizeof == 176);
++        }
++        else
++        {
++            static assert(stat_t.sizeof == 216);
+         }
+     }
+     else version (PPC)
 diff --git a/libphobos/libdruntime/core/thread.d b/libphobos/libdruntime/core/thread.d
 index 3d2cd287a2e..feac50eb7f2 100644
 --- a/libphobos/libdruntime/core/thread.d
