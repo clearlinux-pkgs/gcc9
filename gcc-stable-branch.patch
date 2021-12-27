@@ -17,7 +17,12 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (200):
+GCC Administrator (205):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -265,7 +270,7 @@ John David Anglin (5):
       Don't use 'G' constraint in integer move patterns
       Fix warnings building linux-atomic.c and fptr.c on hppa64-linux
 
-Jonathan Wakely (27):
+Jonathan Wakely (28):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -293,6 +298,7 @@ Jonathan Wakely (27):
       libstdc++: Rename file with the wrong extension
       libstdc++: Fix range access for empty std::valarray [PR103022]
       libstdc++: Fix circular dependency for bitmap_allocator [PR103381]
+      aarch64: Fix mismatched extern "C" block [PR100985]
 
 Kewen Lin (3):
       ipa-fnsummary: Remove inconsistent bp_pack_value
@@ -2275,6 +2281,21 @@ index 0a73e105e08..e4ae7d9b16b 100644
 -	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
 +	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,neoverse512tvb,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
+diff --git a/gcc/config/aarch64/arm_acle.h b/gcc/config/aarch64/arm_acle.h
+index 56147352c23..8c622a3985b 100644
+--- a/gcc/config/aarch64/arm_acle.h
++++ b/gcc/config/aarch64/arm_acle.h
+@@ -98,10 +98,6 @@ __rint64x (double __a)
+ 
+ #pragma GCC target ("+nothing+crc")
+ 
+-#ifdef __cplusplus
+-extern "C" {
+-#endif
+-
+ __extension__ static __inline uint32_t __attribute__ ((__always_inline__))
+ __crc32b (uint32_t __a, uint8_t __b)
+ {
 diff --git a/gcc/config/arm/arm-c.c b/gcc/config/arm/arm-c.c
 index 6e256ee0a12..8cb08646ce5 100644
 --- a/gcc/config/arm/arm-c.c
