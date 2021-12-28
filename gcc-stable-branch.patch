@@ -17,7 +17,8 @@ Eric Botcazou (3):
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
 
-GCC Administrator (205):
+GCC Administrator (206):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -227,7 +228,7 @@ GCC Administrator (205):
 H.J. Lu (1):
       x86: Document -fcf-protection requires i686 or newer
 
-Harald Anlauf (13):
+Harald Anlauf (14):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
@@ -241,6 +242,7 @@ Harald Anlauf (13):
       Fortran: fix checking of elemental functions of type CLASS
       Fortran: dimensions of an array have to be non-negative
       Fortran: catch failed simplification of bad stride expression
+      Fortran: PACK intrinsic should not try to read from zero-sized array
 
 Iain Buclaw (16):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -1803,10 +1805,15 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..d3d57e2a2a1 100644
+index 7558c0a369e..d2e3ef85b2c 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,356 @@
+@@ -1,3 +1,361 @@
++2021-12-27  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR target/100985
++	* config/aarch64/arm_acle.h: Remove unclosed extern "C" block.
++
 +2021-12-15  Kewen Lin  <linkw@linux.ibm.com>
 +
 +	Backported from master:
@@ -5570,10 +5577,18 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..56ced1cca49 100644
+index 47eac19a1f6..cb24c244c10 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,460 @@
+@@ -1,3 +1,468 @@
++2021-12-27  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-12-14  Harald Anlauf  <anlauf@gmx.de>
++
++	PR libfortran/103634
++	* gfortran.dg/intrinsic_pack_6.f90: New test.
++
 +2021-12-19  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
@@ -7838,6 +7853,69 @@ index 00000000000..e5994635008
 +  use m
 +  call a ()
 +end
+diff --git a/gcc/testsuite/gfortran.dg/intrinsic_pack_6.f90 b/gcc/testsuite/gfortran.dg/intrinsic_pack_6.f90
+new file mode 100644
+index 00000000000..917944d8846
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/intrinsic_pack_6.f90
+@@ -0,0 +1,57 @@
++! { dg-do run }
++! PR libfortran/103634 - Runtime crash with PACK on zero-sized arrays
++! Exercise PACK intrinsic for cases when it calls pack_internal
++
++program p
++  implicit none
++  type t
++     real :: r(24) = -99.
++  end type
++  type(t), allocatable :: new(:), old(:), vec(:)
++  logical, allocatable :: mask(:)
++  integer              :: n, m
++! m = 1    ! works
++  m = 0    ! failed with SIGSEGV in pack_internal
++  do m = 0, 2
++     print *, m
++     allocate (old(m), mask(m), vec(m))
++     if (m > 0) vec(m)% r(1) = 42
++     mask(:) = .true.
++     n = count (mask)
++     allocate (new(n))
++
++     mask(:) = .false.
++     if (size (pack (old, mask)) /= 0) stop 1
++     mask(:) = .true.
++     if (size (pack (old, mask)) /= m) stop 2
++     new(:) = pack (old, mask)              ! this used to segfault for m=0
++
++     mask(:) = .false.
++     if (size (pack (old, mask, vector=vec)) /= m) stop 3
++     new(:) = t()
++     new(:) = pack (old, mask, vector=vec)  ! this used to segfault for m=0
++     if (m > 0) then
++        if (     new( m  )% r(1) /=  42)  stop 4
++        if (any (new(:m-1)% r(1) /= -99)) stop 5
++     end if
++
++     if (m > 0) mask(m) = .true.
++     if (size (pack (old, mask, vector=vec)) /= m) stop 6
++     new(:) = t()
++     new(:) = pack (old, mask, vector=vec)  ! this used to segfault for m=0
++     if (m > 0) then
++        if (new(1)% r(1) /= -99) stop 7
++     end if
++     if (m > 1) then
++        if (new(m)% r(1) /=  42) stop 8
++     end if
++
++     if (size (pack (old(:0), mask(:0), vector=vec)) /= m) stop 9
++     new(:) = t()
++     new(:) = pack (old(:0), mask(:0), vector=vec) ! did segfault for m=0
++     if (m > 0) then
++        if (new(m)% r(1) /= 42) stop 10
++     end if
++     deallocate (old, mask, new, vec)
++  end do
++end
 diff --git a/gcc/testsuite/gfortran.dg/pdt_26.f03 b/gcc/testsuite/gfortran.dg/pdt_26.f03
 index bf1273743d3..59ddcfb6cc4 100644
 --- a/gcc/testsuite/gfortran.dg/pdt_26.f03
@@ -8565,6 +8643,62 @@ index 1d0a6ada1a1..026b48b02e5 100644
  
 -HOST_LIBGCC2_CFLAGS += -Dpa64=1 -DELF=1
 +LIB2ADD_ST = $(srcdir)/config/pa/linux-atomic.c
+diff --git a/libgfortran/ChangeLog b/libgfortran/ChangeLog
+index c24f0cc8546..66a6d996c07 100644
+--- a/libgfortran/ChangeLog
++++ b/libgfortran/ChangeLog
+@@ -1,3 +1,13 @@
++2021-12-27  Harald Anlauf  <anlauf@gmx.de>
++
++	Backported from master:
++	2021-12-14  Harald Anlauf  <anlauf@gmx.de>
++
++	PR libfortran/103634
++	* intrinsics/pack_generic.c (pack_internal): Handle case when the
++	array argument of PACK has one or more extents of size zero to
++	avoid invalid reads.
++
+ 2021-06-01  Release Manager
+ 
+ 	* GCC 9.4.0 released.
+diff --git a/libgfortran/intrinsics/pack_generic.c b/libgfortran/intrinsics/pack_generic.c
+index 69306747e9c..2b7c955da54 100644
+--- a/libgfortran/intrinsics/pack_generic.c
++++ b/libgfortran/intrinsics/pack_generic.c
+@@ -85,6 +85,7 @@ pack_internal (gfc_array_char *ret, const gfc_array_char *array,
+ 
+   index_type count[GFC_MAX_DIMENSIONS];
+   index_type extent[GFC_MAX_DIMENSIONS];
++  bool zero_sized;
+   index_type n;
+   index_type dim;
+   index_type nelem;
+@@ -114,10 +115,13 @@ pack_internal (gfc_array_char *ret, const gfc_array_char *array,
+   else
+     runtime_error ("Funny sized logical array");
+ 
++  zero_sized = false;
+   for (n = 0; n < dim; n++)
+     {
+       count[n] = 0;
+       extent[n] = GFC_DESCRIPTOR_EXTENT(array,n);
++      if (extent[n] <= 0)
++	zero_sized = true;
+       sstride[n] = GFC_DESCRIPTOR_STRIDE_BYTES(array,n);
+       mstride[n] = GFC_DESCRIPTOR_STRIDE_BYTES(mask,n);
+     }
+@@ -126,6 +130,11 @@ pack_internal (gfc_array_char *ret, const gfc_array_char *array,
+   if (mstride[0] == 0)
+     mstride[0] = mask_kind;
+ 
++  if (zero_sized)
++    sptr = NULL;
++  else
++    sptr = array->base_addr;
++
+   if (ret->base_addr == NULL || unlikely (compile_options.bounds_check))
+     {
+       /* Count the elements, either for allocating memory or
 diff --git a/libitm/ChangeLog b/libitm/ChangeLog
 index 22d7711bb98..156378b7f0b 100644
 --- a/libitm/ChangeLog
