@@ -12,12 +12,27 @@ Christophe Lyon (1):
 Diane Meirowitz (1):
       doc: improve -fsanitize=undefined description
 
-Eric Botcazou (3):
+Eric Botcazou (5):
       Fix internal error on pointer-to-pointer binding in LTO mode
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
+      Update documentation of %X spec
+      Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (206):
+GCC Administrator (219):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -3572,6 +3587,31 @@ index ec10dbeb3e9..d67f72df8a2 100644
    case "$target" in
       *le-*-linux*)
       emul_name="-melf64lppc"
+diff --git a/gcc/coretypes.h b/gcc/coretypes.h
+index 2f6b8599d7c..eb0bda3a835 100644
+--- a/gcc/coretypes.h
++++ b/gcc/coretypes.h
+@@ -202,15 +202,17 @@ enum profile_update {
+   PROFILE_UPDATE_PREFER_ATOMIC
+ };
+ 
+-/* Types of unwind/exception handling info that can be generated.  */
++/* Types of unwind/exception handling info that can be generated.
++   Note that a UI_TARGET (or larger) setting is considered to be
++   incompatible with -freorder-blocks-and-partition.  */
+ 
+ enum unwind_info_type
+ {
+   UI_NONE,
+   UI_SJLJ,
+   UI_DWARF2,
+-  UI_TARGET,
+-  UI_SEH
++  UI_SEH,
++  UI_TARGET
+ };
+ 
+ /* Callgraph node profile representation.  */
 diff --git a/gcc/d/ChangeLog b/gcc/d/ChangeLog
 index b0e68a99a73..9a3c98f19d6 100644
 --- a/gcc/d/ChangeLog
@@ -4562,7 +4602,7 @@ index 0b19bcf7f34..117a5bd1592 100644
    Type *t = type->merge2 ();
    Identifier *ident;
 diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
-index 7b5f6e03d9f..3f0c8715c7a 100644
+index 7b5f6e03d9f..f61f8c541e0 100644
 --- a/gcc/doc/invoke.texi
 +++ b/gcc/doc/invoke.texi
 @@ -12484,7 +12484,8 @@ The option cannot be combined with @option{-fsanitize=thread}.
@@ -4626,6 +4666,16 @@ index 7b5f6e03d9f..3f0c8715c7a 100644
  @item -moverride=@var{string}
  @opindex moverride
  Override tuning decisions made by the back-end in response to a
+@@ -29379,8 +29401,7 @@ Substitute the contents of spec string @var{name} at this point.
+ Accumulate an option for @samp{%X}.
+ 
+ @item %X
+-Output the accumulated linker options specified by @option{-Wl} or a @samp{%x}
+-spec string.
++Output the accumulated linker options specified by a @samp{%x} spec string.
+ 
+ @item %Y
+ Output the accumulated assembler options specified by @option{-Wa}.
 diff --git a/gcc/doc/trouble.texi b/gcc/doc/trouble.texi
 index 693912ea355..aaee8fba6bb 100644
 --- a/gcc/doc/trouble.texi
