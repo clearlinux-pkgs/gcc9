@@ -19,7 +19,8 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (220):
+GCC Administrator (221):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -353,7 +354,7 @@ Paul Thomas (9):
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
 
-Richard Biener (9):
+Richard Biener (10):
       Bump BASE-VER to 9.4.1
       middle-end/100509 - avoid folding constant to aggregate type
       tree-optimization/100934 - properly mark irreducible regions for DOM
@@ -363,6 +364,7 @@ Richard Biener (9):
       middle-end/101824 - properly handle volatiles in nested fn lowering
       tree-optimization/101868 - avoid PRE of trapping mems across calls
       middle-end/100672 - fix bogus right shift folding
+      tree-optimization/97953 - fix bougs range recorded by EVRP
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -5562,6 +5564,23 @@ index b188ce86d5e..d10089b8c22 100644
  	    return false;
  	}
      }
+diff --git a/gcc/gimple-ssa-evrp-analyze.c b/gcc/gimple-ssa-evrp-analyze.c
+index bb4e2d6e798..3a6956c59c6 100644
+--- a/gcc/gimple-ssa-evrp-analyze.c
++++ b/gcc/gimple-ssa-evrp-analyze.c
+@@ -217,7 +217,11 @@ evrp_range_analyzer::record_ranges_from_incoming_edge (basic_block bb)
+ 	      push_value_range (vrs[i].first, vrs[i].second);
+ 	      if (is_fallthru
+ 		  && m_update_global_ranges
+-		  && all_uses_feed_or_dominated_by_stmt (vrs[i].first, stmt))
++		  && all_uses_feed_or_dominated_by_stmt (vrs[i].first, stmt)
++		  /* The condition must post-dominate the definition point.  */
++		  && (SSA_NAME_IS_DEFAULT_DEF (vrs[i].first)
++		      || (gimple_bb (SSA_NAME_DEF_STMT (vrs[i].first))
++			  == pred_e->src)))
+ 		{
+ 		  set_ssa_range_info (vrs[i].first, vrs[i].second);
+ 		  maybe_set_nonzero_bits (pred_e, vrs[i].first);
 diff --git a/gcc/ipa-fnsummary.c b/gcc/ipa-fnsummary.c
 index 7c5562ad801..2b8c21ddd4f 100644
 --- a/gcc/ipa-fnsummary.c
@@ -6319,6 +6338,36 @@ index ebc2cce78f4..04bf0381f76 100644
 -/* { dg-message "fself\-test: " "-fself-test" { target *-*-* } 0 } */
 +
 +/* { dg-regexp {^-fself-test: [0-9]+ pass\(es\) in [.0-9]+ seconds$|.*: note: self-tests are not enabled in this build$} } */
+diff --git a/gcc/testsuite/gcc.dg/pr97953.c b/gcc/testsuite/gcc.dg/pr97953.c
+new file mode 100644
+index 00000000000..6219619d67b
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr97953.c
+@@ -0,0 +1,24 @@
++/* { dg-do run } */
++/* { dg-options "-O2 -fno-tree-fre" } */
++
++int __attribute__((noipa))
++foo (int flag, int *p)
++{
++  int val = *p;
++  if (flag)
++    {
++      if (val != 1)
++        __builtin_unreachable ();
++      return 0;
++    }
++  int val2 = *p;
++  return val2 == 2;
++}
++
++int main()
++{
++  int i = 2;
++  if (foo (0, &i) != 1)
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.dg/torture/pr100672.c b/gcc/testsuite/gcc.dg/torture/pr100672.c
 new file mode 100644
 index 00000000000..cc62e71f9a3
