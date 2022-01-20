@@ -19,7 +19,8 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (228):
+GCC Administrator (229):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -249,8 +250,9 @@ GCC Administrator (228):
       Daily bump.
       Daily bump.
 
-H.J. Lu (1):
+H.J. Lu (2):
       x86: Document -fcf-protection requires i686 or newer
+      libsanitizer: Cherry-pick LLVM release/13.x commit d96358a28193
 
 Harald Anlauf (14):
       Fortran - ICE in inline_matmul_assign
@@ -441,10 +443,16 @@ index a795096f038..e91367a7112 100644
  STAGE2_CXXFLAGS += -D__USE_MINGW_ACCESS
  STAGE3_CXXFLAGS += -D__USE_MINGW_ACCESS
 diff --git a/contrib/ChangeLog b/contrib/ChangeLog
-index 7ab95a2466e..96ec8313721 100644
+index 7ab95a2466e..5408afd9969 100644
 --- a/contrib/ChangeLog
 +++ b/contrib/ChangeLog
-@@ -1,3 +1,28 @@
+@@ -1,3 +1,34 @@
++2022-01-19  Martin Liska  <mliska@suse.cz>
++
++	* git-backport.py: Sync from master.
++	* git-commit-mklog.py: Likewise.
++	* git-fix-changelog.py: New file.
++
 +2022-01-17  Martin Liska  <mliska@suse.cz>
 +
 +	Backported from master:
@@ -9225,10 +9233,19 @@ index 461f20d9e28..72376ecda0f 100644
      destroy(emutlsArrays);
  }
 diff --git a/libsanitizer/ChangeLog b/libsanitizer/ChangeLog
-index d8c2f6b863a..a82ac090821 100644
+index d8c2f6b863a..2de8b7c96f1 100644
 --- a/libsanitizer/ChangeLog
 +++ b/libsanitizer/ChangeLog
-@@ -1,3 +1,10 @@
+@@ -1,3 +1,19 @@
++2022-01-19  H.J. Lu  <hjl.tools@gmail.com>
++
++	Backported from master:
++	2022-01-12  H.J. Lu  <hjl.tools@gmail.com>
++
++	PR sanitizer/102911
++	* asan/asan_malloc_linux.cc (kDlsymAllocPoolSize): Set it to
++	8192 on Linux.
++
 +2021-08-05  Martin Liska  <mliska@suse.cz>
 +
 +	PR sanitizer/101749
@@ -9239,6 +9256,19 @@ index d8c2f6b863a..a82ac090821 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/libsanitizer/asan/asan_malloc_linux.cc b/libsanitizer/asan/asan_malloc_linux.cc
+index a6e692759ce..ddf898846a8 100644
+--- a/libsanitizer/asan/asan_malloc_linux.cc
++++ b/libsanitizer/asan/asan_malloc_linux.cc
+@@ -30,7 +30,7 @@ using namespace __asan;  // NOLINT
+ 
+ static uptr allocated_for_dlsym;
+ static uptr last_dlsym_alloc_size_in_words;
+-static const uptr kDlsymAllocPoolSize = SANITIZER_RTEMS ? 4096 : 1024;
++static const uptr kDlsymAllocPoolSize = SANITIZER_RTEMS ? 4096 : 8192;
+ static uptr alloc_memory_for_dlsym[kDlsymAllocPoolSize];
+ 
+ static INLINE bool IsInDlsymAllocPool(const void *ptr) {
 diff --git a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc b/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
 index 1917e29ced2..8c8aa75004e 100644
 --- a/libsanitizer/sanitizer_common/sanitizer_posix_libcdep.cc
