@@ -19,7 +19,8 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (234):
+GCC Administrator (235):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -259,7 +260,7 @@ H.J. Lu (2):
       x86: Document -fcf-protection requires i686 or newer
       libsanitizer: Cherry-pick LLVM release/13.x commit d96358a28193
 
-Harald Anlauf (15):
+Harald Anlauf (16):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
@@ -275,6 +276,7 @@ Harald Anlauf (15):
       Fortran: catch failed simplification of bad stride expression
       Fortran: PACK intrinsic should not try to read from zero-sized array
       Fortran: fix ICE overloading elemental intrinsics
+      Fortran: MOLD argument to TRANSFER intrinsic having storage size zero
 
 Iain Buclaw (16):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
@@ -5349,6 +5351,19 @@ index 017334839ed..c5d813a2dc3 100644
  	      mpz_clear (stride);
  	      return false;
  	    }
+diff --git a/gcc/fortran/check.c b/gcc/fortran/check.c
+index df95d0b65ca..8e0c8d974e5 100644
+--- a/gcc/fortran/check.c
++++ b/gcc/fortran/check.c
+@@ -5563,7 +5563,7 @@ gfc_calculate_transfer_sizes (gfc_expr *source, gfc_expr *mold, gfc_expr *size,
+    * If SIZE is present, the result is an array of rank one and size SIZE.
+    */
+   if (result_elt_size == 0 && *source_size > 0 && !size
+-      && mold->expr_type == EXPR_ARRAY)
++      && (mold->expr_type == EXPR_ARRAY || mold->rank))
+     {
+       gfc_error ("%<MOLD%> argument of %<TRANSFER%> intrinsic at %L is an "
+ 		 "array and shall not have storage size 0 when %<SOURCE%> "
 diff --git a/gcc/fortran/class.c b/gcc/fortran/class.c
 index 1a5bcfae3c0..928a50a6cd1 100644
 --- a/gcc/fortran/class.c
@@ -8703,6 +8718,23 @@ index 0d5e3d75e88..83e788a55a6 100644
  c = (/ c0(1)(1:5) /)
  do i=1,5
     if (c(1)(i:i) /= c1(i)) STOP 2
+diff --git a/gcc/testsuite/gfortran.dg/transfer_check_6.f90 b/gcc/testsuite/gfortran.dg/transfer_check_6.f90
+new file mode 100644
+index 00000000000..dffd0913f0d
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/transfer_check_6.f90
+@@ -0,0 +1,11 @@
++! { dg-do compile }
++! PR fortran/104227 - ICE virtual memory exhausted
++! Contributed by G.Steinmetz
++
++program p
++  type t
++  end type
++  type(t) :: x(2)
++  print *, transfer(1, x) ! { dg-error "shall not have storage size 0" }
++  x = transfer(1, x)      ! { dg-error "shall not have storage size 0" }
++end
 diff --git a/gcc/tree-nested.c b/gcc/tree-nested.c
 index dc0cfe27142..a2ae3aefe4a 100644
 --- a/gcc/tree-nested.c
