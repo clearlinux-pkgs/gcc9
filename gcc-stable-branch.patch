@@ -19,7 +19,10 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (245):
+GCC Administrator (248):
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -432,6 +435,9 @@ Xi Ruoyao (1):
 
 konglin1 (1):
       i386: Fix _mm512_fpclass_ps_mask in O0 [PR 101471]
+
+liuhongt (1):
+      ICE: QImode(not SImode) operand should be passed to gen_vec_initv16qiqi in ashlv16qi3.
 
 diff --git a/config/ChangeLog b/config/ChangeLog
 index debc7381143..07d1a887900 100644
@@ -3344,6 +3350,21 @@ index 8ae7ea68c16..5d76d36e1c0 100644
     (parallel
       [(set (match_dup 0) (xor:SWI48 (match_dup 0) (match_dup 2)))
        (clobber (reg:CC FLAGS_REG))])]
+diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
+index 3b51fef56f2..48d413daa65 100644
+--- a/gcc/config/i386/sse.md
++++ b/gcc/config/i386/sse.md
+@@ -18713,8 +18713,9 @@
+ 	    negate = true;
+ 	}
+       par = gen_rtx_PARALLEL (V16QImode, rtvec_alloc (16));
++      tmp = lowpart_subreg (QImode, operands[2], SImode);
+       for (i = 0; i < 16; i++)
+-        XVECEXP (par, 0, i) = operands[2];
++	XVECEXP (par, 0, i) = tmp;
+ 
+       tmp = gen_reg_rtx (V16QImode);
+       emit_insn (gen_vec_initv16qiqi (tmp, par));
 diff --git a/gcc/config/i386/sync.md b/gcc/config/i386/sync.md
 index 08149006876..bbf91c46c4d 100644
 --- a/gcc/config/i386/sync.md
@@ -7171,6 +7192,37 @@ index 00000000000..ed7a08110a5
 +
 +  if (r != -1)
 +    abort ();
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104451.c b/gcc/testsuite/gcc.target/i386/pr104451.c
+new file mode 100644
+index 00000000000..8b251ccf827
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104451.c
+@@ -0,0 +1,25 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx2 -mxop -O" } */
++
++typedef char __attribute__((__vector_size__ (16))) V;
++typedef unsigned char __attribute__((__vector_size__ (16))) UV;
++V v;
++UV uv;
++
++V
++foo (long c)
++{
++  return v << c;
++}
++
++V
++foo1 (long c)
++{
++  return v >> c;
++}
++
++UV
++foo2 (unsigned long uc)
++{
++  return uv >> uc;
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr71245-1.c b/gcc/testsuite/gcc.target/i386/pr71245-1.c
 deleted file mode 100644
