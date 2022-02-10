@@ -427,9 +427,10 @@ Thomas Schwinge (3):
       Fix up 'gcc.dg/pr78213.c' for '--enable-checking=release' etc.
       Fix 'OMP_CLAUSE_TILE' operands handling in 'gcc/tree.c:walk_tree_1'
 
-Uros Bizjak (2):
+Uros Bizjak (3):
       i386: Prevent unwanted combine from LZCNT to BSR [PR101175]
       i386: Remove atomic_storedi_fpu and atomic_loaddi_fpu peepholes [PR100182]
+      i386: Fix vec_unpacks_float_lo_v4si operand constraint [PR104469]
 
 Xi Ruoyao (1):
       mips: Fix up mips_atomic_assign_expand_fenv [PR94780]
@@ -3358,9 +3359,18 @@ index 8ae7ea68c16..5d76d36e1c0 100644
       [(set (match_dup 0) (xor:SWI48 (match_dup 0) (match_dup 2)))
        (clobber (reg:CC FLAGS_REG))])]
 diff --git a/gcc/config/i386/sse.md b/gcc/config/i386/sse.md
-index 3b51fef56f2..48d413daa65 100644
+index 3b51fef56f2..7de1b23eb60 100644
 --- a/gcc/config/i386/sse.md
 +++ b/gcc/config/i386/sse.md
+@@ -6393,7 +6393,7 @@
+ (define_expand "vec_unpacks_float_hi_v8si"
+   [(set (match_dup 2)
+ 	(vec_select:V4SI
+-	  (match_operand:V8SI 1 "vector_operand")
++	  (match_operand:V8SI 1 "register_operand")
+ 	  (parallel [(const_int 4) (const_int 5)
+ 		     (const_int 6) (const_int 7)])))
+    (set (match_operand:V4DF 0 "register_operand")
 @@ -18713,8 +18713,9 @@
  	    negate = true;
  	}
@@ -7235,6 +7245,24 @@ index 00000000000..8b251ccf827
 +foo2 (unsigned long uc)
 +{
 +  return uv >> uc;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104469.c b/gcc/testsuite/gcc.target/i386/pr104469.c
+new file mode 100644
+index 00000000000..39cc31fde1f
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104469.c
+@@ -0,0 +1,12 @@
++/* PR target/104469 */
++/* { dg-do compile } */
++/* { dg-options "-mavx512f" } */
++
++typedef double __attribute__((__vector_size__ (64))) F;
++typedef int __attribute__((__vector_size__ (32))) V;
++
++F
++foo (V v)
++{
++  return __builtin_convertvector (v, F);
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr71245-1.c b/gcc/testsuite/gcc.target/i386/pr71245-1.c
 deleted file mode 100644
