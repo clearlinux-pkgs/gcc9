@@ -19,7 +19,8 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (248):
+GCC Administrator (249):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2148,10 +2149,16 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..a6f18eee4f6 100644
+index 7558c0a369e..d140a34d451 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,381 @@
+@@ -1,3 +1,387 @@
++2022-02-09  liuhongt  <hongtao.liu@intel.com>
++
++	PR target/104451
++	* config/i386/sse.md (<insn><mode>3): lowpart_subreg
++	operands[2] from SImode to QImode.
++
 +2022-01-12  Richard Biener  <rguenther@suse.de>
 +
 +	Backported from master:
@@ -6095,10 +6102,15 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..dfbf910b2cb 100644
+index 47eac19a1f6..0504493fa47 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,509 @@
+@@ -1,3 +1,514 @@
++2022-02-09  liuhongt  <hongtao.liu@intel.com>
++
++	PR target/104451
++	* gcc.target/i386/pr104451.c: New test.
++
 +2022-02-04  Harald Anlauf  <anlauf@gmx.de>
 +
 +	Backported from master:
