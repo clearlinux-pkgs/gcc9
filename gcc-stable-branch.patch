@@ -19,7 +19,13 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (250):
+GCC Administrator (256):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -391,7 +397,7 @@ Paul Thomas (9):
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
 
-Richard Biener (10):
+Richard Biener (13):
       Bump BASE-VER to 9.4.1
       middle-end/100509 - avoid folding constant to aggregate type
       tree-optimization/100934 - properly mark irreducible regions for DOM
@@ -402,6 +408,9 @@ Richard Biener (10):
       tree-optimization/101868 - avoid PRE of trapping mems across calls
       middle-end/100672 - fix bogus right shift folding
       tree-optimization/97953 - fix bougs range recorded by EVRP
+      tree-optimization/103237 - avoid vectorizing unhandled double reductions
+      middle-end/103181 - fix operation_could_trap_p for vector division
+      tree-optimization/102798 - avoid copying PTA info to old SSA names
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -6833,6 +6842,67 @@ index 00000000000..9405e2a27df
 +const int a = 0;
 +static struct X A __attribute__((alias("a")));
 +void foo() { struct X b = A; }
+diff --git a/gcc/testsuite/gcc.dg/pr102798.c b/gcc/testsuite/gcc.dg/pr102798.c
+new file mode 100644
+index 00000000000..3a50546a16b
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr102798.c
+@@ -0,0 +1,41 @@
++/* { dg-do run } */
++/* { dg-options "-O3 -fno-tree-pta" } */
++
++typedef __SIZE_TYPE__ size_t;
++
++__attribute__((__noipa__))
++void BUF_reverse (unsigned char *out, const unsigned char *in, size_t size)
++{
++  size_t i;
++  if (in)
++    {
++      out += size - 1;
++      for (i = 0; i < size; i++)
++        *out++ = *in++;
++    }
++  else
++    {
++      unsigned char *q;
++      char c;
++      q = out + size - 1;
++      for (i = 0; i < size ; i++)
++            {
++              *out++ = 1;
++            }
++    }
++}
++
++int
++main (void)
++{
++  unsigned char buf[40];
++  unsigned char buf1[40];
++  for (unsigned i = 0; i < sizeof (buf); i++)
++    buf[i] = i;
++  BUF_reverse (buf, 0, sizeof (buf));
++  for (unsigned i = 0; i < sizeof (buf); i++)
++    if (buf[i] != 1)
++      __builtin_abort ();
++
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/pr103248.c b/gcc/testsuite/gcc.dg/pr103248.c
+new file mode 100644
+index 00000000000..da6232d21ee
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr103248.c
+@@ -0,0 +1,8 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target fixed_point } */
++/* { dg-options "-fnon-call-exceptions" } */
++
++_Accum sa;
++int c;
++
++void div_csa() { c /= sa; }
 diff --git a/gcc/testsuite/gcc.dg/pr78213.c b/gcc/testsuite/gcc.dg/pr78213.c
 index ebc2cce78f4..04bf0381f76 100644
 --- a/gcc/testsuite/gcc.dg/pr78213.c
@@ -7012,6 +7082,66 @@ index 00000000000..87fbdadc152
 +  if (g++)
 +    e();
 +  c = (__INTPTR_TYPE__)g;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr103181.c b/gcc/testsuite/gcc.dg/torture/pr103181.c
+new file mode 100644
+index 00000000000..6bc705ab52e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr103181.c
+@@ -0,0 +1,24 @@
++/* { dg-do run } */
++
++typedef unsigned char __attribute__((__vector_size__ (2))) U;
++typedef unsigned short S;
++typedef unsigned int __attribute__((__vector_size__ (64))) V;
++
++V v;
++U a, b, c;
++
++U
++foo (S s)
++{
++  v += __builtin_bswap16 (s) || (S) (a / ((U){3, 0}));
++  return b + c;
++}
++
++int
++main (void)
++{
++  U x = foo (4);
++  if (x[0] || x[1])
++    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr103237.c b/gcc/testsuite/gcc.dg/torture/pr103237.c
+new file mode 100644
+index 00000000000..f2399f9586e
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr103237.c
+@@ -0,0 +1,24 @@
++/* { dg-do run } */
++/* { dg-additional-options "-ftree-vectorize" } */
++
++int g1;
++unsigned int g2 = -1U;
++static void __attribute__((noipa))
++func_1()
++{
++  int *l_1 = &g1;
++  for (int g3a = 0; g3a != 4; g3a++)
++    for (int l_2 = 0; l_2 <= 3; l_2++)
++      {
++        unsigned int *l_3 = &g2;
++        *l_1 = *l_3 ^= 1;
++      }
++}
++int
++main()
++{
++  func_1();
++  if (g1 != -1)
++    __builtin_abort ();
++  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c b/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c
 new file mode 100644
@@ -9003,6 +9133,51 @@ index 00000000000..cdbec97ae71
 +  print *, transfer(1,x,2)       ! { dg-error "shall not have storage size 0" }
 +  print *, transfer(1,x,huge(1)) ! { dg-error "shall not have storage size 0" }
 +end
+diff --git a/gcc/tree-eh.c b/gcc/tree-eh.c
+index c8063486f2d..426f0a12ef7 100644
+--- a/gcc/tree-eh.c
++++ b/gcc/tree-eh.c
+@@ -2435,13 +2435,35 @@ operation_could_trap_helper_p (enum tree_code op,
+     case FLOOR_MOD_EXPR:
+     case ROUND_MOD_EXPR:
+     case TRUNC_MOD_EXPR:
+-    case RDIV_EXPR:
+-      if (honor_snans)
+-	return true;
+-      if (fp_operation)
+-	return flag_trapping_math;
+       if (!TREE_CONSTANT (divisor) || integer_zerop (divisor))
+         return true;
++      if (TREE_CODE (divisor) == VECTOR_CST)
++	{
++	  /* Inspired by initializer_each_zero_or_onep.  */
++	  unsigned HOST_WIDE_INT nelts = vector_cst_encoded_nelts (divisor);
++	  if (VECTOR_CST_STEPPED_P (divisor)
++	      && !TYPE_VECTOR_SUBPARTS (TREE_TYPE (divisor))
++		    .is_constant (&nelts))
++	    return true;
++	  for (unsigned int i = 0; i < nelts; ++i)
++	    {
++	      tree elt = vector_cst_elt (divisor, i);
++	      if (integer_zerop (elt))
++		return true;
++	    }
++	}
++      return false;
++
++    case RDIV_EXPR:
++      if (fp_operation)
++	{
++	  if (honor_snans)
++	    return true;
++	  return flag_trapping_math;
++	}
++      /* Fixed point operations also use RDIV_EXPR.  */
++      if (!TREE_CONSTANT (divisor) || fixed_zerop (divisor))
++	return true;
+       return false;
+ 
+     case LT_EXPR:
 diff --git a/gcc/tree-nested.c b/gcc/tree-nested.c
 index dc0cfe27142..a2ae3aefe4a 100644
 --- a/gcc/tree-nested.c
@@ -9093,7 +9268,7 @@ index c163c3823c2..5583db6db50 100644
  	      gcc_assert (edoubleprime->kind == CONSTANT
  			  || edoubleprime->kind == NAME);
 diff --git a/gcc/tree-vect-data-refs.c b/gcc/tree-vect-data-refs.c
-index f2e1766432b..151bffa7714 100644
+index f2e1766432b..6d3806fc334 100644
 --- a/gcc/tree-vect-data-refs.c
 +++ b/gcc/tree-vect-data-refs.c
 @@ -3424,9 +3424,9 @@ vect_prune_runtime_alias_test_list (loop_vec_info loop_vinfo)
@@ -9128,6 +9303,16 @@ index f2e1766432b..151bffa7714 100644
  	      || vectorizable_with_step_bound_p (dr_info_a, dr_info_b,
  						 &lower_bound)))
  	{
+@@ -4556,7 +4564,8 @@ vect_create_addr_base_for_vector_ref (stmt_vec_info stmt_info,
+ 
+   if (DR_PTR_INFO (dr)
+       && TREE_CODE (addr_base) == SSA_NAME
+-      && !SSA_NAME_PTR_INFO (addr_base))
++      /* We should only duplicate pointer info to newly created SSA names.  */
++      && SSA_NAME_VAR (addr_base) == dest)
+     {
+       vect_duplicate_ssa_name_ptr_info (addr_base, dr_info);
+       if (offset || byte_offset)
 diff --git a/gcc/tree-vect-loop-manip.c b/gcc/tree-vect-loop-manip.c
 index 030effcd79d..4951e1d505f 100644
 --- a/gcc/tree-vect-loop-manip.c
@@ -9142,6 +9327,28 @@ index 030effcd79d..4951e1d505f 100644
  	vect_update_init_of_dr (dr, niters, code);
      }
  }
+diff --git a/gcc/tree-vect-loop.c b/gcc/tree-vect-loop.c
+index 21c53cbb4a7..795ab61a63b 100644
+--- a/gcc/tree-vect-loop.c
++++ b/gcc/tree-vect-loop.c
+@@ -2925,6 +2925,17 @@ vect_is_simple_reduction (loop_vec_info loop_info, stmt_vec_info phi_info,
+ 	}
+     }
+ 
++  /* When the inner loop of a double reduction ends up with more than
++     one loop-closed PHI we have failed to classify alternate such
++     PHIs as double reduction, leading to wrong code.  See PR103237.  */
++  if (inner_loop_of_double_reduc && lcphis.length () != 1)
++    {
++      if (dump_enabled_p ())
++	dump_printf_loc (MSG_MISSED_OPTIMIZATION, vect_location,
++			 "unhandle double reduction\n");
++      return NULL;
++    }
++
+   /* If this isn't a nested cycle or if the nested cycle reduction value
+      is used ouside of the inner loop we cannot handle uses of the reduction
+      value.  */
 diff --git a/gcc/tree.c b/gcc/tree.c
 index be311754393..99f4318306a 100644
 --- a/gcc/tree.c
