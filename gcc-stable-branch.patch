@@ -19,7 +19,8 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (256):
+GCC Administrator (257):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -397,7 +398,7 @@ Paul Thomas (9):
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
 
-Richard Biener (13):
+Richard Biener (15):
       Bump BASE-VER to 9.4.1
       middle-end/100509 - avoid folding constant to aggregate type
       tree-optimization/100934 - properly mark irreducible regions for DOM
@@ -411,6 +412,8 @@ Richard Biener (13):
       tree-optimization/103237 - avoid vectorizing unhandled double reductions
       middle-end/103181 - fix operation_could_trap_p for vector division
       tree-optimization/102798 - avoid copying PTA info to old SSA names
+      tree-optimization/96522 - transfer of flow-sensitive info in copy_ref_info
+      tree-optimization/97043 - fix latent wrong-code with SLP vectorization
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -2160,10 +2163,40 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..c23fe577bcf 100644
+index 7558c0a369e..309eaef9773 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,396 @@
+@@ -1,3 +1,426 @@
++2022-02-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-11-08  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/102798
++	* tree-vect-data-refs.c (vect_create_addr_base_for_vector_ref):
++	Only copy points-to info to newly generated SSA names.
++
++2022-02-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-11-22  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/103181
++	PR middle-end/103248
++	* tree-eh.c (operation_could_trap_helper_p): Properly
++	check vector constants for a zero element for integer
++	division.  Separate floating point and integer division code.
++	Properly handle fixed-point RDIV_EXPR.
++
++2022-02-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-11-15  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/103237
++	* tree-vect-loop.c (vect_is_simple_reduction): Fail for
++	double reductions with multiple inner loop LC PHI nodes.
++
 +2022-02-10  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	Backported from master:
@@ -6131,10 +6164,36 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..8c6b81f54c5 100644
+index 47eac19a1f6..e16572bbcda 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,522 @@
+@@ -1,3 +1,548 @@
++2022-02-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-11-08  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/102798
++	* gcc.dg/pr102798.c: New testcase.
++
++2022-02-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-11-22  Richard Biener  <rguenther@suse.de>
++
++	PR middle-end/103181
++	PR middle-end/103248
++	* gcc.dg/torture/pr103181.c: New testcase.
++	* gcc.dg/pr103248.c: Likewise.
++
++2022-02-17  Richard Biener  <rguenther@suse.de>
++
++	Backported from master:
++	2021-11-15  Richard Biener  <rguenther@suse.de>
++
++	PR tree-optimization/103237
++	* gcc.dg/torture/pr103237.c: New testcase.
++
 +2022-02-10  Uros Bizjak  <ubizjak@gmail.com>
 +
 +	Backported from master:
@@ -7141,6 +7200,48 @@ index 00000000000..f2399f9586e
 +  func_1();
 +  if (g1 != -1)
 +    __builtin_abort ();
++  return 0;
++}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr96522.c b/gcc/testsuite/gcc.dg/torture/pr96522.c
+new file mode 100644
+index 00000000000..2f55d1aeb4d
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr96522.c
+@@ -0,0 +1,36 @@
++/* { dg-do run } */
++/* { dg-additional-options "-fno-tree-pta" } */
++
++__attribute__((noipa)) void
++bar (void)
++{
++  volatile int v = 1;
++  if (v)
++    __builtin_abort ();
++}
++
++__attribute__((noipa)) void
++baz (void)
++{
++}
++
++__attribute__((noipa)) void
++foo (int n, double *p, double *x)
++{
++  if (n < 10 && p != 0)
++    for (int i = 0; i < 10; i++)
++      if (x[0] < p[i])
++        x[i] = 0;
++  if (p != 0)
++    bar ();
++  else
++    baz ();
++}
++
++int
++main ()
++{
++  double arr[10];
++  foo (1000, 0, arr);
 +  return 0;
 +}
 diff --git a/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c b/gcc/testsuite/gcc.dg/tree-ssa/loop-interchange-16.c
@@ -9204,6 +9305,88 @@ index 909b4fef9a8..252953b7512 100644
  		    bitmap_set_bit (final_bbs, bb->index);
  		}
  
+diff --git a/gcc/tree-ssa-address.c b/gcc/tree-ssa-address.c
+index 2e5d87734d6..8ab1cb262df 100644
+--- a/gcc/tree-ssa-address.c
++++ b/gcc/tree-ssa-address.c
+@@ -47,6 +47,7 @@ along with GCC; see the file COPYING3.  If not see
+ #include "dumpfile.h"
+ #include "tree-affine.h"
+ #include "gimplify.h"
++#include "builtins.h"
+ 
+ /* FIXME: We compute address costs using RTL.  */
+ #include "tree-ssa-address.h"
+@@ -1015,45 +1016,24 @@ copy_ref_info (tree new_ref, tree old_ref)
+ 
+   new_ptr_base = TREE_OPERAND (new_ref, 0);
+ 
++  tree base = get_base_address (old_ref);
++  if (!base)
++    return;
++
+   /* We can transfer points-to information from an old pointer
+      or decl base to the new one.  */
+   if (new_ptr_base
+       && TREE_CODE (new_ptr_base) == SSA_NAME
+       && !SSA_NAME_PTR_INFO (new_ptr_base))
+     {
+-      tree base = get_base_address (old_ref);
+-      if (!base)
+-	;
+-      else if ((TREE_CODE (base) == MEM_REF
+-		|| TREE_CODE (base) == TARGET_MEM_REF)
+-	       && TREE_CODE (TREE_OPERAND (base, 0)) == SSA_NAME
+-	       && SSA_NAME_PTR_INFO (TREE_OPERAND (base, 0)))
++      if ((TREE_CODE (base) == MEM_REF
++	   || TREE_CODE (base) == TARGET_MEM_REF)
++	  && TREE_CODE (TREE_OPERAND (base, 0)) == SSA_NAME
++	  && SSA_NAME_PTR_INFO (TREE_OPERAND (base, 0)))
+ 	{
+-	  struct ptr_info_def *new_pi;
+-	  unsigned int align, misalign;
+-
+ 	  duplicate_ssa_name_ptr_info
+ 	    (new_ptr_base, SSA_NAME_PTR_INFO (TREE_OPERAND (base, 0)));
+-	  new_pi = SSA_NAME_PTR_INFO (new_ptr_base);
+-	  /* We have to be careful about transferring alignment information.  */
+-	  if (get_ptr_info_alignment (new_pi, &align, &misalign)
+-	      && TREE_CODE (old_ref) == MEM_REF
+-	      && !(TREE_CODE (new_ref) == TARGET_MEM_REF
+-		   && (TMR_INDEX2 (new_ref)
+-		       /* TODO: Below conditions can be relaxed if TMR_INDEX
+-			  is an indcution variable and its initial value and
+-			  step are aligned.  */
+-		       || (TMR_INDEX (new_ref) && !TMR_STEP (new_ref))
+-		       || (TMR_STEP (new_ref)
+-			   && (TREE_INT_CST_LOW (TMR_STEP (new_ref))
+-			       < align)))))
+-	    {
+-	      poly_uint64 inc = (mem_ref_offset (old_ref)
+-				 - mem_ref_offset (new_ref)).force_uhwi ();
+-	      adjust_ptr_info_misalignment (new_pi, inc);
+-	    }
+-	  else
+-	    mark_ptr_info_alignment_unknown (new_pi);
++	  reset_flow_sensitive_info (new_ptr_base);
+ 	}
+       else if (VAR_P (base)
+ 	       || TREE_CODE (base) == PARM_DECL
+@@ -1063,6 +1043,14 @@ copy_ref_info (tree new_ref, tree old_ref)
+ 	  pt_solution_set_var (&pi->pt, base);
+ 	}
+     }
++
++  /* And alignment info.  Note we cannot transfer misalignment info
++     since that sits on the SSA name but this is flow-sensitive info
++     which we cannot transfer in this generic routine.  */
++  unsigned old_align = get_object_alignment (old_ref);
++  unsigned new_align = get_object_alignment (new_ref);
++  if (new_align < old_align)
++    TREE_TYPE (new_ref) = build_aligned_type (TREE_TYPE (new_ref), old_align);
+ }
+ 
+ /* Move constants in target_mem_ref REF to offset.  Returns the new target
 diff --git a/gcc/tree-ssa-dom.c b/gcc/tree-ssa-dom.c
 index b0d56fcf3e3..5bb337b5417 100644
 --- a/gcc/tree-ssa-dom.c
@@ -9267,6 +9450,20 @@ index c163c3823c2..5583db6db50 100644
  	    {
  	      gcc_assert (edoubleprime->kind == CONSTANT
  			  || edoubleprime->kind == NAME);
+diff --git a/gcc/tree-ssa-sccvn.c b/gcc/tree-ssa-sccvn.c
+index 066a0559b71..ccd3e1c4cc7 100644
+--- a/gcc/tree-ssa-sccvn.c
++++ b/gcc/tree-ssa-sccvn.c
+@@ -5080,8 +5080,7 @@ eliminate_dom_walker::eliminate_stmt (basic_block b, gimple_stmt_iterator *gsi)
+ 	      duplicate_ssa_name_ptr_info (sprime,
+ 					   SSA_NAME_PTR_INFO (lhs));
+ 	      if (b != sprime_b)
+-		mark_ptr_info_alignment_unknown
+-		    (SSA_NAME_PTR_INFO (sprime));
++		reset_flow_sensitive_info (sprime);
+ 	    }
+ 	  else if (INTEGRAL_TYPE_P (TREE_TYPE (lhs))
+ 		   && SSA_NAME_RANGE_INFO (lhs)
 diff --git a/gcc/tree-vect-data-refs.c b/gcc/tree-vect-data-refs.c
 index f2e1766432b..6d3806fc334 100644
 --- a/gcc/tree-vect-data-refs.c
@@ -9349,6 +9546,22 @@ index 21c53cbb4a7..795ab61a63b 100644
    /* If this isn't a nested cycle or if the nested cycle reduction value
       is used ouside of the inner loop we cannot handle uses of the reduction
       value.  */
+diff --git a/gcc/tree-vect-slp.c b/gcc/tree-vect-slp.c
+index 394c6ec39cd..3322abd86f9 100644
+--- a/gcc/tree-vect-slp.c
++++ b/gcc/tree-vect-slp.c
+@@ -2051,9 +2051,8 @@ vect_analyze_slp_instance (vec_info *vinfo,
+ 		  /* The load requires permutation when unrolling exposes
+ 		     a gap either because the group is larger than the SLP
+ 		     group-size or because there is a gap between the groups.  */
+-		  && (known_eq (unrolling_factor, 1U)
+-		      || (group_size == DR_GROUP_SIZE (first_stmt_info)
+-			  && DR_GROUP_GAP (first_stmt_info) == 0)))
++		  && group_size == DR_GROUP_SIZE (first_stmt_info)
++		  && DR_GROUP_GAP (first_stmt_info) == 0)
+ 		{
+ 		  load_permutation.release ();
+ 		  continue;
 diff --git a/gcc/tree.c b/gcc/tree.c
 index be311754393..99f4318306a 100644
 --- a/gcc/tree.c
