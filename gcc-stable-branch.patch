@@ -19,7 +19,31 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (258):
+GCC Administrator (282):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -399,7 +423,7 @@ Paul Thomas (9):
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
 
-Richard Biener (15):
+Richard Biener (16):
       Bump BASE-VER to 9.4.1
       middle-end/100509 - avoid folding constant to aggregate type
       tree-optimization/100934 - properly mark irreducible regions for DOM
@@ -415,6 +439,7 @@ Richard Biener (15):
       tree-optimization/102798 - avoid copying PTA info to old SSA names
       tree-optimization/96522 - transfer of flow-sensitive info in copy_ref_info
       tree-optimization/97043 - fix latent wrong-code with SLP vectorization
+      target/104453 - guard call folding with NULL LHS
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -3366,6 +3391,19 @@ index f0c18fb45fb..c080c2041fa 100644
  
  #define _mm_reduce_sd(A, B, C)						\
    ((__m128d) __builtin_ia32_reducesd_mask ((__v2df)(__m128d)(A),	\
+diff --git a/gcc/config/i386/i386.c b/gcc/config/i386/i386.c
+index b079985e9e2..8d00f6f94a0 100644
+--- a/gcc/config/i386/i386.c
++++ b/gcc/config/i386/i386.c
+@@ -33801,6 +33801,8 @@ ix86_gimple_fold_builtin (gimple_stmt_iterator *gsi)
+ 
+     do_shift:
+       gcc_assert (n_args >= 2);
++      if (!gimple_call_lhs (stmt))
++	break;
+       arg0 = gimple_call_arg (stmt, 0);
+       arg1 = gimple_call_arg (stmt, 1);
+       if (n_args > 2)
 diff --git a/gcc/config/i386/i386.md b/gcc/config/i386/i386.md
 index 8ae7ea68c16..5d76d36e1c0 100644
 --- a/gcc/config/i386/i386.md
@@ -7525,6 +7563,23 @@ index 00000000000..8b251ccf827
 +foo2 (unsigned long uc)
 +{
 +  return uv >> uc;
++}
+diff --git a/gcc/testsuite/gcc.target/i386/pr104453.c b/gcc/testsuite/gcc.target/i386/pr104453.c
+new file mode 100644
+index 00000000000..325cedf0e2c
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/i386/pr104453.c
+@@ -0,0 +1,11 @@
++/* { dg-do compile } */
++/* { dg-options "-mavx512f" } */
++
++typedef short __attribute__((__vector_size__ (32))) V;
++V g;
++
++void
++foo (void)
++{
++  __builtin_ia32_psrawi256 (g, 0);
 +}
 diff --git a/gcc/testsuite/gcc.target/i386/pr104469.c b/gcc/testsuite/gcc.target/i386/pr104469.c
 new file mode 100644
