@@ -19,7 +19,20 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (283):
+GCC Administrator (296):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -394,8 +407,9 @@ Kewen Lin (3):
 Marius Hillenbrand (1):
       IBM Z: Fix vector intrinsics vec_double and vec_floate
 
-Martin Jambor (1):
+Martin Jambor (2):
       ipa-sra: Check also ECF_LOOPING_CONST_OR_PURE when evaluating calls
+      cplxlower: Avoid a transform when looking at a default definition
 
 Martin Liska (8):
       contrib: add git-commit-mklog wrapper
@@ -7384,6 +7398,52 @@ index 00000000000..d5987e14360
 +   when going through FRAME.  */
 +/* { dg-final { scan-tree-dump-not "Executing predictive commoning" "pcom" } } */
 +/* { dg-final { scan-tree-dump " ={v} FRAME" "optimized" } } */
+diff --git a/gcc/testsuite/gcc.dg/tree-ssa/pr97456.c b/gcc/testsuite/gcc.dg/tree-ssa/pr97456.c
+new file mode 100644
+index 00000000000..5171c9b4577
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/tree-ssa/pr97456.c
+@@ -0,0 +1,40 @@
++/* { dg-do run } */
++/* { dg-options "-O2 -fwhole-program" } */
++
++
++float val2 = 1.710780f;
++float val3;
++volatile float vf;
++
++int __attribute__((noipa))
++get_bool (void)
++{
++  return 1;
++}
++
++int __attribute__((noinline))
++wrong (float *pos)
++{
++  _Complex float a;
++
++  __real__ a = *pos;
++  __imag__ a = *pos;
++
++  _Complex float b = 0 + 0i;
++
++  b = b + a;
++
++  if (b == 0.0f)
++    return 1;
++
++  vf = __imag__ b;
++  return 0;
++}
++
++int main(int argc, char **argv) {
++  float val = get_bool () == 1 ? val2 : val3;
++
++  if ((wrong(&val), wrong(&val)))
++    __builtin_abort ();
++  return 0;
++}
 diff --git a/gcc/testsuite/gcc.target/arm/attr-neon.c b/gcc/testsuite/gcc.target/arm/attr-neon.c
 index 225fb8dc3db..e8e3086247d 100644
 --- a/gcc/testsuite/gcc.target/arm/attr-neon.c
@@ -9338,6 +9398,20 @@ index 00000000000..cdbec97ae71
 +  print *, transfer(1,x,2)       ! { dg-error "shall not have storage size 0" }
 +  print *, transfer(1,x,huge(1)) ! { dg-error "shall not have storage size 0" }
 +end
+diff --git a/gcc/tree-complex.c b/gcc/tree-complex.c
+index d4b053d68e1..36a4d6f06d5 100644
+--- a/gcc/tree-complex.c
++++ b/gcc/tree-complex.c
+@@ -569,7 +569,8 @@ set_component_ssa_name (tree ssa_name, bool imag_p, tree value)
+     {
+       /* Replace an anonymous base value with the variable from cvc_lookup.
+ 	 This should result in better debug info.  */
+-      if (SSA_NAME_VAR (ssa_name)
++      if (!SSA_NAME_IS_DEFAULT_DEF (value)
++	  && SSA_NAME_VAR (ssa_name)
+ 	  && (!SSA_NAME_VAR (value) || DECL_IGNORED_P (SSA_NAME_VAR (value)))
+ 	  && !DECL_IGNORED_P (SSA_NAME_VAR (ssa_name)))
+ 	{
 diff --git a/gcc/tree-eh.c b/gcc/tree-eh.c
 index c8063486f2d..426f0a12ef7 100644
 --- a/gcc/tree-eh.c
