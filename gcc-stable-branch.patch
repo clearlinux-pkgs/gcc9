@@ -1,3 +1,6 @@
+Alex Coplan (1):
+      arm: Fix ICEs with compare-and-swap and -march=armv8-m.base [PR99977]
+
 Andrew Pinski (1):
       [GCC 10 branch] tree-optimization: [PR102622]: wrong code due to signed one bit integer and "a?-1:0"
 
@@ -19,7 +22,11 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (297):
+GCC Administrator (301):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2946,7 +2953,7 @@ index 3e8bba5caea..cd16c3c35f9 100644
  extern void arm_options_perform_arch_sanity_checks (void);
  extern void arm_pr_long_calls (struct cpp_reader *);
 diff --git a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
-index 4679da75dd8..58afc4a2647 100644
+index 4679da75dd8..8cbdb9a44e5 100644
 --- a/gcc/config/arm/arm.c
 +++ b/gcc/config/arm/arm.c
 @@ -78,10 +78,6 @@
@@ -3273,7 +3280,43 @@ index 4679da75dd8..58afc4a2647 100644
    if (NEED_INDICATE_EXEC_STACK)
      /* Add .note.GNU-stack.  */
      file_end_indicate_exec_stack ();
-@@ -30938,10 +30981,8 @@ arm_can_inline_p (tree caller, tree callee)
+@@ -29010,13 +29053,31 @@ arm_split_compare_and_swap (rtx operands[])
+     }
+   else
+     {
+-      emit_move_insn (neg_bval, const1_rtx);
+       cond = gen_rtx_NE (VOIDmode, rval, oldval);
+       if (thumb1_cmpneg_operand (oldval, SImode))
+-	emit_unlikely_jump (gen_cbranchsi4_scratch (neg_bval, rval, oldval,
+-						    label2, cond));
++	{
++	  rtx src = rval;
++	  if (!satisfies_constraint_L (oldval))
++	    {
++	      gcc_assert (satisfies_constraint_J (oldval));
++
++	      /* For such immediates, ADDS needs the source and destination regs
++		 to be the same.
++
++		 Normally this would be handled by RA, but this is all happening
++		 after RA.  */
++	      emit_move_insn (neg_bval, rval);
++	      src = neg_bval;
++	    }
++
++	  emit_unlikely_jump (gen_cbranchsi4_neg_late (neg_bval, src, oldval,
++						       label2, cond));
++	}
+       else
+-	emit_unlikely_jump (gen_cbranchsi4_insn (cond, rval, oldval, label2));
++	{
++	  emit_move_insn (neg_bval, const1_rtx);
++	  emit_unlikely_jump (gen_cbranchsi4_insn (cond, rval, oldval, label2));
++	}
+     }
+ 
+   arm_emit_store_exclusive (mode, neg_bval, mem, newval, use_release);
+@@ -30938,10 +30999,8 @@ arm_can_inline_p (tree caller, tree callee)
    caller_target.isa = sbitmap_alloc (isa_num_bits);
    callee_target.isa = sbitmap_alloc (isa_num_bits);
  
@@ -3286,7 +3329,7 @@ index 4679da75dd8..58afc4a2647 100644
    if (!bitmap_subset_p (callee_target.isa, caller_target.isa))
      can_inline = false;
  
-@@ -31073,7 +31114,7 @@ arm_valid_target_attribute_tree (tree args, struct gcc_options *opts,
+@@ -31073,7 +31132,7 @@ arm_valid_target_attribute_tree (tree args, struct gcc_options *opts,
      return NULL_TREE;
  
    cl_target_option_save (&cl_opts, opts);
@@ -3295,7 +3338,7 @@ index 4679da75dd8..58afc4a2647 100644
    arm_option_check_internal (opts);
    /* Do any overrides, such as global options arch=xxx.
       We do this since arm_active_target was overridden.  */
-@@ -31188,7 +31229,7 @@ arm_identify_fpu_from_isa (sbitmap isa)
+@@ -31188,7 +31247,7 @@ arm_identify_fpu_from_isa (sbitmap isa)
    auto_sbitmap fpubits (isa_num_bits);
    auto_sbitmap cand_fpubits (isa_num_bits);
  
@@ -3304,7 +3347,7 @@ index 4679da75dd8..58afc4a2647 100644
  
    /* If there are no ISA feature bits relating to the FPU, we must be
       doing soft-float.  */
-@@ -31219,44 +31260,7 @@ arm_declare_function_name (FILE *stream, const char *name, tree decl)
+@@ -31219,44 +31278,7 @@ arm_declare_function_name (FILE *stream, const char *name, tree decl)
      targ_options = TREE_TARGET_OPTION (target_option_current_node);
    gcc_assert (targ_options);
  
@@ -3350,7 +3393,7 @@ index 4679da75dd8..58afc4a2647 100644
  
    fprintf (stream, "\t.syntax unified\n");
  
-@@ -31274,16 +31278,6 @@ arm_declare_function_name (FILE *stream, const char *name, tree decl)
+@@ -31274,16 +31296,6 @@ arm_declare_function_name (FILE *stream, const char *name, tree decl)
    else
      fprintf (stream, "\t.arm\n");
  
@@ -3367,7 +3410,7 @@ index 4679da75dd8..58afc4a2647 100644
    if (TARGET_POKE_FUNCTION_NAME)
      arm_poke_function_name (stream, (const char *) name);
  }
-@@ -31934,28 +31928,28 @@ arm_test_cpu_arch_data (void)
+@@ -31934,28 +31946,28 @@ arm_test_cpu_arch_data (void)
  static void
  arm_test_fpu_data (void)
  {
@@ -3404,6 +3447,107 @@ index 4679da75dd8..58afc4a2647 100644
      }
  }
  
+diff --git a/gcc/config/arm/sync.md b/gcc/config/arm/sync.md
+index 0e777a92bb4..693a802c292 100644
+--- a/gcc/config/arm/sync.md
++++ b/gcc/config/arm/sync.md
+@@ -187,20 +187,20 @@
+ ;; Constraints of this pattern must be at least as strict as those of the
+ ;; cbranchsi operations in thumb1.md and aim to be as permissive.
+ (define_insn_and_split "@atomic_compare_and_swap<CCSI:arch><NARROW:mode>_1"
+-  [(set (match_operand:CCSI 0 "cc_register_operand" "=&c,&l,&l,&l")	;; bool out
++  [(set (match_operand:CCSI 0 "cc_register_operand" "=&c,&l,&l")	;; bool out
+ 	(unspec_volatile:CCSI [(const_int 0)] VUNSPEC_ATOMIC_CAS))
+-   (set (match_operand:SI 1 "s_register_operand" "=&r,&l,&0,&l*h")	;; val out
++   (set (match_operand:SI 1 "s_register_operand" "=&r,&l,&l*h")	;; val out
+ 	(zero_extend:SI
+-	  (match_operand:NARROW 2 "mem_noofs_operand" "+Ua,Ua,Ua,Ua")))	;; memory
++	  (match_operand:NARROW 2 "mem_noofs_operand" "+Ua,Ua,Ua")))	;; memory
+    (set (match_dup 2)
+ 	(unspec_volatile:NARROW
+-	  [(match_operand:SI 3 "arm_add_operand" "rIL,lIL*h,J,*r")	;; expected
+-	   (match_operand:NARROW 4 "s_register_operand" "r,r,r,r")	;; desired
++	  [(match_operand:SI 3 "arm_add_operand" "rIL,lILJ*h,*r")	;; expected
++	   (match_operand:NARROW 4 "s_register_operand" "r,r,r")	;; desired
+ 	   (match_operand:SI 5 "const_int_operand")		;; is_weak
+ 	   (match_operand:SI 6 "const_int_operand")		;; mod_s
+ 	   (match_operand:SI 7 "const_int_operand")]		;; mod_f
+ 	  VUNSPEC_ATOMIC_CAS))
+-   (clobber (match_scratch:SI 8 "=&r,X,X,X"))]
++   (clobber (match_scratch:SI 8 "=&r,X,X"))]
+   "<sync_predtab>"
+   "#"
+   "&& reload_completed"
+@@ -209,7 +209,7 @@
+     arm_split_compare_and_swap (operands);
+     DONE;
+   }
+-  [(set_attr "arch" "32,v8mb,v8mb,v8mb")])
++  [(set_attr "arch" "32,v8mb,v8mb")])
+ 
+ (define_mode_attr cas_cmp_operand
+   [(SI "arm_add_operand") (DI "cmpdi_operand")])
+@@ -219,19 +219,19 @@
+ ;; Constraints of this pattern must be at least as strict as those of the
+ ;; cbranchsi operations in thumb1.md and aim to be as permissive.
+ (define_insn_and_split "@atomic_compare_and_swap<CCSI:arch><SIDI:mode>_1"
+-  [(set (match_operand:CCSI 0 "cc_register_operand" "=&c,&l,&l,&l")	;; bool out
++  [(set (match_operand:CCSI 0 "cc_register_operand" "=&c,&l,&l")	;; bool out
+ 	(unspec_volatile:CCSI [(const_int 0)] VUNSPEC_ATOMIC_CAS))
+-   (set (match_operand:SIDI 1 "s_register_operand" "=&r,&l,&0,&l*h")	;; val out
+-	(match_operand:SIDI 2 "mem_noofs_operand" "+Ua,Ua,Ua,Ua"))	;; memory
++   (set (match_operand:SIDI 1 "s_register_operand" "=&r,&l,&l*h")	;; val out
++	(match_operand:SIDI 2 "mem_noofs_operand" "+Ua,Ua,Ua"))	;; memory
+    (set (match_dup 2)
+ 	(unspec_volatile:SIDI
+-	  [(match_operand:SIDI 3 "<cas_cmp_operand>" "<cas_cmp_str>,lIL*h,J,*r") ;; expect
+-	   (match_operand:SIDI 4 "s_register_operand" "r,r,r,r")	;; desired
++	  [(match_operand:SIDI 3 "<cas_cmp_operand>" "<cas_cmp_str>,lILJ*h,*r") ;; expect
++	   (match_operand:SIDI 4 "s_register_operand" "r,r,r")	;; desired
+ 	   (match_operand:SI 5 "const_int_operand")		;; is_weak
+ 	   (match_operand:SI 6 "const_int_operand")		;; mod_s
+ 	   (match_operand:SI 7 "const_int_operand")]		;; mod_f
+ 	  VUNSPEC_ATOMIC_CAS))
+-   (clobber (match_scratch:SI 8 "=&r,X,X,X"))]
++   (clobber (match_scratch:SI 8 "=&r,X,X"))]
+   "<sync_predtab>"
+   "#"
+   "&& reload_completed"
+@@ -240,7 +240,7 @@
+     arm_split_compare_and_swap (operands);
+     DONE;
+   }
+-  [(set_attr "arch" "32,v8mb,v8mb,v8mb")])
++  [(set_attr "arch" "32,v8mb,v8mb")])
+ 
+ (define_insn_and_split "atomic_exchange<mode>"
+   [(set (match_operand:QHSD 0 "s_register_operand" "=&r,&r")	;; output
+diff --git a/gcc/config/arm/thumb1.md b/gcc/config/arm/thumb1.md
+index 8f051f87c0f..edbeb7340d4 100644
+--- a/gcc/config/arm/thumb1.md
++++ b/gcc/config/arm/thumb1.md
+@@ -1242,6 +1242,21 @@
+    (set_attr "type" "multiple")]
+ )
+ 
++;; An expander which makes use of the cbranchsi4_scratch insn, but can
++;; be used safely after RA.
++(define_expand "cbranchsi4_neg_late"
++  [(parallel [
++     (set (pc) (if_then_else
++		(match_operator 4 "arm_comparison_operator"
++		 [(match_operand:SI 1 "s_register_operand")
++		  (match_operand:SI 2 "thumb1_cmpneg_operand")])
++		(label_ref (match_operand 3 "" ""))
++		(pc)))
++     (clobber (match_operand:SI 0 "s_register_operand"))
++  ])]
++  "TARGET_THUMB1"
++)
++
+ ;; Changes to the constraints of this pattern must be propagated to those of
+ ;; atomic compare_and_swap splitters in sync.md.  These must be at least as
+ ;; strict as the constraints here and aim to be as permissive.
 diff --git a/gcc/config/i386/avx512dqintrin.h b/gcc/config/i386/avx512dqintrin.h
 index f0c18fb45fb..c080c2041fa 100644
 --- a/gcc/config/i386/avx512dqintrin.h
@@ -7542,6 +7686,20 @@ index bd505187728..58a6104e8f6 100644
 +   least once.  */
 +/* { dg-final { scan-assembler "\.fpu\\s+vfp\n" } } */
 +/* { dg-final { scan-assembler "\.fpu\\s+neon-vfpv4\n" } } */
+diff --git a/gcc/testsuite/gcc.target/arm/pr99977.c b/gcc/testsuite/gcc.target/arm/pr99977.c
+new file mode 100644
+index 00000000000..db330e4a4a3
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/arm/pr99977.c
+@@ -0,0 +1,8 @@
++/* { dg-do compile } */
++/* { dg-require-effective-target arm_arch_v8m_base_ok } */
++/* { dg-options "-O2" } */
++/* { dg-add-options arm_arch_v8m_base } */
++_Bool f1(int *p) { return __sync_bool_compare_and_swap (p, -1, 2); }
++_Bool f2(int *p) { return __sync_bool_compare_and_swap (p, -8, 2); }
++int g1(int *p) { return __sync_val_compare_and_swap (p, -1, 2); }
++int g2(int *p) { return __sync_val_compare_and_swap (p, -8, 3); }
 diff --git a/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c b/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c
 index 174be85f3f7..7e63cf53013 100644
 --- a/gcc/testsuite/gcc.target/arm/pragma_fpu_attribute.c
