@@ -22,7 +22,8 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (301):
+GCC Administrator (302):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2212,10 +2213,23 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..6a7430d71fe 100644
+index 7558c0a369e..5440c2ca881 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,467 @@
+@@ -1,3 +1,480 @@
++2022-04-06  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99977
++	* config/arm/arm.c (arm_split_compare_and_swap): Fix up codegen
++	with negative immediates: ensure we expand cbranchsi4_scratch
++	correctly and ensure we satisfy its constraints.
++	* config/arm/sync.md
++	(@atomic_compare_and_swap<CCSI:arch><NARROW:mode>_1): Don't
++	attempt to tie two output operands together with constraints;
++	collapse two alternatives.
++	(@atomic_compare_and_swap<CCSI:arch><SIDI:mode>_1): Likewise.
++	* config/arm/thumb1.md (cbranchsi4_neg_late): New.
++
 +2022-03-30  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backported from master:
@@ -6404,10 +6418,15 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..ecd28449b07 100644
+index 47eac19a1f6..29535de3dd8 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,572 @@
+@@ -1,3 +1,577 @@
++2022-04-06  Alex Coplan  <alex.coplan@arm.com>
++
++	PR target/99977
++	* gcc.target/arm/pr99977.c: New test.
++
 +2022-03-30  Martin Jambor  <mjambor@suse.cz>
 +
 +	Backported from master:
