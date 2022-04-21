@@ -22,7 +22,24 @@ Eric Botcazou (5):
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
 
-GCC Administrator (302):
+Fritz Reese (1):
+      fortran: Fix conv of UNION constructors [PR105310]
+
+GCC Administrator (316):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -6172,7 +6189,7 @@ index fb957d187d3..99772db9ca1 100644
  
    /* Dummy PDT 'len' parameters should be checked when they are explicit.  */
 diff --git a/gcc/fortran/trans-expr.c b/gcc/fortran/trans-expr.c
-index 9be8dd185bf..e240441ac2c 100644
+index 9be8dd185bf..34f8a1abdba 100644
 --- a/gcc/fortran/trans-expr.c
 +++ b/gcc/fortran/trans-expr.c
 @@ -1655,8 +1655,9 @@ gfc_trans_class_init_assign (gfc_code *code)
@@ -6260,6 +6277,17 @@ index 9be8dd185bf..e240441ac2c 100644
  		    if (tmp != NULL_TREE)
  		      gfc_add_expr_to_block (&se->pre, tmp);
  		  }
+@@ -8423,8 +8447,8 @@ gfc_trans_structure_assign (tree dest, gfc_expr * expr, bool init, bool coarray)
+   return gfc_finish_block (&block);
+ }
+ 
+-void
+-gfc_conv_union_initializer (vec<constructor_elt, va_gc> *v,
++static void
++gfc_conv_union_initializer (vec<constructor_elt, va_gc> *&v,
+                             gfc_component *un, gfc_expr *init)
+ {
+   gfc_constructor *ctor;
 @@ -10806,7 +10830,8 @@ gfc_trans_assignment_1 (gfc_expr * expr1, gfc_expr * expr2, bool init_flag,
  		       || gfc_is_class_array_ref (expr1, NULL)
  		       || gfc_is_class_scalar_expr (expr1)
@@ -8952,6 +8980,55 @@ index 00000000000..913426804f3
 +         A = [ (REC2(I, I+1), I = 1, 10) ]
 +         CALL SUB1(A, 10)
 +       END
+diff --git a/gcc/testsuite/gfortran.dg/dec_union_12.f90 b/gcc/testsuite/gfortran.dg/dec_union_12.f90
+new file mode 100755
+index 00000000000..26671230b05
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/dec_union_12.f90
+@@ -0,0 +1,43 @@
++! { dg-do compile }
++! { dg-options "-std=legacy -ffree-form -finit-local-zero -finit-derived -fdec-structure" }
++!
++! PR fortran/105310
++!
++! Test that gfc_conv_union_initializer does not cause an ICE when called
++! to build the constructor for a field which triggers a vector resize.
++!
++
++program dec_union_12
++  implicit none
++STRUCTURE /foo8u/
++  ! 8 fields
++  INTEGER(4) :: a,b,c,d,e,f,g,h
++  UNION
++  MAP
++  ENDMAP
++  ENDUNION
++ENDSTRUCTURE
++STRUCTURE /foo16u/
++  ! 16 fields
++  INTEGER(4) :: a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p
++  UNION
++  MAP
++  ENDMAP
++  ENDUNION
++ENDSTRUCTURE
++STRUCTURE /foo32u/
++  ! 32 fields
++  INTEGER(4) :: a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p
++  INTEGER(4) :: aa,ab,ac,ad,ae,af,ag,ah,ai,aj,ak,al,am,an,ao,ap
++  UNION
++  MAP
++  ENDMAP
++  ENDUNION
++ENDSTRUCTURE
++  record /foo8u/ bar8u
++  record /foo16u/ bar16u
++  record /foo32u/ bar32u
++  bar8u.a = 1
++  bar16u.a = 1
++  bar32u.a = 1
++end
 diff --git a/gcc/testsuite/gfortran.dg/deferred_character_35.f90 b/gcc/testsuite/gfortran.dg/deferred_character_35.f90
 new file mode 100644
 index 00000000000..c28f52f79ff
