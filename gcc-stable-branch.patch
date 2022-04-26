@@ -25,7 +25,11 @@ Eric Botcazou (5):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (317):
+GCC Administrator (321):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -368,7 +372,7 @@ Harald Anlauf (18):
       Fortran: fix simplification of TRANSFER for zero-sized character array result
       Fortran: reject simplifying TRANSFER for MOLD with storage size 0
 
-Iain Buclaw (16):
+Iain Buclaw (17):
       d: Fix ICE in gimplify_var_or_parm_decl, at gimplify.c:2755 (PR100882)
       d: Respect explicit align(N) type alignment (PR100935)
       d: TypeInfo error when using slice copy on Structs (PR100964)
@@ -385,6 +389,7 @@ Iain Buclaw (16):
       libphobos: Increase size of defaultStackPages on OSX X86_64 targets.
       d: Align methods to MINIMUM_METHOD_BOUNDARY.
       libphobos: Fix definition of stat_t for MIPS64 (PR103604)
+      libphobos: Don't call free on the TLS array in the emutls destroy function.
 
 Jan Hubicka (1):
       Fix looping flag discovery in ipa-pure-const
@@ -10579,10 +10584,20 @@ index 3d2cd287a2e..feac50eb7f2 100644
      in
      {
 diff --git a/libphobos/libdruntime/gcc/emutls.d b/libphobos/libdruntime/gcc/emutls.d
-index 461f20d9e28..72376ecda0f 100644
+index 461f20d9e28..fbc837672a0 100644
 --- a/libphobos/libdruntime/gcc/emutls.d
 +++ b/libphobos/libdruntime/gcc/emutls.d
-@@ -229,9 +229,6 @@ void** emutlsAlloc(shared __emutls_object* obj) nothrow @nogc
+@@ -222,16 +222,13 @@ void** emutlsAlloc(shared __emutls_object* obj) nothrow @nogc
+ }
+ 
+ /*
+- * When a thread has finished, remove the TLS array from the GC
+- * scan list emutlsArrays, free all allocated TLS variables and
+- * finally free the array.
++ * When a thread has finished, free all allocated TLS variables and empty the
++ * array.  The pointer is not free'd as it is stil referenced by the GC scan
++ * list emutlsArrays, which gets destroyed when druntime is unloaded.
+  */
  extern (C) void emutlsDestroyThread(void* ptr) nothrow @nogc
  {
      auto arr = cast(TlsArray*) ptr;
@@ -10592,6 +10607,15 @@ index 461f20d9e28..72376ecda0f 100644
  
      foreach (entry; *arr)
      {
+@@ -239,7 +236,7 @@ extern (C) void emutlsDestroyThread(void* ptr) nothrow @nogc
+             free(entry[-1]);
+     }
+ 
+-    free(arr);
++    arr.length = 0;
+ }
+ 
+ /*
 @@ -308,9 +305,6 @@ void _d_emutls_scan(scope void delegate(void* pbeg, void* pend) nothrow cb) noth
  // Call this after druntime has been unloaded
  void _d_emutls_destroy() nothrow @nogc
