@@ -25,7 +25,8 @@ Eric Botcazou (5):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (322):
+GCC Administrator (323):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -2241,10 +2242,30 @@ index 8148c559489..ccfb75e5120 100644
 -9.4.0
 +9.4.1
 diff --git a/gcc/ChangeLog b/gcc/ChangeLog
-index 7558c0a369e..5440c2ca881 100644
+index 7558c0a369e..3192929d89a 100644
 --- a/gcc/ChangeLog
 +++ b/gcc/ChangeLog
-@@ -1,3 +1,480 @@
+@@ -1,3 +1,500 @@
++2022-04-27  Hongyu Wang  <hongyu.wang@intel.com>
++
++	Backported from master:
++	2022-04-25  Hongyu Wang  <hongyu.wang@intel.com>
++
++	PR target/105339
++	* config/i386/avx512fintrin.h (_mm512_scalef_round_pd):
++	Add parentheses for parameters and djust format.
++	(_mm512_mask_scalef_round_pd): Ditto.
++	(_mm512_maskz_scalef_round_pd): Ditto.
++	(_mm512_scalef_round_ps): Ditto.
++	(_mm512_mask_scalef_round_ps): Ditto.
++	(_mm512_maskz_scalef_round_ps): Ditto.
++	(_mm_scalef_round_sd): Use _mm_undefined_pd.
++	(_mm_scalef_round_ss): Use _mm_undefined_ps.
++	(_mm_mask_scalef_round_sd): New macro.
++	(_mm_mask_scalef_round_ss): Ditto.
++	(_mm_maskz_scalef_round_sd): Ditto.
++	(_mm_maskz_scalef_round_ss): Ditto.
++
 +2022-04-06  Alex Coplan  <alex.coplan@arm.com>
 +
 +	PR target/99977
@@ -6562,10 +6583,18 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..2d2c834c1f1 100644
+index 47eac19a1f6..b056aef6435 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,585 @@
+@@ -1,3 +1,593 @@
++2022-04-27  Hongyu Wang  <hongyu.wang@intel.com>
++
++	Backported from master:
++	2022-04-25  Hongyu Wang  <hongyu.wang@intel.com>
++
++	PR target/105339
++	* gcc.target/i386/sse-14.c: Add tests for new macro.
++
 +2022-04-21  Fritz Reese  <foreese@gcc.gnu.org>
 +
 +	Backported from master:
