@@ -25,7 +25,15 @@ Eric Botcazou (5):
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (323):
+GCC Administrator (331):
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -476,7 +484,7 @@ Paul Thomas (9):
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
 
-Richard Biener (16):
+Richard Biener (20):
       Bump BASE-VER to 9.4.1
       middle-end/100509 - avoid folding constant to aggregate type
       tree-optimization/100934 - properly mark irreducible regions for DOM
@@ -493,6 +501,10 @@ Richard Biener (16):
       tree-optimization/96522 - transfer of flow-sensitive info in copy_ref_info
       tree-optimization/97043 - fix latent wrong-code with SLP vectorization
       target/104453 - guard call folding with NULL LHS
+      middle-end/100786 - constant folding from incompatible alias
+      tree-optimization/103361 - fix unroll-and-jam direction vector handling
+      middle-end/104786 - ICE with asm and VLA
+      tree-optimization/105070 - annotate bit cluster tests with locations
 
 Richard Earnshaw (5):
       arm: Remove use of opts_set in arm_configure_build_target [PR100767]
@@ -518,6 +530,9 @@ Thomas Schwinge (3):
       Restore 'gcc.dg/pr78213.c' testing
       Fix up 'gcc.dg/pr78213.c' for '--enable-checking=release' etc.
       Fix 'OMP_CLAUSE_TILE' operands handling in 'gcc/tree.c:walk_tree_1'
+
+Tom de Vries (1):
+      debug: fix switch lowering debug info
 
 Uros Bizjak (3):
       i386: Prevent unwanted combine from LZCNT to BSR [PR101175]
@@ -2807,6 +2822,21 @@ index 882802a19e4..acfb60c3e37 100644
  
        TYPE_POINTER_TO (old_type) = NULL_TREE;
        TYPE_REFERENCE_TO (old_type) = NULL_TREE;
+diff --git a/gcc/cfgexpand.c b/gcc/cfgexpand.c
+index 26b6bf3e6c6..b1535e15d28 100644
+--- a/gcc/cfgexpand.c
++++ b/gcc/cfgexpand.c
+@@ -3168,7 +3168,9 @@ expand_asm_stmt (gasm *stmt)
+ 		    && GET_MODE (DECL_RTL (val)) != TYPE_MODE (type)))
+ 	  || ! allows_reg
+ 	  || is_inout
+-	  || TREE_ADDRESSABLE (type))
++	  || TREE_ADDRESSABLE (type)
++	  || (!tree_fits_poly_int64_p (TYPE_SIZE (type))
++	      && !known_size_p (max_int_size_in_bytes (type))))
+ 	{
+ 	  op = expand_expr (val, NULL_RTX, VOIDmode,
+ 			    !allows_reg ? EXPAND_MEMORY : EXPAND_WRITE);
 diff --git a/gcc/combine.c b/gcc/combine.c
 index d82161e5161..9fc3c8d5e00 100644
 --- a/gcc/combine.c
@@ -6462,10 +6492,21 @@ index 1b51e870f04..729f933ac11 100644
  	  gfc_add_block_to_block (&se->post, &arg1se.post);
  	  gfc_add_block_to_block (&se->pre, &arg2se.pre);
 diff --git a/gcc/gimple-fold.c b/gcc/gimple-fold.c
-index 408b93b2200..aea4ea0c6e8 100644
+index 408b93b2200..0166fdae0c0 100644
 --- a/gcc/gimple-fold.c
 +++ b/gcc/gimple-fold.c
-@@ -434,7 +434,8 @@ fold_gimple_assign (gimple_stmt_iterator *si)
+@@ -274,7 +274,9 @@ get_symbol_constant_value (tree sym)
+       if (val)
+ 	{
+ 	  val = canonicalize_constructor_val (unshare_expr (val), sym);
+-	  if (val && is_gimple_min_invariant (val))
++	  if (val
++	      && is_gimple_min_invariant (val)
++	      && useless_type_conversion_p (TREE_TYPE (sym), TREE_TYPE (val)))
+ 	    return val;
+ 	  else
+ 	    return NULL_TREE;
+@@ -434,7 +436,8 @@ fold_gimple_assign (gimple_stmt_iterator *si)
  					   CONSTRUCTOR_ELTS (rhs));
  	  }
  
@@ -6491,6 +6532,23 @@ index b188ce86d5e..d10089b8c22 100644
  	    return false;
  	}
      }
+diff --git a/gcc/gimple-loop-jam.c b/gcc/gimple-loop-jam.c
+index 236349e36ba..4a1d42d98a9 100644
+--- a/gcc/gimple-loop-jam.c
++++ b/gcc/gimple-loop-jam.c
+@@ -404,10 +404,10 @@ adjust_unroll_factor (class loop *inner, struct data_dependence_relation *ddr,
+ 	     a >= N, or b > 0, or b is zero and a > 0.  Otherwise the unroll
+ 	     factor needs to be limited so that the first condition holds.
+ 	     That may limit the factor down to zero in the worst case.  */
+-	  int dist = dist_v[0];
++	  lambda_int dist = dist_v[0];
+ 	  if (dist < 0)
+ 	    gcc_unreachable ();
+-	  else if ((unsigned)dist >= *unroll)
++	  else if (dist >= (lambda_int)*unroll)
+ 	    ;
+ 	  else if (lambda_vector_zerop (dist_v + 1, DDR_NB_LOOPS (ddr) - 1))
+ 	    {
 diff --git a/gcc/gimple-ssa-evrp-analyze.c b/gcc/gimple-ssa-evrp-analyze.c
 index bb4e2d6e798..3a6956c59c6 100644
 --- a/gcc/gimple-ssa-evrp-analyze.c
@@ -7180,6 +7238,30 @@ index 47eac19a1f6..b056aef6435 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/gcc/testsuite/g++.dg/torture/pr103361.C b/gcc/testsuite/g++.dg/torture/pr103361.C
+new file mode 100644
+index 00000000000..ec1d6e1bae4
+--- /dev/null
++++ b/gcc/testsuite/g++.dg/torture/pr103361.C
+@@ -0,0 +1,18 @@
++/* { dg-do compile } */
++/* { dg-additional-options "-floop-unroll-and-jam" } */
++
++char a, b;
++extern unsigned short c[];
++extern bool d[];
++const unsigned short &e(const unsigned short &f, const unsigned short &g) {
++  if (g < f)
++    return g;
++  return f;
++}
++void k() {
++  for (int h = 0; b; h += 3)
++    for (unsigned long i = 0; i < 11104842004558084287ULL;
++         i += -11104842004558084300ULL)
++      for (bool j(e(6, e(6, c[h + i]))); j < (bool)a; j = 7)
++        d[7] = 0;
++}
 diff --git a/gcc/testsuite/gcc.c-torture/execute/bitfld-10.c b/gcc/testsuite/gcc.c-torture/execute/bitfld-10.c
 new file mode 100644
 index 00000000000..bdbf5733ce7
@@ -7426,6 +7508,20 @@ index 00000000000..da6232d21ee
 +int c;
 +
 +void div_csa() { c /= sa; }
+diff --git a/gcc/testsuite/gcc.dg/pr104786.c b/gcc/testsuite/gcc.dg/pr104786.c
+new file mode 100644
+index 00000000000..3076d236d21
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/pr104786.c
+@@ -0,0 +1,8 @@
++/* { dg-do compile } */
++/* { dg-options "-std=gnu90" } */
++
++void h(void *di, int num)
++{
++  char (*t)[num] = di;
++  __asm__ ("" : "=X"( *t));
++}
 diff --git a/gcc/testsuite/gcc.dg/pr78213.c b/gcc/testsuite/gcc.dg/pr78213.c
 index ebc2cce78f4..04bf0381f76 100644
 --- a/gcc/testsuite/gcc.dg/pr78213.c
@@ -7506,6 +7602,21 @@ index 00000000000..cc62e71f9a3
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.dg/torture/pr100786.c b/gcc/testsuite/gcc.dg/torture/pr100786.c
+new file mode 100644
+index 00000000000..42f4e485593
+--- /dev/null
++++ b/gcc/testsuite/gcc.dg/torture/pr100786.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++
++const double a = 0;
++extern int b __attribute__((alias("a")));
++void inc() { b++; }
++
++const int a2 = 0;
++extern double b2 __attribute__((alias("a2")));
++void inc2() { b2+=1; }
 diff --git a/gcc/testsuite/gcc.dg/torture/pr100934.c b/gcc/testsuite/gcc.dg/torture/pr100934.c
 new file mode 100644
 index 00000000000..43b78849895
@@ -9862,6 +9973,19 @@ index d4b053d68e1..36a4d6f06d5 100644
  	  && (!SSA_NAME_VAR (value) || DECL_IGNORED_P (SSA_NAME_VAR (value)))
  	  && !DECL_IGNORED_P (SSA_NAME_VAR (ssa_name)))
  	{
+diff --git a/gcc/tree-data-ref.c b/gcc/tree-data-ref.c
+index 8aa4e39b5b9..81b0229c6db 100644
+--- a/gcc/tree-data-ref.c
++++ b/gcc/tree-data-ref.c
+@@ -391,7 +391,7 @@ print_lambda_vector (FILE * outfile, lambda_vector vector, int n)
+   int i;
+ 
+   for (i = 0; i < n; i++)
+-    fprintf (outfile, "%3d ", (int)vector[i]);
++    fprintf (outfile, HOST_WIDE_INT_PRINT_DEC " ", vector[i]);
+   fprintf (outfile, "\n");
+ }
+ 
 diff --git a/gcc/tree-eh.c b/gcc/tree-eh.c
 index c8063486f2d..426f0a12ef7 100644
 --- a/gcc/tree-eh.c
@@ -10092,6 +10216,178 @@ index 066a0559b71..ccd3e1c4cc7 100644
  	    }
  	  else if (INTEGRAL_TYPE_P (TREE_TYPE (lhs))
  		   && SSA_NAME_RANGE_INFO (lhs)
+diff --git a/gcc/tree-switch-conversion.c b/gcc/tree-switch-conversion.c
+index dd6dd8064de..32c5f794ff2 100644
+--- a/gcc/tree-switch-conversion.c
++++ b/gcc/tree-switch-conversion.c
+@@ -1120,7 +1120,8 @@ group_cluster::dump (FILE *f, bool details)
+ 
+ void
+ jump_table_cluster::emit (tree index_expr, tree,
+-			  tree default_label_expr, basic_block default_bb)
++			  tree default_label_expr, basic_block default_bb,
++			  location_t loc)
+ {
+   unsigned HOST_WIDE_INT range = get_range (get_low (), get_high ());
+   unsigned HOST_WIDE_INT nondefault_range = 0;
+@@ -1139,6 +1140,7 @@ jump_table_cluster::emit (tree index_expr, tree,
+ 
+   gswitch *s = gimple_build_switch (index_expr,
+ 				    unshare_expr (default_label_expr), labels);
++  gimple_set_location (s, loc);
+   gimple_stmt_iterator gsi = gsi_start_bb (m_case_bb);
+   gsi_insert_after (&gsi, s, GSI_NEW_STMT);
+ 
+@@ -1478,7 +1480,7 @@ case_bit_test::cmp (const void *p1, const void *p2)
+ 
+ void
+ bit_test_cluster::emit (tree index_expr, tree index_type,
+-			tree, basic_block default_bb)
++			tree, basic_block default_bb, location_t loc)
+ {
+   struct case_bit_test test[m_max_case_bit_tests] = { {} };
+   unsigned int i, j, k;
+@@ -1572,9 +1574,9 @@ bit_test_cluster::emit (tree index_expr, tree index_type,
+   gsi = gsi_last_bb (m_case_bb);
+ 
+   /* idx = (unsigned)x - minval.  */
+-  idx = fold_convert (unsigned_index_type, index_expr);
+-  idx = fold_build2 (MINUS_EXPR, unsigned_index_type, idx,
+-		     fold_convert (unsigned_index_type, minval));
++  idx = fold_convert_loc (loc, unsigned_index_type, index_expr);
++  idx = fold_build2_loc (loc, MINUS_EXPR, unsigned_index_type, idx,
++			 fold_convert_loc (loc, unsigned_index_type, minval));
+   idx = force_gimple_operand_gsi (&gsi, idx,
+ 				  /*simple=*/true, NULL_TREE,
+ 				  /*before=*/true, GSI_SAME_STMT);
+@@ -1587,17 +1589,17 @@ bit_test_cluster::emit (tree index_expr, tree index_type,
+ 				    fold_convert (unsigned_index_type, range),
+ 				    /*simple=*/true, NULL_TREE,
+ 				    /*before=*/true, GSI_SAME_STMT);
+-      tmp = fold_build2 (GT_EXPR, boolean_type_node, idx, range);
++      tmp = fold_build2_loc (loc, GT_EXPR, boolean_type_node, idx, range);
+       basic_block new_bb
+ 	= hoist_edge_and_branch_if_true (&gsi, tmp, default_bb,
+-					 profile_probability::unlikely ());
++					 profile_probability::unlikely (), loc);
+       gsi = gsi_last_bb (new_bb);
+     }
+ 
+   /* csui = (1 << (word_mode) idx) */
+   csui = make_ssa_name (word_type_node);
+-  tmp = fold_build2 (LSHIFT_EXPR, word_type_node, word_mode_one,
+-		     fold_convert (word_type_node, idx));
++  tmp = fold_build2_loc (loc, LSHIFT_EXPR, word_type_node, word_mode_one,
++			 fold_convert_loc (loc, word_type_node, idx));
+   tmp = force_gimple_operand_gsi (&gsi, tmp,
+ 				  /*simple=*/false, NULL_TREE,
+ 				  /*before=*/true, GSI_SAME_STMT);
+@@ -1615,13 +1617,15 @@ bit_test_cluster::emit (tree index_expr, tree index_type,
+ 							 bt_range);
+       bt_range -= test[k].bits;
+       tmp = wide_int_to_tree (word_type_node, test[k].mask);
+-      tmp = fold_build2 (BIT_AND_EXPR, word_type_node, csui, tmp);
++      tmp = fold_build2_loc (loc, BIT_AND_EXPR, word_type_node, csui, tmp);
+       tmp = force_gimple_operand_gsi (&gsi, tmp,
+ 				      /*simple=*/true, NULL_TREE,
+ 				      /*before=*/true, GSI_SAME_STMT);
+-      tmp = fold_build2 (NE_EXPR, boolean_type_node, tmp, word_mode_zero);
++      tmp = fold_build2_loc (loc, NE_EXPR, boolean_type_node,
++			     tmp, word_mode_zero);
+       basic_block new_bb
+-	= hoist_edge_and_branch_if_true (&gsi, tmp, test[k].target_bb, prob);
++	= hoist_edge_and_branch_if_true (&gsi, tmp, test[k].target_bb,
++					 prob, loc);
+       gsi = gsi_last_bb (new_bb);
+     }
+ 
+@@ -1651,7 +1655,8 @@ bit_test_cluster::emit (tree index_expr, tree index_type,
+ basic_block
+ bit_test_cluster::hoist_edge_and_branch_if_true (gimple_stmt_iterator *gsip,
+ 						 tree cond, basic_block case_bb,
+-						 profile_probability prob)
++						 profile_probability prob,
++						 location_t loc)
+ {
+   tree tmp;
+   gcond *cond_stmt;
+@@ -1665,6 +1670,7 @@ bit_test_cluster::hoist_edge_and_branch_if_true (gimple_stmt_iterator *gsip,
+   tmp = force_gimple_operand_gsi (gsip, cond, /*simple=*/true, NULL,
+ 				  /*before=*/true, GSI_SAME_STMT);
+   cond_stmt = gimple_build_cond_from_tree (tmp, NULL_TREE, NULL_TREE);
++  gimple_set_location (cond_stmt, loc);
+   gsi_insert_before (gsip, cond_stmt, GSI_SAME_STMT);
+ 
+   e_false = split_block (split_bb, cond_stmt);
+@@ -1844,7 +1850,8 @@ switch_decision_tree::try_switch_expansion (vec<cluster *> &clusters)
+     {
+       cluster *c = clusters[0];
+       c->emit (index_expr, index_type,
+-	       gimple_switch_default_label (m_switch), m_default_bb);
++	       gimple_switch_default_label (m_switch), m_default_bb,
++	       gimple_location (m_switch));
+       redirect_edge_succ (single_succ_edge (bb), c->m_case_bb);
+     }
+   else
+@@ -1856,7 +1863,7 @@ switch_decision_tree::try_switch_expansion (vec<cluster *> &clusters)
+ 	if (clusters[i]->get_type () != SIMPLE_CASE)
+ 	  clusters[i]->emit (index_expr, index_type,
+ 			     gimple_switch_default_label (m_switch),
+-			     m_default_bb);
++			     m_default_bb, gimple_location (m_switch));
+     }
+ 
+   fix_phi_operands_for_edges ();
+diff --git a/gcc/tree-switch-conversion.h b/gcc/tree-switch-conversion.h
+index b3bc4b9ddf7..e174b47e191 100644
+--- a/gcc/tree-switch-conversion.h
++++ b/gcc/tree-switch-conversion.h
+@@ -70,7 +70,7 @@ struct cluster
+   virtual void dump (FILE *f, bool details = false) = 0;
+ 
+   /* Emit GIMPLE code to handle the cluster.  */
+-  virtual void emit (tree, tree, tree, basic_block) = 0;
++  virtual void emit (tree, tree, tree, basic_block, location_t) = 0;
+ 
+   /* Return true if a cluster handles only a single case value and the
+      value is not a range.  */
+@@ -163,7 +163,7 @@ struct simple_cluster: public cluster
+     fprintf (f, " ");
+   }
+ 
+-  void emit (tree, tree, tree, basic_block)
++  void emit (tree, tree, tree, basic_block, location_t)
+   {
+     gcc_unreachable ();
+   }
+@@ -247,7 +247,7 @@ struct jump_table_cluster: public group_cluster
+   }
+ 
+   void emit (tree index_expr, tree index_type,
+-	     tree default_label_expr, basic_block default_bb);
++	     tree default_label_expr, basic_block default_bb, location_t loc);
+ 
+   /* Find jump tables of given CLUSTERS, where all members of the vector
+      are of type simple_cluster.  New clusters are returned.  */
+@@ -370,7 +370,7 @@ struct bit_test_cluster: public group_cluster
+     There *MUST* be max_case_bit_tests or less unique case
+     node targets.  */
+   void emit (tree index_expr, tree index_type,
+-	     tree default_label_expr, basic_block default_bb);
++	     tree default_label_expr, basic_block default_bb, location_t loc);
+ 
+   /* Find bit tests of given CLUSTERS, where all members of the vector
+      are of type simple_cluster.  New clusters are returned.  */
+@@ -411,7 +411,8 @@ struct bit_test_cluster: public group_cluster
+   static basic_block hoist_edge_and_branch_if_true (gimple_stmt_iterator *gsip,
+ 						    tree cond,
+ 						    basic_block case_bb,
+-						    profile_probability prob);
++						    profile_probability prob,
++						    location_t);
+ 
+   /* True when the jump table handles an entire switch statement.  */
+   bool m_handles_entire_switch;
 diff --git a/gcc/tree-vect-data-refs.c b/gcc/tree-vect-data-refs.c
 index f2e1766432b..6d3806fc334 100644
 --- a/gcc/tree-vect-data-refs.c
