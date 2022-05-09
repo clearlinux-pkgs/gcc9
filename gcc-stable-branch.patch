@@ -418,7 +418,7 @@ John David Anglin (5):
       Don't use 'G' constraint in integer move patterns
       Fix warnings building linux-atomic.c and fptr.c on hppa64-linux
 
-Jonathan Wakely (28):
+Jonathan Wakely (44):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -447,6 +447,22 @@ Jonathan Wakely (28):
       libstdc++: Fix range access for empty std::valarray [PR103022]
       libstdc++: Fix circular dependency for bitmap_allocator [PR103381]
       aarch64: Fix mismatched extern "C" block [PR100985]
+      libstdc++: Deprecate __gnu_cxx::rope::erase(size_type) [PR102048]
+      libstdc++: Fix incorrect IS number in doc comment
+      libstdc++: Fix mismatched noexcept-specifiers in Filesystem TS
+      libstdc++: Rename non-reserved macros in config header [PR103650]
+      libstdc++: Fix example preprocessor command in FAQ [PR103877]
+      libstdc++: Initialize member in std::match_results [PR103549]
+      libstdc++: Add missing header to test
+      libstdc++: Do not allocate a zero-size vector<bool> [PR 100153]
+      libstdc++: Add additional overload of std::lerp [PR101870]
+      libstdc++: Fix undefined behaviour in std::string
+      libstdc++: Test errno macros directly, not via autoconf [PR 93151]
+      libstdc++: Test errno macros directly for all targets [PR 93151]
+      libstdc++: Fix std::exception_ptr regressions [PR103630]
+      libstdc++: Remove un-implementable noexcept from Filesystem TS operations
+      libstdc++: Fix test that fails for C++98 mode
+      libstdc++: Fix deserialization for std::normal_distribution [PR105502]
 
 Kewen Lin (3):
       ipa-fnsummary: Remove inconsistent bp_pack_value
@@ -486,6 +502,9 @@ Paul Thomas (9):
       Fortran: Improve resolution of associate variables. [PR93701].
       Fortran: Fix for class functions as associated target [PR98565].
       Fortran: Correct missing structure constructor comps. [PR97612].
+
+Pavel I. Kryukov (1):
+      libstdc++: Add self-merge check to std::forward_list::merge [PR103853]
 
 Piotr Kubaj (1):
       gcc/configure: Check for powerpc64le*-*-freebsd*
@@ -11700,6 +11719,1251 @@ index 4a898cd27d7..3cf67c719cf 100644
  2021-06-01  Release Manager
  
  	* GCC 9.4.0 released.
+diff --git a/libstdc++-v3/acinclude.m4 b/libstdc++-v3/acinclude.m4
+index 93d86d2c363..a41f68790ae 100644
+--- a/libstdc++-v3/acinclude.m4
++++ b/libstdc++-v3/acinclude.m4
+@@ -2322,35 +2322,6 @@ AC_DEFUN([GLIBCXX_CHECK_MATH11_PROTO], [
+   AC_LANG_RESTORE
+ ])
+ 
+-dnl
+-dnl Check whether macros, etc are present for <system_error>
+-dnl
+-AC_DEFUN([GLIBCXX_CHECK_SYSTEM_ERROR], [
+-
+-m4_pushdef([n_syserr], [1])dnl
+-m4_foreach([syserr], [EOWNERDEAD, ENOTRECOVERABLE, ENOLINK, EPROTO, ENODATA,
+-		      ENOSR, ENOSTR, ETIME, EBADMSG, ECANCELED,
+-		      EOVERFLOW, ENOTSUP, EIDRM, ETXTBSY,
+-		      ECHILD, ENOSPC, EPERM,
+-		      ETIMEDOUT, EWOULDBLOCK],
+-[m4_pushdef([SYSERR], m4_toupper(syserr))dnl
+-AC_MSG_CHECKING([for syserr])
+-AC_CACHE_VAL([glibcxx_cv_system_error[]n_syserr], [
+-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <errno.h>]],
+-				   [int i = syserr;])],
+-		  [glibcxx_cv_system_error[]n_syserr=yes],
+-		  [glibcxx_cv_system_error[]n_syserr=no])
+-])
+-AC_MSG_RESULT([$glibcxx_cv_system_error[]n_syserr])
+-if test x"$glibcxx_cv_system_error[]n_syserr" = x"yes"; then
+-  AC_DEFINE([HAVE_]SYSERR, 1, [Define if ]syserr[ exists.])
+-fi
+-m4_define([n_syserr], m4_incr(n_syserr))dnl
+-m4_popdef([SYSERR])dnl
+-])
+-m4_popdef([n_syserr])dnl
+-])
+-
+ dnl
+ dnl Check for what type of C headers to use.
+ dnl
+diff --git a/libstdc++-v3/config.h.in b/libstdc++-v3/config.h.in
+index 1252e0c6f60..79e920c733d 100644
+--- a/libstdc++-v3/config.h.in
++++ b/libstdc++-v3/config.h.in
+@@ -69,66 +69,9 @@
+ /* Define to 1 if you have the <dlfcn.h> header file. */
+ #undef HAVE_DLFCN_H
+ 
+-/* Define if EBADMSG exists. */
+-#undef HAVE_EBADMSG
+-
+-/* Define if ECANCELED exists. */
+-#undef HAVE_ECANCELED
+-
+-/* Define if ECHILD exists. */
+-#undef HAVE_ECHILD
+-
+-/* Define if EIDRM exists. */
+-#undef HAVE_EIDRM
+-
+ /* Define to 1 if you have the <endian.h> header file. */
+ #undef HAVE_ENDIAN_H
+ 
+-/* Define if ENODATA exists. */
+-#undef HAVE_ENODATA
+-
+-/* Define if ENOLINK exists. */
+-#undef HAVE_ENOLINK
+-
+-/* Define if ENOSPC exists. */
+-#undef HAVE_ENOSPC
+-
+-/* Define if ENOSR exists. */
+-#undef HAVE_ENOSR
+-
+-/* Define if ENOSTR exists. */
+-#undef HAVE_ENOSTR
+-
+-/* Define if ENOTRECOVERABLE exists. */
+-#undef HAVE_ENOTRECOVERABLE
+-
+-/* Define if ENOTSUP exists. */
+-#undef HAVE_ENOTSUP
+-
+-/* Define if EOVERFLOW exists. */
+-#undef HAVE_EOVERFLOW
+-
+-/* Define if EOWNERDEAD exists. */
+-#undef HAVE_EOWNERDEAD
+-
+-/* Define if EPERM exists. */
+-#undef HAVE_EPERM
+-
+-/* Define if EPROTO exists. */
+-#undef HAVE_EPROTO
+-
+-/* Define if ETIME exists. */
+-#undef HAVE_ETIME
+-
+-/* Define if ETIMEDOUT exists. */
+-#undef HAVE_ETIMEDOUT
+-
+-/* Define if ETXTBSY exists. */
+-#undef HAVE_ETXTBSY
+-
+-/* Define if EWOULDBLOCK exists. */
+-#undef HAVE_EWOULDBLOCK
+-
+ /* Define to 1 if GCC 4.6 supported std::exception_ptr for the target */
+ #undef HAVE_EXCEPTION_PTR_SINCE_GCC46
+ 
+diff --git a/libstdc++-v3/config/os/djgpp/error_constants.h b/libstdc++-v3/config/os/djgpp/error_constants.h
+index 7b8810d62f1..6540bdb13a0 100644
+--- a/libstdc++-v3/config/os/djgpp/error_constants.h
++++ b/libstdc++-v3/config/os/djgpp/error_constants.h
+@@ -48,7 +48,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       bad_address = 				EFAULT,
+       bad_file_descriptor = 			EBADF,
+ 
+-#ifdef _GLIBCXX_HAVE_EBADMSG
++#ifdef EBADMSG
+       bad_message = 				EBADMSG,
+ #endif
+ 
+@@ -68,7 +68,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       function_not_supported = 			ENOSYS,
+ //    host_unreachable = 			EHOSTUNREACH,
+ 
+-#ifdef _GLIBCXX_HAVE_EIDRM
++#ifdef EIDRM
+       identifier_removed = 			EIDRM,
+ #endif
+ 
+@@ -86,13 +86,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    no_buffer_space = 			ENOBUFS,
+       no_child_process = 			ECHILD,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOLINK
++#ifdef ENOLINK
+       no_link = 				ENOLINK,
+ #endif
+ 
+       no_lock_available = 			ENOLCK,
+ 
+-#ifdef _GLIBCXX_HAVE_ENODATA
++#ifdef ENODATA
+       no_message_available = 			ENODATA,
+ #endif
+ 
+@@ -100,7 +100,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    no_protocol_option = 			ENOPROTOOPT,
+       no_space_on_device = 			ENOSPC,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOSR
++#ifdef ENOSR
+       no_stream_resources = 			ENOSR,
+ #endif
+ 
+@@ -111,18 +111,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       not_a_directory = 			ENOTDIR,
+ //    not_a_socket = 				ENOTSOCK,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOSTR
++#ifdef ENOSTR
+       not_a_stream = 				ENOSTR,
+ #endif
+ 
+ //    not_connected = 				ENOTCONN,
+       not_enough_memory = 			ENOMEM,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOTSUP
++#ifdef ENOTSUP
+       not_supported = 				ENOTSUP,
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ECANCELED
++#ifdef ECANCELED
+       operation_canceled = 			ECANCELED,
+ #endif
+ 
+@@ -131,13 +131,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    operation_not_supported = 		EOPNOTSUPP,
+ //    operation_would_block = 			EWOULDBLOCK,
+ 
+-#ifdef _GLIBCXX_HAVE_EOWNERDEAD
++#ifdef EOWNERDEAD
+       owner_dead = 				EOWNERDEAD,
+ #endif
+ 
+       permission_denied = 			EACCES,
+ 
+-#ifdef _GLIBCXX_HAVE_EPROTO
++#ifdef EPROTO
+       protocol_error = 				EPROTO,
+ #endif
+ 
+@@ -147,15 +147,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       resource_unavailable_try_again = 		EAGAIN,
+       result_out_of_range = 			ERANGE,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOTRECOVERABLE
++#ifdef ENOTRECOVERABLE
+       state_not_recoverable = 			ENOTRECOVERABLE,
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ETIME
++#ifdef ETIME
+       stream_timeout = 				ETIME,
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ETXTBSY
++#ifdef ETXTBSY
+       text_file_busy = 				ETXTBSY,
+ #endif
+ 
+@@ -165,7 +165,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       too_many_links = 				EMLINK,
+       too_many_symbolic_link_levels = 		ELOOP,
+ 
+-#ifdef _GLIBCXX_HAVE_EOVERFLOW
++#ifdef EOVERFLOW
+       value_too_large = 			EOVERFLOW,
+ #endif
+ 
+diff --git a/libstdc++-v3/config/os/generic/error_constants.h b/libstdc++-v3/config/os/generic/error_constants.h
+index 95bef92d4cd..bf4bed28cad 100644
+--- a/libstdc++-v3/config/os/generic/error_constants.h
++++ b/libstdc++-v3/config/os/generic/error_constants.h
+@@ -48,7 +48,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       bad_address = 				EFAULT,
+       bad_file_descriptor = 			EBADF,
+ 
+-#ifdef _GLIBCXX_HAVE_EBADMSG
++#ifdef EBADMSG
+       bad_message = 				EBADMSG,
+ #endif
+ 
+@@ -68,7 +68,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       function_not_supported = 			ENOSYS,
+       host_unreachable = 			EHOSTUNREACH,
+ 
+-#ifdef _GLIBCXX_HAVE_EIDRM
++#ifdef EIDRM
+       identifier_removed = 			EIDRM,
+ #endif
+ 
+@@ -86,13 +86,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       no_buffer_space = 			ENOBUFS,
+       no_child_process = 			ECHILD,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOLINK
++#ifdef ENOLINK
+       no_link = 				ENOLINK,
+ #endif
+ 
+       no_lock_available = 			ENOLCK,
+ 
+-#ifdef _GLIBCXX_HAVE_ENODATA
++#ifdef ENODATA
+       no_message_available = 			ENODATA,
+ #endif
+ 
+@@ -100,7 +100,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       no_protocol_option = 			ENOPROTOOPT,
+       no_space_on_device = 			ENOSPC,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOSR
++#ifdef ENOSR
+       no_stream_resources = 			ENOSR,
+ #endif
+ 
+@@ -111,18 +111,18 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       not_a_directory = 			ENOTDIR,
+       not_a_socket = 				ENOTSOCK,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOSTR
++#ifdef ENOSTR
+       not_a_stream = 				ENOSTR,
+ #endif
+ 
+       not_connected = 				ENOTCONN,
+       not_enough_memory = 			ENOMEM,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOTSUP
++#ifdef ENOTSUP
+       not_supported = 				ENOTSUP,
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ECANCELED
++#ifdef ECANCELED
+       operation_canceled = 			ECANCELED,
+ #endif
+ 
+@@ -131,13 +131,13 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       operation_not_supported = 		EOPNOTSUPP,
+       operation_would_block = 			EWOULDBLOCK,
+ 
+-#ifdef _GLIBCXX_HAVE_EOWNERDEAD
++#ifdef EOWNERDEAD
+       owner_dead = 				EOWNERDEAD,
+ #endif
+ 
+       permission_denied = 			EACCES,
+ 
+-#ifdef _GLIBCXX_HAVE_EPROTO
++#ifdef EPROTO
+       protocol_error = 				EPROTO,
+ #endif
+ 
+@@ -147,15 +147,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       resource_unavailable_try_again = 		EAGAIN,
+       result_out_of_range = 			ERANGE,
+ 
+-#ifdef _GLIBCXX_HAVE_ENOTRECOVERABLE
++#ifdef ENOTRECOVERABLE
+       state_not_recoverable = 			ENOTRECOVERABLE,
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ETIME
++#ifdef ETIME
+       stream_timeout = 				ETIME,
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ETXTBSY
++#ifdef ETXTBSY
+       text_file_busy = 				ETXTBSY,
+ #endif
+ 
+@@ -165,7 +165,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       too_many_links = 				EMLINK,
+       too_many_symbolic_link_levels = 		ELOOP,
+ 
+-#ifdef _GLIBCXX_HAVE_EOVERFLOW
++#ifdef EOVERFLOW
+       value_too_large = 			EOVERFLOW,
+ #endif
+ 
+diff --git a/libstdc++-v3/config/os/mingw32-w64/error_constants.h b/libstdc++-v3/config/os/mingw32-w64/error_constants.h
+index ea893b1f59d..2394a04bd11 100644
+--- a/libstdc++-v3/config/os/mingw32-w64/error_constants.h
++++ b/libstdc++-v3/config/os/mingw32-w64/error_constants.h
+@@ -49,7 +49,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       argument_out_of_domain = 			EDOM,
+       bad_address = 				EFAULT,
+       bad_file_descriptor = 			EBADF,
+-#ifdef _GLIBCXX_HAVE_EBADMSG
++#ifdef EBADMSG
+       bad_message = 				EBADMSG,
+ #endif
+       broken_pipe = 				EPIPE,
+@@ -67,7 +67,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       filename_too_long = 			ENAMETOOLONG,
+       function_not_supported = 			ENOSYS,
+       host_unreachable = 			EHOSTUNREACH,
+-#ifdef _GLIBCXX_HAVE_EIDRM
++#ifdef EIDRM
+       identifier_removed = 			EIDRM,
+ #endif
+       illegal_byte_sequence = 			EILSEQ,
+@@ -82,24 +82,24 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       network_reset = 				ENETRESET,
+       network_unreachable = 			ENETUNREACH,
+       no_buffer_space = 			ENOBUFS,
+-#ifdef _GLIBCXX_HAVE_ECHILD
++#ifdef ECHILD
+       no_child_process = 			ECHILD,
+ #endif
+-#ifdef _GLIBCXX_HAVE_ENOLINK
++#ifdef ENOLINK
+       no_link = 				ENOLINK,
+ #endif
+       no_lock_available = 			ENOLCK,
+-#ifdef _GLIBCXX_HAVE_ENODATA
++#ifdef ENODATA
+       no_message_available = 			ENODATA,
+ #endif
+-#ifdef _GLIBCXX_HAVE_ENOMSG
++#ifdef ENOMSG
+       no_message = 				ENOMSG,
+ #endif
+       no_protocol_option = 			ENOPROTOOPT,
+-#ifdef _GLIBCXX_HAVE_ENOSPC
++#ifdef ENOSPC
+       no_space_on_device = 			ENOSPC,
+ #endif
+-#ifdef _GLIBCXX_HAVE_ENOSR
++#ifdef ENOSR
+       no_stream_resources = 			ENOSR,
+ #endif
+       no_such_device_or_address = 		ENXIO,
+@@ -108,24 +108,24 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       no_such_process = 			ESRCH,
+       not_a_directory = 			ENOTDIR,
+       not_a_socket = 				ENOTSOCK,
+-#ifdef _GLIBCXX_HAVE_ENOSTR
++#ifdef ENOSTR
+       not_a_stream = 				ENOSTR,
+ #endif
+       not_connected = 				ENOTCONN,
+       not_enough_memory = 			ENOMEM,
+-#ifdef _GLIBCXX_HAVE_ENOTSUP
++#ifdef ENOTSUP
+       not_supported = 				ENOTSUP,
+ #endif
+       operation_canceled = 			ECANCELED,
+       operation_in_progress = 			EINPROGRESS,
+-#ifdef _GLIBCXX_HAVE_EPERM
++#ifdef EPERM
+       operation_not_permitted = 		EPERM,
+ #endif
+       operation_not_supported = 		EOPNOTSUPP,
+-#ifdef _GLIBCXX_HAVE_EWOULDBLOCK
++#ifdef EWOULDBLOCK
+       operation_would_block = 			EWOULDBLOCK,
+ #endif
+-#ifdef _GLIBCXX_HAVE_EOWNERDEAD
++#ifdef EOWNERDEAD
+       owner_dead = 				EOWNERDEAD,
+ #endif
+       permission_denied = 			EACCES,
+@@ -135,23 +135,23 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       resource_deadlock_would_occur = 		EDEADLK,
+       resource_unavailable_try_again = 		EAGAIN,
+       result_out_of_range = 			ERANGE,
+-#ifdef _GLIBCXX_HAVE_ENOTRECOVERABLE
++#ifdef ENOTRECOVERABLE
+       state_not_recoverable = 			ENOTRECOVERABLE,
+ #endif
+-#ifdef _GLIBCXX_HAVE_ETIME
++#ifdef ETIME
+       stream_timeout = 				ETIME,
+ #endif
+-#ifdef _GLIBCXX_HAVE_ETXTBSY
++#ifdef ETXTBSY
+       text_file_busy = 				ETXTBSY,
+ #endif
+-#ifdef _GLIBCXX_HAVE_ETIMEDOUT
++#ifdef ETIMEDOUT
+       timed_out = 				ETIMEDOUT,
+ #endif
+       too_many_files_open_in_system = 		ENFILE,
+       too_many_files_open = 			EMFILE,
+       too_many_links = 				EMLINK,
+       too_many_symbolic_link_levels = 		ELOOP,
+-#ifdef _GLIBCXX_HAVE_EOVERFLOW
++#ifdef EOVERFLOW
+       value_too_large = 			EOVERFLOW,
+ #endif
+       wrong_protocol_type = 			EPROTOTYPE
+diff --git a/libstdc++-v3/config/os/mingw32/error_constants.h b/libstdc++-v3/config/os/mingw32/error_constants.h
+index 974c94fa1b1..d8ea420e586 100644
+--- a/libstdc++-v3/config/os/mingw32/error_constants.h
++++ b/libstdc++-v3/config/os/mingw32/error_constants.h
+@@ -78,7 +78,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    network_reset = 				ENETRESET,
+ //    network_unreachable = 			ENETUNREACH,
+ //    no_buffer_space = 			ENOBUFS,
+-#ifdef _GLIBCXX_HAVE_ECHILD
++#ifdef ECHILD
+       no_child_process = 			ECHILD,
+ #endif
+ //    no_link = 				ENOLINK,
+@@ -86,7 +86,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    no_message_available = 			ENODATA,
+ //    no_message = 				ENOMSG,
+ //    no_protocol_option = 			ENOPROTOOPT,
+-#ifdef _GLIBCXX_HAVE_ENOSPC
++#ifdef ENOSPC
+       no_space_on_device = 			ENOSPC,
+ #endif
+ //    no_stream_resources = 			ENOSR,
+@@ -99,16 +99,16 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    not_a_stream = 				ENOSTR,
+ //    not_connected = 				ENOTCONN,
+       not_enough_memory = 			ENOMEM,
+-#ifdef _GLIBCXX_HAVE_ENOTSUP
++#ifdef ENOTSUP
+       not_supported = 				ENOTSUP,
+ #endif
+ //    operation_canceled = 			ECANCELED,
+ //    operation_in_progress = 			EINPROGRESS,
+-#ifdef _GLIBCXX_HAVE_EPERM
++#ifdef EPERM
+       operation_not_permitted = 		EPERM,
+ #endif
+ //    operation_not_supported = 		EOPNOTSUPP,
+-#ifdef _GLIBCXX_HAVE_EWOULDBLOCK
++#ifdef EWOULDBLOCK
+       operation_would_block = 			EWOULDBLOCK,
+ #endif
+ //    owner_dead = 				EOWNERDEAD,
+@@ -122,14 +122,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ //    state_not_recoverable = 			ENOTRECOVERABLE,
+ //    stream_timeout = 				ETIME,
+ //    text_file_busy = 				ETXTBSY,
+-#ifdef _GLIBCXX_HAVE_ETIMEDOUT
++#ifdef ETIMEDOUT
+       timed_out = 				ETIMEDOUT,
+ #endif
+       too_many_files_open_in_system = 		ENFILE,
+       too_many_files_open = 			EMFILE,
+       too_many_links = 				EMLINK
+ //    too_many_symbolic_link_levels = 		ELOOP,
+-#ifdef _GLIBCXX_HAVE_EOVERFLOW
++#ifdef EOVERFLOW
+ 	,
+       value_too_large = 			EOVERFLOW
+ #endif
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+index ec6f7eb00b7..bd393d6e6d3 100755
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -18942,637 +18942,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
+ 
+ 
+ 
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EOWNERDEAD" >&5
+-$as_echo_n "checking for EOWNERDEAD... " >&6; }
+-if ${glibcxx_cv_system_error1+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EOWNERDEAD;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error1=yes
+-else
+-  glibcxx_cv_system_error1=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error1" >&5
+-$as_echo "$glibcxx_cv_system_error1" >&6; }
+-if test x"$glibcxx_cv_system_error1" = x"yes"; then
+-
+-$as_echo "#define HAVE_EOWNERDEAD 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENOTRECOVERABLE" >&5
+-$as_echo_n "checking for ENOTRECOVERABLE... " >&6; }
+-if ${glibcxx_cv_system_error2+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENOTRECOVERABLE;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error2=yes
+-else
+-  glibcxx_cv_system_error2=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error2" >&5
+-$as_echo "$glibcxx_cv_system_error2" >&6; }
+-if test x"$glibcxx_cv_system_error2" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENOTRECOVERABLE 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENOLINK" >&5
+-$as_echo_n "checking for ENOLINK... " >&6; }
+-if ${glibcxx_cv_system_error3+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENOLINK;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error3=yes
+-else
+-  glibcxx_cv_system_error3=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error3" >&5
+-$as_echo "$glibcxx_cv_system_error3" >&6; }
+-if test x"$glibcxx_cv_system_error3" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENOLINK 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EPROTO" >&5
+-$as_echo_n "checking for EPROTO... " >&6; }
+-if ${glibcxx_cv_system_error4+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EPROTO;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error4=yes
+-else
+-  glibcxx_cv_system_error4=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error4" >&5
+-$as_echo "$glibcxx_cv_system_error4" >&6; }
+-if test x"$glibcxx_cv_system_error4" = x"yes"; then
+-
+-$as_echo "#define HAVE_EPROTO 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENODATA" >&5
+-$as_echo_n "checking for ENODATA... " >&6; }
+-if ${glibcxx_cv_system_error5+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENODATA;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error5=yes
+-else
+-  glibcxx_cv_system_error5=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error5" >&5
+-$as_echo "$glibcxx_cv_system_error5" >&6; }
+-if test x"$glibcxx_cv_system_error5" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENODATA 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENOSR" >&5
+-$as_echo_n "checking for ENOSR... " >&6; }
+-if ${glibcxx_cv_system_error6+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENOSR;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error6=yes
+-else
+-  glibcxx_cv_system_error6=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error6" >&5
+-$as_echo "$glibcxx_cv_system_error6" >&6; }
+-if test x"$glibcxx_cv_system_error6" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENOSR 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENOSTR" >&5
+-$as_echo_n "checking for ENOSTR... " >&6; }
+-if ${glibcxx_cv_system_error7+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENOSTR;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error7=yes
+-else
+-  glibcxx_cv_system_error7=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error7" >&5
+-$as_echo "$glibcxx_cv_system_error7" >&6; }
+-if test x"$glibcxx_cv_system_error7" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENOSTR 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ETIME" >&5
+-$as_echo_n "checking for ETIME... " >&6; }
+-if ${glibcxx_cv_system_error8+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ETIME;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error8=yes
+-else
+-  glibcxx_cv_system_error8=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error8" >&5
+-$as_echo "$glibcxx_cv_system_error8" >&6; }
+-if test x"$glibcxx_cv_system_error8" = x"yes"; then
+-
+-$as_echo "#define HAVE_ETIME 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EBADMSG" >&5
+-$as_echo_n "checking for EBADMSG... " >&6; }
+-if ${glibcxx_cv_system_error9+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EBADMSG;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error9=yes
+-else
+-  glibcxx_cv_system_error9=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error9" >&5
+-$as_echo "$glibcxx_cv_system_error9" >&6; }
+-if test x"$glibcxx_cv_system_error9" = x"yes"; then
+-
+-$as_echo "#define HAVE_EBADMSG 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ECANCELED" >&5
+-$as_echo_n "checking for ECANCELED... " >&6; }
+-if ${glibcxx_cv_system_error10+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ECANCELED;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error10=yes
+-else
+-  glibcxx_cv_system_error10=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error10" >&5
+-$as_echo "$glibcxx_cv_system_error10" >&6; }
+-if test x"$glibcxx_cv_system_error10" = x"yes"; then
+-
+-$as_echo "#define HAVE_ECANCELED 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EOVERFLOW" >&5
+-$as_echo_n "checking for EOVERFLOW... " >&6; }
+-if ${glibcxx_cv_system_error11+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EOVERFLOW;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error11=yes
+-else
+-  glibcxx_cv_system_error11=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error11" >&5
+-$as_echo "$glibcxx_cv_system_error11" >&6; }
+-if test x"$glibcxx_cv_system_error11" = x"yes"; then
+-
+-$as_echo "#define HAVE_EOVERFLOW 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENOTSUP" >&5
+-$as_echo_n "checking for ENOTSUP... " >&6; }
+-if ${glibcxx_cv_system_error12+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENOTSUP;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error12=yes
+-else
+-  glibcxx_cv_system_error12=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error12" >&5
+-$as_echo "$glibcxx_cv_system_error12" >&6; }
+-if test x"$glibcxx_cv_system_error12" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENOTSUP 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EIDRM" >&5
+-$as_echo_n "checking for EIDRM... " >&6; }
+-if ${glibcxx_cv_system_error13+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EIDRM;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error13=yes
+-else
+-  glibcxx_cv_system_error13=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error13" >&5
+-$as_echo "$glibcxx_cv_system_error13" >&6; }
+-if test x"$glibcxx_cv_system_error13" = x"yes"; then
+-
+-$as_echo "#define HAVE_EIDRM 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ETXTBSY" >&5
+-$as_echo_n "checking for ETXTBSY... " >&6; }
+-if ${glibcxx_cv_system_error14+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ETXTBSY;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error14=yes
+-else
+-  glibcxx_cv_system_error14=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error14" >&5
+-$as_echo "$glibcxx_cv_system_error14" >&6; }
+-if test x"$glibcxx_cv_system_error14" = x"yes"; then
+-
+-$as_echo "#define HAVE_ETXTBSY 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ECHILD" >&5
+-$as_echo_n "checking for ECHILD... " >&6; }
+-if ${glibcxx_cv_system_error15+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ECHILD;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error15=yes
+-else
+-  glibcxx_cv_system_error15=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error15" >&5
+-$as_echo "$glibcxx_cv_system_error15" >&6; }
+-if test x"$glibcxx_cv_system_error15" = x"yes"; then
+-
+-$as_echo "#define HAVE_ECHILD 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ENOSPC" >&5
+-$as_echo_n "checking for ENOSPC... " >&6; }
+-if ${glibcxx_cv_system_error16+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ENOSPC;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error16=yes
+-else
+-  glibcxx_cv_system_error16=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error16" >&5
+-$as_echo "$glibcxx_cv_system_error16" >&6; }
+-if test x"$glibcxx_cv_system_error16" = x"yes"; then
+-
+-$as_echo "#define HAVE_ENOSPC 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EPERM" >&5
+-$as_echo_n "checking for EPERM... " >&6; }
+-if ${glibcxx_cv_system_error17+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EPERM;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error17=yes
+-else
+-  glibcxx_cv_system_error17=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error17" >&5
+-$as_echo "$glibcxx_cv_system_error17" >&6; }
+-if test x"$glibcxx_cv_system_error17" = x"yes"; then
+-
+-$as_echo "#define HAVE_EPERM 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ETIMEDOUT" >&5
+-$as_echo_n "checking for ETIMEDOUT... " >&6; }
+-if ${glibcxx_cv_system_error18+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = ETIMEDOUT;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error18=yes
+-else
+-  glibcxx_cv_system_error18=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error18" >&5
+-$as_echo "$glibcxx_cv_system_error18" >&6; }
+-if test x"$glibcxx_cv_system_error18" = x"yes"; then
+-
+-$as_echo "#define HAVE_ETIMEDOUT 1" >>confdefs.h
+-
+-fi
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EWOULDBLOCK" >&5
+-$as_echo_n "checking for EWOULDBLOCK... " >&6; }
+-if ${glibcxx_cv_system_error19+:} false; then :
+-  $as_echo_n "(cached) " >&6
+-else
+-
+-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+-/* end confdefs.h.  */
+-#include <errno.h>
+-int
+-main ()
+-{
+-int i = EWOULDBLOCK;
+-  ;
+-  return 0;
+-}
+-_ACEOF
+-if ac_fn_c_try_compile "$LINENO"; then :
+-  glibcxx_cv_system_error19=yes
+-else
+-  glibcxx_cv_system_error19=no
+-fi
+-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+-
+-fi
+-
+-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $glibcxx_cv_system_error19" >&5
+-$as_echo "$glibcxx_cv_system_error19" >&6; }
+-if test x"$glibcxx_cv_system_error19" = x"yes"; then
+-
+-$as_echo "#define HAVE_EWOULDBLOCK 1" >>confdefs.h
+-
+-fi
+-
+-
+-
+-
+   # Test uchar.h.
+   for ac_header in uchar.h
+ do :
+diff --git a/libstdc++-v3/configure.ac b/libstdc++-v3/configure.ac
+index d8455e41574..8365a647ffa 100644
+--- a/libstdc++-v3/configure.ac
++++ b/libstdc++-v3/configure.ac
+@@ -183,7 +183,6 @@ GLIBCXX_ENABLE_VTABLE_VERIFY([no])
+ # Checks for operating systems support that doesn't require linking.
+ GLIBCXX_CHECK_STDIO_PROTO
+ GLIBCXX_CHECK_MATH11_PROTO
+-GLIBCXX_CHECK_SYSTEM_ERROR
+ GLIBCXX_CHECK_UCHAR_H
+ 
+ # For the streamoff typedef.
+diff --git a/libstdc++-v3/doc/html/faq.html b/libstdc++-v3/doc/html/faq.html
+index 18407225d7a..aa85d85db46 100644
+--- a/libstdc++-v3/doc/html/faq.html
++++ b/libstdc++-v3/doc/html/faq.html
+@@ -456,7 +456,7 @@
+          <code class="varname">CPLUSPLUS_CPP_SPEC</code> in
+          the gcc config headers for your target (and try changing them to
+          see what happens when building complicated code).  You can also run
+-         <span class="command"><strong>g++ -E -dM - &lt; /dev/null"</strong></span> to display
++         <span class="command"><strong>g++ -E -dM -x c++ /dev/null</strong></span> to display
+          a list of predefined macros for any particular installation.
+       </p><p>This has been discussed on the mailing lists
+          <a class="link" href="http://gcc.gnu.org/cgi-bin/htsearch?method=and&amp;format=builtin-long&amp;sort=score&amp;words=_XOPEN_SOURCE+Solaris" target="_top">quite a bit</a>.
+diff --git a/libstdc++-v3/doc/xml/faq.xml b/libstdc++-v3/doc/xml/faq.xml
+index cf8684e1cea..ef673ef4954 100644
+--- a/libstdc++-v3/doc/xml/faq.xml
++++ b/libstdc++-v3/doc/xml/faq.xml
+@@ -580,7 +580,7 @@
+          <varname>CPLUSPLUS_CPP_SPEC</varname> in
+          the gcc config headers for your target (and try changing them to
+          see what happens when building complicated code).  You can also run
+-         <command>g++ -E -dM - &lt; /dev/null"</command> to display
++         <command>g++ -E -dM -x c++ /dev/null</command> to display
+          a list of predefined macros for any particular installation.
+       </para>
+       <para>This has been discussed on the mailing lists
+diff --git a/libstdc++-v3/doc/xml/manual/intro.xml b/libstdc++-v3/doc/xml/manual/intro.xml
+index 518981559a0..c4c07e8c2f4 100644
+--- a/libstdc++-v3/doc/xml/manual/intro.xml
++++ b/libstdc++-v3/doc/xml/manual/intro.xml
+@@ -55,7 +55,7 @@
+     <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml" href="status_cxxtr24733.xml">
+     </xi:include>
+ 
+-    <!-- Section 01.7 : Status C++ IS 24733 -->
++    <!-- Section 01.7 : Status C++ IS 29124 -->
+     <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml" href="status_cxxis29124.xml">
+     </xi:include>
+   </section>
+diff --git a/libstdc++-v3/include/Makefile.am b/libstdc++-v3/include/Makefile.am
+index 7958f436242..cb4308365ca 100644
+--- a/libstdc++-v3/include/Makefile.am
++++ b/libstdc++-v3/include/Makefile.am
+@@ -1334,6 +1334,8 @@ ${host_builddir}/c++config.h: ${CONFIG_HEADER} \
+ 	    -e 's/PACKAGE/_GLIBCXX_PACKAGE/g' \
+ 	    -e 's/VERSION/_GLIBCXX_VERSION/g' \
+ 	    -e 's/WORDS_/_GLIBCXX_WORDS_/g' \
++	    -e 's/LT_OBJDIR/_GLIBCXX_LT_OBJDIR/g' \
++	    -e 's/STDC_HEADERS/_GLIBCXX_STDC_HEADERS/g' \
+ 	    -e 's/_DARWIN_USE_64_BIT_INODE/_GLIBCXX_DARWIN_USE_64_BIT_INODE/g' \
+ 	    -e 's/_FILE_OFFSET_BITS/_GLIBCXX_FILE_OFFSET_BITS/g' \
+ 	    -e 's/_LARGE_FILES/_GLIBCXX_LARGE_FILES/g' \
+diff --git a/libstdc++-v3/include/Makefile.in b/libstdc++-v3/include/Makefile.in
+index 631c77280b0..e18c771b16b 100644
+--- a/libstdc++-v3/include/Makefile.in
++++ b/libstdc++-v3/include/Makefile.in
+@@ -1816,6 +1816,8 @@ ${host_builddir}/c++config.h: ${CONFIG_HEADER} \
+ 	    -e 's/PACKAGE/_GLIBCXX_PACKAGE/g' \
+ 	    -e 's/VERSION/_GLIBCXX_VERSION/g' \
+ 	    -e 's/WORDS_/_GLIBCXX_WORDS_/g' \
++	    -e 's/LT_OBJDIR/_GLIBCXX_LT_OBJDIR/g' \
++	    -e 's/STDC_HEADERS/_GLIBCXX_STDC_HEADERS/g' \
+ 	    -e 's/_DARWIN_USE_64_BIT_INODE/_GLIBCXX_DARWIN_USE_64_BIT_INODE/g' \
+ 	    -e 's/_FILE_OFFSET_BITS/_GLIBCXX_FILE_OFFSET_BITS/g' \
+ 	    -e 's/_LARGE_FILES/_GLIBCXX_LARGE_FILES/g' \
+diff --git a/libstdc++-v3/include/bits/basic_string.h b/libstdc++-v3/include/bits/basic_string.h
+index 6c11135fa8c..5977b5cb7c0 100644
+--- a/libstdc++-v3/include/bits/basic_string.h
++++ b/libstdc++-v3/include/bits/basic_string.h
+@@ -528,7 +528,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+ #endif
+       basic_string(const _CharT* __s, const _Alloc& __a = _Alloc())
+       : _M_dataplus(_M_local_data(), __a)
+-      { _M_construct(__s, __s ? __s + traits_type::length(__s) : __s+npos); }
++      {
++	const _CharT* __end = __s ? __s + traits_type::length(__s)
++	  // We just need a non-null pointer here to get an exception:
++	  : reinterpret_cast<const _CharT*>(__alignof__(_CharT));
++	_M_construct(__s, __end, random_access_iterator_tag());
++      }
+ 
+       /**
+        *  @brief  Construct string as multiple characters.
 diff --git a/libstdc++-v3/include/bits/char_traits.h b/libstdc++-v3/include/bits/char_traits.h
 index 50bd25eb2df..4c7b84e357f 100644
 --- a/libstdc++-v3/include/bits/char_traits.h
@@ -11722,6 +12986,22 @@ index 50bd25eb2df..4c7b84e357f 100644
      __constant_char_array_p(const _CharT* __a, size_t __n)
      {
  #ifdef _GLIBCXX_HAVE_BUILTIN_IS_CONSTANT_EVALUATED
+diff --git a/libstdc++-v3/include/bits/forward_list.tcc b/libstdc++-v3/include/bits/forward_list.tcc
+index 088111e3330..b74c56a173e 100644
+--- a/libstdc++-v3/include/bits/forward_list.tcc
++++ b/libstdc++-v3/include/bits/forward_list.tcc
+@@ -372,6 +372,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
+       forward_list<_Tp, _Alloc>::
+       merge(forward_list&& __list, _Comp __comp)
+       {
++	// _GLIBCXX_RESOLVE_LIB_DEFECTS
++	// 3088. forward_list::merge behavior unclear when passed *this
++	if (std::__addressof(__list) == this)
++	  return;
++
+ 	_Node_base* __node = &this->_M_impl._M_head;
+ 	while (__node->_M_next && __list._M_impl._M_head._M_next)
+ 	  {
 diff --git a/libstdc++-v3/include/bits/fs_path.h b/libstdc++-v3/include/bits/fs_path.h
 index 13eb18c0652..f4fa9f3719d 100644
 --- a/libstdc++-v3/include/bits/fs_path.h
@@ -11744,10 +13024,32 @@ index 13eb18c0652..f4fa9f3719d 100644
    void
    advance(filesystem::path::iterator& __i, _Distance __n)
    { __path_iter_advance(__i, static_cast<ptrdiff_t>(__n)); }
+diff --git a/libstdc++-v3/include/bits/random.tcc b/libstdc++-v3/include/bits/random.tcc
+index 0a299baedc5..0f758671f69 100644
+--- a/libstdc++-v3/include/bits/random.tcc
++++ b/libstdc++-v3/include/bits/random.tcc
+@@ -1941,7 +1941,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       bool __saved_avail;
+       if (__is >> __mean >> __stddev >> __saved_avail)
+ 	{
+-	  if (__saved_avail && (__is >> __x._M_saved))
++	  if (!__saved_avail || (__is >> __x._M_saved))
+ 	    {
+ 	      __x._M_saved_available = __saved_avail;
+ 	      __x.param(typename normal_distribution<_RealType>::
 diff --git a/libstdc++-v3/include/bits/regex.h b/libstdc++-v3/include/bits/regex.h
-index 8fb89071461..9ca4cf8a815 100644
+index 8fb89071461..8fd13b2f071 100644
 --- a/libstdc++-v3/include/bits/regex.h
 +++ b/libstdc++-v3/include/bits/regex.h
+@@ -35,7 +35,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+   template<typename, typename>
+     class basic_regex;
+ 
+-  template<typename, typename>
++  template<typename _Bi_iter, typename _Alloc>
+     class match_results;
+ 
+ _GLIBCXX_END_NAMESPACE_CXX11
 @@ -1707,7 +1707,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
         */
        _GLIBCXX_NODISCARD bool
@@ -11766,6 +13068,15 @@ index 8fb89071461..9ca4cf8a815 100644
  
        /**
         * @brief Gets an iterator to one-past-the-end of the collection.
+@@ -1970,7 +1970,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+       _M_suffix()
+       { return _Base_type::operator[](_Base_type::size() - 1); }
+ 
+-      _Bi_iter _M_begin;
++      _Bi_iter _M_begin {};
+     };
+ 
+   typedef match_results<const char*>		 cmatch;
 diff --git a/libstdc++-v3/include/bits/shared_ptr.h b/libstdc++-v3/include/bits/shared_ptr.h
 index 281600b2901..4ddc52ae723 100644
 --- a/libstdc++-v3/include/bits/shared_ptr.h
@@ -11792,8 +13103,117 @@ index 0367c2d51a5..8af6e9fb11c 100644
        return __shared_ptr<_Tp, _Lp>(_Sp_alloc_shared_tag<_Alloc>{__a},
  				    std::forward<_Args>(__args)...);
      }
+diff --git a/libstdc++-v3/include/bits/vector.tcc b/libstdc++-v3/include/bits/vector.tcc
+index 497d9f72247..7d56c63134a 100644
+--- a/libstdc++-v3/include/bits/vector.tcc
++++ b/libstdc++-v3/include/bits/vector.tcc
+@@ -944,7 +944,13 @@ _GLIBCXX_BEGIN_NAMESPACE_CONTAINER
+ 	return false;
+       __try
+ 	{
+-	  _M_reallocate(size());
++	  if (size_type __n = size())
++	    _M_reallocate(__n);
++	  else
++	    {
++	      this->_M_deallocate();
++	      this->_M_impl._M_reset();
++	    }
+ 	  return true;
+ 	}
+       __catch(...)
+diff --git a/libstdc++-v3/include/c_global/cmath b/libstdc++-v3/include/c_global/cmath
+index 01e56a559fe..11f0706e203 100644
+--- a/libstdc++-v3/include/c_global/cmath
++++ b/libstdc++-v3/include/c_global/cmath
+@@ -1844,7 +1844,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+ #endif // _GLIBCXX_USE_C99_MATH_TR1
+ #endif // C++11
+ 
+-#if __cplusplus > 201402L
++#if __cplusplus >= 201703L
+ 
+   // [c.math.hypot3], three-dimensional hypotenuse
+ #define __cpp_lib_hypot 201603
+@@ -1877,10 +1877,10 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   { return std::__hypot3<long double>(__x, __y, __z); }
+ 
+   template<typename _Tp, typename _Up, typename _Vp>
+-    typename __gnu_cxx::__promote_3<_Tp, _Up, _Vp>::__type
++    __gnu_cxx::__promoted_t<_Tp, _Up, _Vp>
+     hypot(_Tp __x, _Up __y, _Vp __z)
+     {
+-      using __type = typename __gnu_cxx::__promote_3<_Tp, _Up, _Vp>::__type;
++      using __type = __gnu_cxx::__promoted_t<_Tp, _Up, _Vp>;
+       return std::__hypot3<__type>(__x, __y, __z);
+     }
+ #endif // C++17
+@@ -1918,6 +1918,14 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   constexpr long double
+   lerp(long double __a, long double __b, long double __t) noexcept
+   { return std::__lerp(__a, __b, __t); }
++
++  template<typename _Tp, typename _Up, typename _Vp>
++    constexpr __gnu_cxx::__promoted_t<_Tp, _Up, _Vp>
++    lerp(_Tp __x, _Up __y, _Vp __z) noexcept
++    {
++      using __type = __gnu_cxx::__promoted_t<_Tp, _Up, _Vp>;
++      return std::__lerp<__type>(__x, __y, __z);
++    }
+ #endif // C++20
+ 
+ _GLIBCXX_END_NAMESPACE_VERSION
+diff --git a/libstdc++-v3/include/experimental/bits/fs_fwd.h b/libstdc++-v3/include/experimental/bits/fs_fwd.h
+index 0da15ef4297..63cb6d15bec 100644
+--- a/libstdc++-v3/include/experimental/bits/fs_fwd.h
++++ b/libstdc++-v3/include/experimental/bits/fs_fwd.h
+@@ -263,7 +263,7 @@ _GLIBCXX_END_NAMESPACE_CXX11
+ 
+   bool copy_file(const path& __from, const path& __to, copy_options __option);
+   bool copy_file(const path& __from, const path& __to, copy_options __option,
+-		 error_code&) noexcept;
++		 error_code&);
+ 
+   path current_path();
+ 
+diff --git a/libstdc++-v3/include/experimental/bits/fs_ops.h b/libstdc++-v3/include/experimental/bits/fs_ops.h
+index c92cb56bd75..e41f023da18 100644
+--- a/libstdc++-v3/include/experimental/bits/fs_ops.h
++++ b/libstdc++-v3/include/experimental/bits/fs_ops.h
+@@ -74,19 +74,19 @@ inline namespace v1
+   { return copy_file(__from, __to, copy_options::none); }
+ 
+   inline bool
+-  copy_file(const path& __from, const path& __to, error_code& __ec) noexcept
++  copy_file(const path& __from, const path& __to, error_code& __ec)
+   { return copy_file(__from, __to, copy_options::none, __ec); }
+ 
+   bool copy_file(const path& __from, const path& __to, copy_options __option);
+   bool copy_file(const path& __from, const path& __to, copy_options __option,
+-		 error_code& __ec) noexcept;
++		 error_code& __ec);
+ 
+   void copy_symlink(const path& __existing_symlink, const path& __new_symlink);
+   void copy_symlink(const path& __existing_symlink, const path& __new_symlink,
+ 		    error_code& __ec) noexcept;
+ 
+   bool create_directories(const path& __p);
+-  bool create_directories(const path& __p, error_code& __ec) noexcept;
++  bool create_directories(const path& __p, error_code& __ec);
+ 
+   bool create_directory(const path& __p);
+   bool create_directory(const path& __p, error_code& __ec) noexcept;
+@@ -262,7 +262,7 @@ inline namespace v1
+   bool remove(const path& __p, error_code& __ec) noexcept;
+ 
+   uintmax_t remove_all(const path& __p);
+-  uintmax_t remove_all(const path& __p, error_code& __ec) noexcept;
++  uintmax_t remove_all(const path& __p, error_code& __ec);
+ 
+   void rename(const path& __from, const path& __to);
+   void rename(const path& __from, const path& __to, error_code& __ec) noexcept;
 diff --git a/libstdc++-v3/include/experimental/bits/fs_path.h b/libstdc++-v3/include/experimental/bits/fs_path.h
-index 33a415645d9..ba12b2f1734 100644
+index 33a415645d9..8bc6abf155f 100644
 --- a/libstdc++-v3/include/experimental/bits/fs_path.h
 +++ b/libstdc++-v3/include/experimental/bits/fs_path.h
 @@ -125,7 +125,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
@@ -11805,6 +13225,17 @@ index 33a415645d9..ba12b2f1734 100644
        { };
  
      template<typename _Tp1, typename _Tp2 = void,
+@@ -398,8 +398,8 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+     class iterator;
+     typedef iterator const_iterator;
+ 
+-    iterator begin() const;
+-    iterator end() const;
++    iterator begin() const noexcept;
++    iterator end() const noexcept;
+ 
+     // Create a basic_string by reading until a null character.
+     template<typename _InputIterator,
 diff --git a/libstdc++-v3/include/ext/bitmap_allocator.h b/libstdc++-v3/include/ext/bitmap_allocator.h
 index 532bad295b6..f2f0a38650b 100644
 --- a/libstdc++-v3/include/ext/bitmap_allocator.h
@@ -11818,6 +13249,45 @@ index 532bad295b6..f2f0a38650b 100644
  #include <new> // For operator new.
  #include <debug/debug.h> // _GLIBCXX_DEBUG_ASSERT
  #include <ext/concurrence.h>
+diff --git a/libstdc++-v3/include/ext/rope b/libstdc++-v3/include/ext/rope
+index 127d113c349..44ff974eba7 100644
+--- a/libstdc++-v3/include/ext/rope
++++ b/libstdc++-v3/include/ext/rope
+@@ -2383,7 +2383,7 @@ protected:
+       }
+ 
+       // Erase, single character
+-      void
++      _GLIBCXX_DEPRECATED void
+       erase(size_t __p)
+       { erase(__p, __p + 1); }
+ 
+diff --git a/libstdc++-v3/include/ext/type_traits.h b/libstdc++-v3/include/ext/type_traits.h
+index 97163911c29..49af656a7e8 100644
+--- a/libstdc++-v3/include/ext/type_traits.h
++++ b/libstdc++-v3/include/ext/type_traits.h
+@@ -163,7 +163,8 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+   { return true; }
+ #endif
+ 
+-  // For complex and cmath
++  // For arithmetic promotions in <complex> and <cmath>
++
+   template<typename _Tp, bool = std::__is_integer<_Tp>::__value>
+     struct __promote
+     { typedef double __type; };
+@@ -187,6 +188,11 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+     struct __promote<float>
+     { typedef float __type; };
+ 
++#if __cpp_fold_expressions
++  template<typename... _Tp>
++    using __promoted_t = decltype((typename __promote<_Tp>::__type(0) + ...));
++#endif
++
+   template<typename _Tp, typename _Up,
+            typename _Tp2 = typename __promote<_Tp>::__type,
+            typename _Up2 = typename __promote<_Up>::__type>
 diff --git a/libstdc++-v3/include/std/any b/libstdc++-v3/include/std/any
 index 91c4c1a7cf1..4957144342c 100644
 --- a/libstdc++-v3/include/std/any
@@ -12233,6 +13703,42 @@ index 5d8ac5ca0ba..b469f62a43d 100644
  
  # Use special rules for the C++17 sources so that the proper flags are passed.
  new_opa.lo: new_opa.cc
+diff --git a/libstdc++-v3/libsupc++/exception_ptr.h b/libstdc++-v3/libsupc++/exception_ptr.h
+index bd2178b3a1a..9d641103141 100644
+--- a/libstdc++-v3/libsupc++/exception_ptr.h
++++ b/libstdc++-v3/libsupc++/exception_ptr.h
+@@ -39,6 +39,10 @@
+ #include <typeinfo>
+ #include <new>
+ 
++#if __cplusplus >= 201103L
++# include <bits/move.h>
++#endif
++
+ extern "C++" {
+ 
+ namespace std 
+@@ -178,14 +182,16 @@ namespace std
+     exception_ptr 
+     make_exception_ptr(_Ex __ex) _GLIBCXX_USE_NOEXCEPT
+     {
+-#if __cpp_exceptions && __cpp_rtti && !_GLIBCXX_HAVE_CDTOR_CALLABI
++#if __cpp_exceptions && __cpp_rtti && !_GLIBCXX_HAVE_CDTOR_CALLABI \
++      && __cplusplus >= 201103L
++      using _Ex2 = typename remove_reference<_Ex>::type;
+       void* __e = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ex));
+       (void) __cxxabiv1::__cxa_init_primary_exception(
+-	  __e, const_cast<std::type_info*>(&typeid(__ex)),
+-	  __exception_ptr::__dest_thunk<_Ex>);
++	  __e, const_cast<std::type_info*>(&typeid(_Ex)),
++	  __exception_ptr::__dest_thunk<_Ex2>);
+       try
+ 	{
+-          ::new (__e) _Ex(__ex);
++	  ::new (__e) _Ex2(std::forward<_Ex>(__ex));
+           return exception_ptr(__e);
+ 	}
+       catch(...)
 diff --git a/libstdc++-v3/python/Makefile.am b/libstdc++-v3/python/Makefile.am
 index 44d0b3e7fb4..c3dd4e8b406 100644
 --- a/libstdc++-v3/python/Makefile.am
@@ -12507,9 +14013,27 @@ index 7825b94b0ad..45a32ac7579 100644
  @ENABLE_DUAL_ABI_TRUE@collate_members_cow.cc: ${glibcxx_srcdir}/$(CCOLLATE_CC)
  @ENABLE_DUAL_ABI_TRUE@	$(LN_S) ${glibcxx_srcdir}/$(CCOLLATE_CC) ./$@ || true
 diff --git a/libstdc++-v3/src/filesystem/ops.cc b/libstdc++-v3/src/filesystem/ops.cc
-index 4859b6e7fa6..ea2693622de 100644
+index 4859b6e7fa6..d920afeffb0 100644
 --- a/libstdc++-v3/src/filesystem/ops.cc
 +++ b/libstdc++-v3/src/filesystem/ops.cc
+@@ -366,7 +366,7 @@ fs::copy_file(const path& from, const path& to, copy_options option)
+ 
+ bool
+ fs::copy_file(const path& from, const path& to, copy_options options,
+-	      error_code& ec) noexcept
++	      error_code& ec)
+ {
+ #ifdef _GLIBCXX_HAVE_SYS_STAT_H
+   return do_copy_file(from.c_str(), to.c_str(), copy_file_options(options),
+@@ -418,7 +418,7 @@ fs::create_directories(const path& p)
+ }
+ 
+ bool
+-fs::create_directories(const path& p, error_code& ec) noexcept
++fs::create_directories(const path& p, error_code& ec)
+ {
+   if (p.empty())
+     {
 @@ -426,7 +426,7 @@ fs::create_directories(const path& p, error_code& ec) noexcept
        return false;
      }
@@ -12519,6 +14043,79 @@ index 4859b6e7fa6..ea2693622de 100644
    if (is_directory(st))
      return false;
    else if (ec && !status_known(st))
+@@ -1092,7 +1092,7 @@ fs::remove_all(const path& p)
+ }
+ 
+ std::uintmax_t
+-fs::remove_all(const path& p, error_code& ec) noexcept
++fs::remove_all(const path& p, error_code& ec)
+ {
+   const auto s = symlink_status(p, ec);
+   if (!status_known(s))
+diff --git a/libstdc++-v3/testsuite/17_intro/headers/c++1998/103650.cc b/libstdc++-v3/testsuite/17_intro/headers/c++1998/103650.cc
+new file mode 100644
+index 00000000000..356ffa310bc
+--- /dev/null
++++ b/libstdc++-v3/testsuite/17_intro/headers/c++1998/103650.cc
+@@ -0,0 +1,13 @@
++// { dg-do preprocess }
++
++// PR libstdc++/103650 libstdc++ headers defined LT_OBJDIR and STDC_HEADERS
++
++#define LT_OBJDIR 99
++#define STDC_HEADERS 99
++#include <utility>
++#if LT_OBJDIR != 99
++# error LT_OBJDIR redefined
++#endif
++#if STDC_HEADERS != 99
++# error STDC_HEADERS redefined
++#endif
+diff --git a/libstdc++-v3/testsuite/18_support/exception_ptr/103630.cc b/libstdc++-v3/testsuite/18_support/exception_ptr/103630.cc
+new file mode 100644
+index 00000000000..58fb2abe4d2
+--- /dev/null
++++ b/libstdc++-v3/testsuite/18_support/exception_ptr/103630.cc
+@@ -0,0 +1,39 @@
++// { dg-do run }
++
++#include <exception>
++#if __cplusplus < 201103L
++// std::make_exception_ptr is defined for C++98 as a GNU extension
++# include <bits/exception_ptr.h>
++#endif
++
++#include <testsuite_hooks.h>
++
++struct B
++{
++  virtual bool derived() const { return false; }
++};
++
++struct D : B
++{
++  virtual bool derived() const { return true; }
++};
++
++int main()
++{
++  D d;
++  std::exception_ptr p = std::make_exception_ptr<B&>(d); // PR libstdc++/103630
++#if __cpp_exceptions
++  try
++  {
++    std::rethrow_exception(p);
++  }
++  catch (const D& d)
++  {
++    VERIFY(d.derived()); // PR libstdc++/103630
++  }
++  catch (const B& b)
++  {
++    VERIFY(!b.derived());
++  }
++#endif
++}
 diff --git a/libstdc++-v3/testsuite/18_support/exception_ptr/96657.cc b/libstdc++-v3/testsuite/18_support/exception_ptr/96657.cc
 new file mode 100644
 index 00000000000..61572668385
@@ -12566,6 +14163,151 @@ index 00000000000..069b5e284e1
 +{
 +  test01();
 +}
+diff --git a/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/93151.cc b/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/93151.cc
+new file mode 100644
+index 00000000000..2d8efc76deb
+--- /dev/null
++++ b/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/93151.cc
+@@ -0,0 +1,23 @@
++// { dg-do compile { target c++11 } }
++
++// Copyright (C) 2020 Free Software Foundation, Inc.
++//
++// This file is part of the GNU ISO C++ Library.  This library is free
++// software; you can redistribute it and/or modify it under the
++// terms of the GNU General Public License as published by the
++// Free Software Foundation; either version 3, or (at your option)
++// any later version.
++
++// This library is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++
++// You should have received a copy of the GNU General Public License along
++// with this library; see the file COPYING3.  If not see
++// <http://www.gnu.org/licenses/>.
++
++// PR libstdc++/93151
++#undef _XOPEN_SOURCE
++#define _XOPEN_SOURCE 600
++#include <system_error>
+diff --git a/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/errc_std_c++0x.cc b/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/errc_std_c++0x.cc
+index c3e2f32a560..024d85ffebe 100644
+--- a/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/errc_std_c++0x.cc
++++ b/libstdc++-v3/testsuite/19_diagnostics/headers/system_error/errc_std_c++0x.cc
+@@ -34,7 +34,7 @@ void test01()
+   TEST_ERRC(bad_address);
+   TEST_ERRC(bad_file_descriptor);
+ 
+-#ifdef _GLIBCXX_HAVE_EBADMSG
++#ifdef EBADMSG
+   TEST_ERRC(bad_message);
+ #endif
+ 
+@@ -54,7 +54,7 @@ void test01()
+   TEST_ERRC(function_not_supported);
+   TEST_ERRC(host_unreachable);
+ 
+-#ifdef _GLIBCXX_HAVE_EIDRM
++#ifdef EIDRM
+   TEST_ERRC(identifier_removed);
+ #endif
+ 
+@@ -72,23 +72,23 @@ void test01()
+   TEST_ERRC(no_buffer_space);
+   TEST_ERRC(no_child_process);
+ 
+-#ifdef _GLIBCXX_HAVE_ENOLINK
++#ifdef ENOLINK
+   TEST_ERRC(no_link);
+ #endif
+ 
+   TEST_ERRC(no_lock_available);
+ 
+-#ifdef _GLIBCXX_HAVE_ENODATA
++#ifdef ENODATA
+   TEST_ERRC(no_message_available);
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ENOMSG
++#ifdef ENOMSG
+   TEST_ERRC(no_message);
+ #endif
+   TEST_ERRC(no_protocol_option);
+   TEST_ERRC(no_space_on_device);
+ 
+-#ifdef _GLIBCXX_HAVE_ENOSR
++#ifdef ENOSR
+   TEST_ERRC(no_stream_resources);
+ #endif
+ 
+@@ -99,15 +99,15 @@ void test01()
+   TEST_ERRC(not_a_directory);
+   TEST_ERRC(not_a_socket);
+ 
+-#ifdef _GLIBCXX_HAVE_ENOSTR
++#ifdef ENOSTR
+   TEST_ERRC(not_a_stream);
+ #endif
+ 
+-  TEST_ERRC(not_connected); 
++  TEST_ERRC(not_connected);
+   TEST_ERRC(not_enough_memory);
+   TEST_ERRC(not_supported);
+ 
+-#ifdef _GLIBCXX_HAVE_ECANCELED
++#ifdef ECANCELED
+   TEST_ERRC(operation_canceled);
+ #endif
+ 
+@@ -116,31 +116,31 @@ void test01()
+   TEST_ERRC(operation_not_supported);
+   TEST_ERRC(operation_would_block);
+ 
+-#ifdef _GLIBCXX_HAVE_EOWNERDEAD
++#ifdef EOWNERDEAD
+   TEST_ERRC(owner_dead);
+ #endif
+ 
+   TEST_ERRC(permission_denied);
+ 
+-#ifdef _GLIBCXX_HAVE_EPROTO
++#ifdef EPROTO
+   TEST_ERRC(protocol_error);
+ #endif
+ 
+   TEST_ERRC(protocol_not_supported);
+   TEST_ERRC(read_only_file_system);
+   TEST_ERRC(resource_deadlock_would_occur);
+-  TEST_ERRC(resource_unavailable_try_again); 
++  TEST_ERRC(resource_unavailable_try_again);
+   TEST_ERRC(result_out_of_range);
+ 
+-#ifdef _GLIBCXX_HAVE_ENOTRECOVERABLE
++#ifdef ENOTRECOVERABLE
+   TEST_ERRC(state_not_recoverable);
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ETIME
++#ifdef ETIME
+   TEST_ERRC(stream_timeout);
+ #endif
+ 
+-#ifdef _GLIBCXX_HAVE_ETXTBSY
++#ifdef ETXTBSY
+   TEST_ERRC(text_file_busy);
+ #endif
+ 
+@@ -150,7 +150,7 @@ void test01()
+   TEST_ERRC(too_many_links);
+   TEST_ERRC(too_many_symbolic_link_levels);
+ 
+-#ifdef _GLIBCXX_HAVE_EOVERFLOW
++#ifdef EOVERFLOW
+   TEST_ERRC(value_too_large);
+ #endif
+ 
 diff --git a/libstdc++-v3/testsuite/20_util/any/cons/101034.cc b/libstdc++-v3/testsuite/20_util/any/cons/101034.cc
 new file mode 100644
 index 00000000000..55f550a839e
@@ -12868,6 +14610,176 @@ index 00000000000..4866aa017ff
 +const std::true_type dat;
 +
 +int i = visit(nullptr, dat);
+diff --git a/libstdc++-v3/testsuite/23_containers/forward_list/operations/merge.cc b/libstdc++-v3/testsuite/23_containers/forward_list/operations/merge.cc
+new file mode 100644
+index 00000000000..0f6f520c33b
+--- /dev/null
++++ b/libstdc++-v3/testsuite/23_containers/forward_list/operations/merge.cc
+@@ -0,0 +1,48 @@
++// { dg-do run { target c++11 } }
++// C++11 23.3.4.6 Operations [forwardlist.ops]
++
++#include <forward_list>
++#include <testsuite_hooks.h>
++
++void
++test_stable()
++{
++  std::forward_list<double> a{1.5, 2.0, 3.5, 4.1};
++  std::forward_list<double> b{1.0, 2.5, 3.0, 4.3, 4.2, 5.0};
++
++  a.merge(b, std::less<int>{});
++
++  // result is sorted with respect to std::less<int>, so 1.0 and 1.5 are
++  // equivalent, and stability guarantee means the element from a comes first.
++  const std::forward_list<double> r { 1.5, 1.0,
++				      2.0, 2.5,
++				      3.5, 3.0,
++				      4.1, 4.3, 4.2,
++				      5.0};
++
++  VERIFY(a == r);
++}
++
++void
++test_lwg3088()
++{
++  // LWG 3088: forward_list::merge behavior unclear when passed *this
++  // PR libstdc++/103853
++  std::forward_list<int> c1{ 1, 2, 3 };
++  const std::forward_list<int> c2 = c1;
++  c1.merge(c1);
++  VERIFY( c1 == c2 );
++  c1.merge(c1, std::less<long>{});
++  VERIFY( c1 == c2 );
++  c1.merge(std::move(c1));
++  VERIFY( c1 == c2 );
++  c1.merge(std::move(c1), std::less<long>{});
++  VERIFY( c1 == c2 );
++}
++
++int
++main()
++{
++  test_stable();
++  test_lwg3088();
++}
+diff --git a/libstdc++-v3/testsuite/25_algorithms/is_permutation/2.cc b/libstdc++-v3/testsuite/25_algorithms/is_permutation/2.cc
+index 51058fee606..57f94f87524 100644
+--- a/libstdc++-v3/testsuite/25_algorithms/is_permutation/2.cc
++++ b/libstdc++-v3/testsuite/25_algorithms/is_permutation/2.cc
+@@ -20,6 +20,7 @@
+ // 25.2.12 [alg.is_permutation] Is permutation
+ 
+ #include <algorithm>
++#include <iterator>
+ #include <functional>
+ #include <testsuite_hooks.h>
+ 
+diff --git a/libstdc++-v3/testsuite/26_numerics/lerp.cc b/libstdc++-v3/testsuite/26_numerics/lerp/1.cc
+similarity index 100%
+rename from libstdc++-v3/testsuite/26_numerics/lerp.cc
+rename to libstdc++-v3/testsuite/26_numerics/lerp/1.cc
+diff --git a/libstdc++-v3/testsuite/26_numerics/lerp/constexpr.cc b/libstdc++-v3/testsuite/26_numerics/lerp/constexpr.cc
+new file mode 100644
+index 00000000000..f1ab42b5a42
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/lerp/constexpr.cc
+@@ -0,0 +1,21 @@
++// { dg-options "-std=gnu++2a" }
++// { dg-do compile { target c++2a } }
++
++#include <cmath>
++
++// Fails template argument deduction unless both arguments are the same type.
++template<typename T>
++constexpr bool
++eq(T result, T expected) { return result == expected; }
++
++static_assert( eq( std::lerp(-10.0, 10.0, 0.25), -5.0 ) );
++static_assert( eq( std::lerp(2.0f, 2.0f, 200.0f), 2.0f ) );
++static_assert( eq( std::lerp(2.0L, 4.0L, 200.0L), 402.0L ) );
++// at least one type is long double, so result is long double
++static_assert( eq( std::lerp(2.0L, 4.0f, -20.0), -38.0L ) );
++// at least one type is double, so result is double:
++static_assert( eq( std::lerp(-8.0f, 10.0, 0.5f), 1.0 ) );
++// int promotes to double, so result is double
++static_assert( eq( std::lerp(0, 1, 0), 0.0 ) );
++// int promotes to double, so result is double
++static_assert( eq( std::lerp(2.0f, -10.0f, 1), -10.0 ) );
+diff --git a/libstdc++-v3/testsuite/26_numerics/lerp/version.cc b/libstdc++-v3/testsuite/26_numerics/lerp/version.cc
+new file mode 100644
+index 00000000000..3ccb032bc67
+--- /dev/null
++++ b/libstdc++-v3/testsuite/26_numerics/lerp/version.cc
+@@ -0,0 +1,10 @@
++// { dg-options "-std=gnu++2a" }
++// { dg-do preprocess { target c++2a } }
++
++#include <version>
++
++#ifndef __cpp_lib_interpolate
++# error "Feature-test macro for midpoint and lerp missing in <version>"
++#elif __cpp_lib_interpolate != 201902L
++# error "Feature-test macro for midpoint and lerp has wrong value in <version>"
++#endif
+diff --git a/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc b/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc
+index a65d4004161..8cc70886bc7 100644
+--- a/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc
++++ b/libstdc++-v3/testsuite/26_numerics/random/normal_distribution/operators/serialize.cc
+@@ -25,6 +25,7 @@
+ 
+ #include <random>
+ #include <sstream>
++#include <testsuite_hooks.h>
+ 
+ void
+ test01()
+@@ -37,10 +38,43 @@ test01()
+   str << u;
+ 
+   str >> v;
++  VERIFY( u == v );
++}
++
++void
++test_pr105502()
++{
++  // PR libstdc++/105502 std::normal_distribution deserialization issue
++  std::stringstream str;
++  std::normal_distribution<> d{1, 2}, d2;
++  std::minstd_rand0 g;
++  str << d;
++  VERIFY( str );
++  str >> d2;
++  VERIFY( str );
++  VERIFY( d == d2 );
++
++  (void) d(g); // sets d._M_saved_available = true
++  str.str("");
++  str.clear();
++  str << d;
++  VERIFY( str );
++  str >> d2;
++  VERIFY( str );
++  VERIFY( d == d2 );
++
++  (void) d(g); // sets d._M_saved_available = false
++  str.str("");
++  str.clear();
++  str << d;
++  VERIFY( str );
++  str >> d2;
++  VERIFY( str );
++  VERIFY( d == d2 );
+ }
+ 
+ int main()
+ {
+   test01();
+-  return 0;
++  test_pr105502();
+ }
 diff --git a/libstdc++-v3/testsuite/26_numerics/reduce/95833.cc b/libstdc++-v3/testsuite/26_numerics/reduce/95833.cc
 new file mode 100644
 index 00000000000..cf4644f53c9
@@ -13139,6 +15051,30 @@ index 00000000000..eb8473e600e
 +  volatile bool b = true;
 +  f(b);
 +}
+diff --git a/libstdc++-v3/testsuite/27_io/types/1.cc b/libstdc++-v3/testsuite/27_io/types/1.cc
+index 19a42360b11..109cca55780 100644
+--- a/libstdc++-v3/testsuite/27_io/types/1.cc
++++ b/libstdc++-v3/testsuite/27_io/types/1.cc
+@@ -27,14 +27,14 @@
+ // Annex D, deprecated.
+ void test01()
+ {
+-  typedef std::ios_base::streampos streampos_type; // { dg-warning "is deprecated: use 'std::streampos' instead" }
+-  typedef std::ios_base::streamoff streamoff_type; // { dg-warning "is deprecated: use 'std::streamoff' instead" }
++  typedef std::ios_base::streampos streampos_type; // { dg-warning "is deprecated: use 'std::streampos' instead" "" { target c++11 } }
++  typedef std::ios_base::streamoff streamoff_type; // { dg-warning "is deprecated: use 'std::streamoff' instead" "" { target c++11 } }
+ }
+ 
+ // Annex D, deprecated.
+ void test02()
+ {
+-  typedef std::ios_base::io_state iostate_type; // { dg-warning "is deprecated: use 'std::iostate' instead" }
+-  typedef std::ios_base::open_mode openmode_type; // { dg-warning "is deprecated: use 'std::openmode' instead" }
+-  typedef std::ios_base::seek_dir seekdir_type; // { dg-warning "is deprecated: use 'std::seekdir' instead" }
++  typedef std::ios_base::io_state iostate_type; // { dg-warning "is deprecated: use 'std::iostate' instead" "" { target c++11 } }
++  typedef std::ios_base::open_mode openmode_type; // { dg-warning "is deprecated: use 'std::openmode' instead" "" { target c++11 } }
++  typedef std::ios_base::seek_dir seekdir_type; // { dg-warning "is deprecated: use 'std::seekdir' instead" "" { target c++11 } }
+ }
 diff --git a/libstdc++-v3/testsuite/28_regex/match_results/102667.cc b/libstdc++-v3/testsuite/28_regex/match_results/102667.cc
 new file mode 100644
 index 00000000000..9e38c9edaa4
