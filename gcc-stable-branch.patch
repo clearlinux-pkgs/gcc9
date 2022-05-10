@@ -15,17 +15,19 @@ Christophe Lyon (1):
 Diane Meirowitz (1):
       doc: improve -fsanitize=undefined description
 
-Eric Botcazou (5):
+Eric Botcazou (6):
       Fix internal error on pointer-to-pointer binding in LTO mode
       Fix inaccurate bounds in debug info for vector array types
       Fix PR rtl-optimization/102306
       Update documentation of %X spec
       Properly enable -freorder-blocks-and-partition on 64-bit Windows
+      Fix internal error with vectorization on SPARC
 
 Fritz Reese (1):
       fortran: Fix conv of UNION constructors [PR105310]
 
-GCC Administrator (334):
+GCC Administrator (335):
+      Daily bump.
       Daily bump.
       Daily bump.
       Daily bump.
@@ -4505,6 +4507,22 @@ index d7a4ae64c36..788175e1543 100644
  #define vec_load_len_r(X,L)				\
    (__vector unsigned char)__builtin_s390_vlrlr((L),(X))
  #define vec_store_len_r(X,Y,L) \
+diff --git a/gcc/config/sparc/sparc.c b/gcc/config/sparc/sparc.c
+index 0553dc501e6..6f7f3cba773 100644
+--- a/gcc/config/sparc/sparc.c
++++ b/gcc/config/sparc/sparc.c
+@@ -12941,9 +12941,9 @@ sparc_vectorize_vec_perm_const (machine_mode vmode, rtx target, rtx op0,
+   if (!TARGET_VIS2)
+     return false;
+ 
+-  /* All permutes are supported.  */
++  /* All 8-byte permutes are supported.  */
+   if (!target)
+-    return true;
++    return GET_MODE_SIZE (vmode) == 8;
+ 
+   /* Force target-independent code to convert constant permutations on other
+      modes down to V8QI.  Rely on this to avoid the complexity of the byte
 diff --git a/gcc/configure b/gcc/configure
 index 9e4c8693966..8c25a18fa08 100755
 --- a/gcc/configure
@@ -5671,10 +5689,27 @@ index a7eff832ff6..04087938276 100644
  	      tree ntype = TYPE_UNSIGNED (type)
  			   ? signed_type_for (type)
 diff --git a/gcc/fortran/ChangeLog b/gcc/fortran/ChangeLog
-index f1d66e38980..d7ac606e099 100644
+index f1d66e38980..3d24eb5f94a 100644
 --- a/gcc/fortran/ChangeLog
 +++ b/gcc/fortran/ChangeLog
-@@ -1,3 +1,288 @@
+@@ -1,3 +1,305 @@
++2022-05-09  Mikael Morin  <mikael@gcc.gnu.org>
++
++	Backported from master:
++	2022-04-24  Mikael Morin  <mikael@gcc.gnu.org>
++
++	PR fortran/104228
++	PR fortran/104570
++	* parse.c (parse_associate): Use a new distinct gfc_charlen if
++	the copied type has one whose length is not known to be
++	constant.
++	* resolve.c (resolve_assoc_var): Also create a new character
++	length for non-dummy associate targets.  Reset charlen if it’s
++	shared with the associate target regardless of the expression
++	type.  Don’t reinitialize charlen if it’s deferred.
++	* trans-stmt.c (trans_associate_var): Initialize character
++	length even if no temporary is used for the associate variable.
++
 +2022-04-21  Fritz Reese  <foreese@gcc.gnu.org>
 +
 +	Backported from master:
@@ -6789,10 +6824,21 @@ index b74495c58b2..ebdb56cbc6d 100644
    if (m_kind != GCC_JIT_FUNCTION_IMPORTED)
      {
 diff --git a/gcc/testsuite/ChangeLog b/gcc/testsuite/ChangeLog
-index 47eac19a1f6..e7fb4dbd763 100644
+index 47eac19a1f6..5b0b17db785 100644
 --- a/gcc/testsuite/ChangeLog
 +++ b/gcc/testsuite/ChangeLog
-@@ -1,3 +1,617 @@
+@@ -1,3 +1,628 @@
++2022-05-09  Mikael Morin  <mikael@gcc.gnu.org>
++
++	Backported from master:
++	2022-04-24  Mikael Morin  <mikael@gcc.gnu.org>
++
++	PR fortran/104228
++	PR fortran/104570
++	* gfortran.dg/asan_associate_58.f90: New test.
++	* gfortran.dg/asan_associate_59.f90: New test.
++	* gfortran.dg/associate_58.f90: New test.
++
 +2022-05-06  Richard Biener  <rguenther@suse.de>
 +
 +	Backported from master:
@@ -8575,6 +8621,43 @@ index 00000000000..03e8bc58db9
 +}
 +
 +/* { dg-final { scan-assembler-times "ldub" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/sparc/20220510-1.c b/gcc/testsuite/gcc.target/sparc/20220510-1.c
+new file mode 100644
+index 00000000000..f321cab8482
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/sparc/20220510-1.c
+@@ -0,0 +1,31 @@
++/* PR target/105292 */
++/* Reported by Koakuma <koachan+gccbugs@protonmail.com> */
++
++/* { dg-do compile } */
++/* { dg-options "-O3 -mvis2" } */
++
++extern void get_vbytes_v2 (unsigned);
++
++typedef struct {
++  unsigned ctt_info;
++  unsigned ctt_size;
++} ctf_type_t;
++
++typedef struct {
++  unsigned short cts_offset;
++  unsigned short cts_bits;
++} ctf_slice_t;
++
++void flip_types_len (ctf_type_t *t, int bsx1, int bsx2)
++{
++  const int kind = t->ctt_info;
++
++  get_vbytes_v2 (t->ctt_size);
++
++  if (kind == 4)
++    {
++      ctf_slice_t *s = (ctf_slice_t *)t;
++      s->cts_offset = __builtin_bswap16(bsx1);
++      s->cts_bits   = __builtin_bswap16(bsx2);
++    }
++}
 diff --git a/gcc/testsuite/gdc.dg/pr100882a.d b/gcc/testsuite/gdc.dg/pr100882a.d
 new file mode 100644
 index 00000000000..d94baff97ac
@@ -11431,10 +11514,185 @@ index 1917e29ced2..8c8aa75004e 100644
  
  void SetAlternateSignalStack() {
 diff --git a/libstdc++-v3/ChangeLog b/libstdc++-v3/ChangeLog
-index 4a898cd27d7..3cf67c719cf 100644
+index 4a898cd27d7..fe1bd8d2c79 100644
 --- a/libstdc++-v3/ChangeLog
 +++ b/libstdc++-v3/ChangeLog
-@@ -1,3 +1,284 @@
+@@ -1,3 +1,459 @@
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-05-06  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/105502
++	* include/bits/random.tcc
++	(operator>>(basic_istream<C,T>&, normal_distribution<R>&)):
++	Update state when __state_avail is false.
++	* testsuite/26_numerics/random/normal_distribution/operators/serialize.cc:
++	Check that deserialized object equals serialized one.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-11-26  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/27_io/types/1.cc: Add c++11 target selector to
++	warnings.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-02-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/experimental/bits/fs_ops.h (fs::copy_file): Remove
++	noexcept.
++	(fs::create_directories): Likewise.
++	(fs::remove_all): Likewise.
++	* src/filesystem/ops.cc (fs::copy_file): Remove noexcept.
++	(fs::create_directories): Likewise.
++	(fs::remove_all): Likewise.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-12-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103630
++	* libsupc++/exception_ptr.h (make_exception_ptr): Decay the
++	template parameter. Use typeid of the static type.
++	* testsuite/18_support/exception_ptr/103630.cc: New test.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-12-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93151
++	* config/os/djgpp/error_constants.h: Test POSIX errno macros
++	directly, instead of corresponding _GLIBCXX_HAVE_EXXX macros.
++	* config/os/mingw32-w64/error_constants.h: Likewise.
++	* config/os/mingw32/error_constants.h: Likewise.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2020-12-16  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/93151
++	* acinclude.m4 (GLIBCXX_CHECK_SYSTEM_ERROR): Remove.
++	* config.h.in: Regenerate.
++	* configure: Regenerate.
++	* configure.ac (GLIBCXX_CHECK_SYSTEM_ERROR): Do not use.
++	* config/os/generic/error_constants.h: Test POSIX errno macros
++	directly, instead of corresponding _GLIBCXX_HAVE_EXXX macros.
++	* testsuite/19_diagnostics/headers/system_error/errc_std_c++0x.cc:
++	Likewise.
++	* testsuite/19_diagnostics/headers/system_error/93151.cc: New
++	test.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-05-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/bits/basic_string.h (basic_string(const CharT*, const A&)):
++	Do not do arithmetic on null pointer.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-08-12  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/101870
++	* include/c_global/cmath (hypot): Use __promoted_t.
++	(lerp): Add new overload accepting any arithmetic types.
++	* include/ext/type_traits.h (__promoted_t): New alias template.
++	* testsuite/26_numerics/lerp.cc: Moved to...
++	* testsuite/26_numerics/lerp/1.cc: ...here.
++	* testsuite/26_numerics/lerp/constexpr.cc: New test.
++	* testsuite/26_numerics/lerp/version.cc: New test.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-10-01  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/100153
++	* include/bits/vector.tcc (vector<bool>::_M_shrink_to_fit()):
++	When size() is zero just deallocate and reset.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-10-01  Jonathan Wakely  <jwakely@redhat.com>
++
++	* testsuite/25_algorithms/is_permutation/2.cc: Include <iterator>.
++
++2022-05-09  Pavel I. Kryukov  <pavel.kryukov@phystech.edu>
++
++	Backported from master:
++	2022-01-06  Pavel I. Kryukov  <pavel.kryukov@phystech.edu>
++		    Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103853
++	* include/bits/forward_list.tcc (forward_list::merge): Check for
++	self-merge.
++	* testsuite/23_containers/forward_list/operations/merge.cc: New test.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2021-12-04  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103549
++	* include/bits/regex.h (match_results): Give names to template
++	parameters in first declaration.
++	(match_results::_M_begin): Add default member-initializer.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-01-05  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103877
++	* doc/xml/faq.xml: Add '-x c++' to preprocessor command.
++	* doc/html/faq.html: Regenerate.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-01-17  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/103650
++	* include/Makefile.am: Rename LT_OBJDIR and STDC_HEADERS.
++	* include/Makefile.in: Regenerate.
++	* testsuite/17_intro/headers/c++1998/103650.cc: New test.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-04-01  Jonathan Wakely  <jwakely@redhat.com>
++
++	* include/experimental/bits/fs_fwd.h (copy_file): Remove
++	incorrect noexcept from declaration.
++	* include/experimental/bits/fs_path.h (path::begin, path::end):
++	Add noexcept to declarations, to match definitions.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-04-14  Jonathan Wakely  <jwakely@redhat.com>
++
++	* doc/xml/manual/intro.xml: Fix comment.
++
++2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	Backported from master:
++	2022-05-09  Jonathan Wakely  <jwakely@redhat.com>
++
++	PR libstdc++/102048
++	* include/ext/rope (rope::erase(size_type)): Deprecate broken
++	function.
++
 +2021-11-23  Jonathan Wakely  <jwakely@redhat.com>
 +
 +	Backported from master:
