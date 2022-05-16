@@ -373,7 +373,7 @@ H.J. Lu (2):
       x86: Document -fcf-protection requires i686 or newer
       libsanitizer: Cherry-pick LLVM release/13.x commit d96358a28193
 
-Harald Anlauf (18):
+Harald Anlauf (21):
       Fortran - ICE in inline_matmul_assign
       Fortran - ICE in gfc_conv_expr_present initializing non-dummy class variable
       Fortran - fix handling of optional allocatable DT arguments with INTENT(OUT)
@@ -392,6 +392,9 @@ Harald Anlauf (18):
       Fortran: MOLD argument to TRANSFER intrinsic having storage size zero
       Fortran: fix simplification of TRANSFER for zero-sized character array result
       Fortran: reject simplifying TRANSFER for MOLD with storage size 0
+      Fortran: a RECURSIVE procedure cannot be an INTRINSIC
+      Fortran: improve error recovery on invalid array section
+      Fortran: fix error recovery on invalid array section
 
 Hongyu Wang (1):
       AVX512F: Add missing macro for mask(z?)_scalf_s[sd] [PR 105339]
@@ -9184,7 +9187,7 @@ index 00321da827e..51238e49fb1 100644
  	 to was one of the iso_c_binding named constants.  If so,
  	 and we're a parameter (constant), let it be iso_c.
 diff --git a/gcc/fortran/expr.c b/gcc/fortran/expr.c
-index 019245a3ab8..7b61488bfe9 100644
+index 019245a3ab8..35bd0bd6d3b 100644
 --- a/gcc/fortran/expr.c
 +++ b/gcc/fortran/expr.c
 @@ -1330,7 +1330,9 @@ find_array_element (gfc_constructor_base base, gfc_array_ref *ar,
@@ -9208,7 +9211,18 @@ index 019245a3ab8..7b61488bfe9 100644
        /* Check the bounds.  */
        if ((ar->as->upper[i]
  	   && mpz_cmp (e->value.integer,
-@@ -1718,8 +1717,8 @@ find_substring_ref (gfc_expr *p, gfc_expr **newp)
+@@ -1553,7 +1552,9 @@ find_array_section (gfc_expr *expr, gfc_ref *ref)
+ 	{
+ 	  if ((begin && begin->expr_type != EXPR_CONSTANT)
+ 	      || (finish && finish->expr_type != EXPR_CONSTANT)
+-	      || (step && step->expr_type != EXPR_CONSTANT))
++	      || (step && step->expr_type != EXPR_CONSTANT)
++	      || !lower
++	      || !upper)
+ 	    {
+ 	      t = false;
+ 	      goto cleanup;
+@@ -1718,8 +1719,8 @@ find_substring_ref (gfc_expr *p, gfc_expr **newp)
    *newp = gfc_copy_expr (p);
    free ((*newp)->value.character.string);
  
@@ -9219,7 +9233,7 @@ index 019245a3ab8..7b61488bfe9 100644
    if (end >= start)
      length = end - start + 1;
    else
-@@ -2144,10 +2143,9 @@ gfc_simplify_expr (gfc_expr *p, int type)
+@@ -2144,10 +2145,9 @@ gfc_simplify_expr (gfc_expr *p, int type)
  	  && gfc_intrinsic_func_interface (p, 1) == MATCH_ERROR)
  	return false;
  
@@ -9308,6 +9322,18 @@ index ff71b44b409..7b0428d27f2 100644
    ns = insert_block ();
  
    /* Assign the type of the zero expression for initializing the resulting
+diff --git a/gcc/fortran/intrinsic.c b/gcc/fortran/intrinsic.c
+index 3fbc8cad914..7d8504166d6 100644
+--- a/gcc/fortran/intrinsic.c
++++ b/gcc/fortran/intrinsic.c
+@@ -1105,6 +1105,7 @@ gfc_is_intrinsic (gfc_symbol* sym, int subroutine_flag, locus loc)
+ 
+   /* Check for attributes which prevent the symbol from being INTRINSIC.  */
+   if (sym->attr.external || sym->attr.contained
++      || sym->attr.recursive
+       || sym->attr.if_source == IFSRC_IFBODY)
+     return false;
+ 
 diff --git a/gcc/fortran/parse.c b/gcc/fortran/parse.c
 index 8426f3b2839..0e2f9f6c131 100644
 --- a/gcc/fortran/parse.c
@@ -17401,6 +17427,35 @@ index 00000000000..a6a2c4fdfd0
 +end
 +
 +! { dg-prune-output "must have constant shape" }
+diff --git a/gcc/testsuite/gfortran.dg/pr104849.f90 b/gcc/testsuite/gfortran.dg/pr104849.f90
+new file mode 100644
+index 00000000000..ae221b5ba10
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr104849.f90
+@@ -0,0 +1,9 @@
++! { dg-do compile }
++! PR fortran/104849 - ICE in find_array_section
++! Contributed by G.Steinmetz
++
++program p
++  integer, parameter :: a(:) = [1, 2] ! { dg-error "deferred shape" }
++  integer :: x(2)
++  data x /a(:)/                       ! { dg-error "Invalid" }
++end
+diff --git a/gcc/testsuite/gfortran.dg/pr105230.f90 b/gcc/testsuite/gfortran.dg/pr105230.f90
+new file mode 100644
+index 00000000000..6c6b42ef9bf
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/pr105230.f90
+@@ -0,0 +1,8 @@
++! { dg-do compile }
++! PR fortran/105230 - ICE in find_array_section
++! Contributed by G.Steinmetz
++
++program p
++  integer, parameter :: a(:) = [1, 2] ! { dg-error "deferred shape" }
++  print *, reshape([3, 4], a(1:2))
++end
 diff --git a/gcc/testsuite/gfortran.dg/pr82314.f90 b/gcc/testsuite/gfortran.dg/pr82314.f90
 new file mode 100644
 index 00000000000..3a147e22711
@@ -17496,6 +17551,26 @@ index 00000000000..cb7cf7040a9
 +if (x .ne. y) stop 2
 +
 +end program classStar_map
+diff --git a/gcc/testsuite/gfortran.dg/recursive_reference_3.f90 b/gcc/testsuite/gfortran.dg/recursive_reference_3.f90
+new file mode 100644
+index 00000000000..f4e2963aec2
+--- /dev/null
++++ b/gcc/testsuite/gfortran.dg/recursive_reference_3.f90
+@@ -0,0 +1,14 @@
++! { dg-do compile }
++! { dg-options "-std=f2018" }
++! PR fortran/105138 - recursive procedures and shadowing of intrinsics
++
++RECURSIVE FUNCTION LOG_GAMMA(Z) RESULT(RES)
++  COMPLEX, INTENT(IN) :: Z
++  COMPLEX             :: RES
++  RES = LOG_GAMMA(Z)
++END FUNCTION LOG_GAMMA
++
++recursive subroutine date_and_time (z)
++  real :: z
++  if (z > 0) call date_and_time (z-1)
++end subroutine date_and_time
 diff --git a/gcc/testsuite/gfortran.dg/shape_11.f90 b/gcc/testsuite/gfortran.dg/shape_11.f90
 new file mode 100644
 index 00000000000..127d221e710
