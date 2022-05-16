@@ -534,7 +534,7 @@ John David Anglin (5):
       Don't use 'G' constraint in integer move patterns
       Fix warnings building linux-atomic.c and fptr.c on hppa64-linux
 
-Jonathan Wakely (44):
+Jonathan Wakely (45):
       libstdc++: Fix find_type helper to work consistently
       libstdc++: Simplify constexpr checks in std::char_traits [PR 91488]
       libstdc++: Reject std::make_shared<T[]> [PR 99006]
@@ -579,6 +579,7 @@ Jonathan Wakely (44):
       libstdc++: Remove un-implementable noexcept from Filesystem TS operations
       libstdc++: Fix test that fails for C++98 mode
       libstdc++: Fix deserialization for std::normal_distribution [PR105502]
+      libstdc++: Fix status docs for <bit> support
 
 Kewen Lin (3):
       ipa-fnsummary: Remove inconsistent bp_pack_value
@@ -662,6 +663,9 @@ Richard Earnshaw (5):
 Richard Sandiford (2):
       aarch64: Add -mtune=neoverse-512tvb
       libgcc: Add missing runtime exception notices
+
+Sebastian Pop (1):
+      [AArch64] add barriers to ool __sync builtins
 
 Segher Boessenkool (1):
       combine: Don't create REG_UNUSED notes if the reg already died (PR99927)
@@ -4389,6 +4393,19 @@ index 3cd7db88b77..fb2faa44e06 100644
  
  /* Qualcomm ('Q') cores. */
  AARCH64_CORE("saphira",     saphira,    saphira,    8_4A,  AARCH64_FL_FOR_ARCH8_4 | AARCH64_FL_CRYPTO | AARCH64_FL_RCPC, saphira,   0x51, 0xC01, -1)
+diff --git a/gcc/config/aarch64/aarch64-protos.h b/gcc/config/aarch64/aarch64-protos.h
+index c9e5d586a51..12a47ebff55 100644
+--- a/gcc/config/aarch64/aarch64-protos.h
++++ b/gcc/config/aarch64/aarch64-protos.h
+@@ -647,7 +647,7 @@ bool aarch64_high_bits_all_ones_p (HOST_WIDE_INT);
+ 
+ struct atomic_ool_names
+ {
+-    const char *str[5][4];
++    const char *str[5][5];
+ };
+ 
+ rtx aarch64_atomic_ool_func(machine_mode mode, rtx model_rtx,
 diff --git a/gcc/config/aarch64/aarch64-tune.md b/gcc/config/aarch64/aarch64-tune.md
 index 0a73e105e08..e4ae7d9b16b 100644
 --- a/gcc/config/aarch64/aarch64-tune.md
@@ -4400,6 +4417,49 @@ index 0a73e105e08..e4ae7d9b16b 100644
 -	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
 +	"cortexa35,cortexa53,cortexa57,cortexa72,cortexa73,thunderx,thunderxt88p1,thunderxt88,octeontx,octeontxt81,octeontxt83,thunderxt81,thunderxt83,emag,xgene1,falkor,qdf24xx,exynosm1,phecda,thunderx2t99p1,vulcan,thunderx2t99,cortexa55,cortexa75,cortexa76,ares,neoversen1,neoversee1,a64fx,tsv110,zeus,neoversev1,neoverse512tvb,saphira,neoversen2,cortexa57cortexa53,cortexa72cortexa53,cortexa73cortexa35,cortexa73cortexa53,cortexa75cortexa55,cortexa76cortexa55"
  	(const (symbol_ref "((enum attr_tune) aarch64_tune)")))
+diff --git a/gcc/config/aarch64/aarch64.c b/gcc/config/aarch64/aarch64.c
+index e96a350ed5b..a35dceab9fc 100644
+--- a/gcc/config/aarch64/aarch64.c
++++ b/gcc/config/aarch64/aarch64.c
+@@ -15764,14 +15764,14 @@ aarch64_emit_unlikely_jump (rtx insn)
+   add_reg_br_prob_note (jump, profile_probability::very_unlikely ());
+ }
+ 
+-/* We store the names of the various atomic helpers in a 5x4 array.
++/* We store the names of the various atomic helpers in a 5x5 array.
+    Return the libcall function given MODE, MODEL and NAMES.  */
+ 
+ rtx
+ aarch64_atomic_ool_func(machine_mode mode, rtx model_rtx,
+ 			const atomic_ool_names *names)
+ {
+-  memmodel model = memmodel_base (INTVAL (model_rtx));
++  memmodel model = memmodel_from_int (INTVAL (model_rtx));
+   int mode_idx, model_idx;
+ 
+   switch (mode)
+@@ -15811,6 +15811,11 @@ aarch64_atomic_ool_func(machine_mode mode, rtx model_rtx,
+     case MEMMODEL_SEQ_CST:
+       model_idx = 3;
+       break;
++    case MEMMODEL_SYNC_ACQUIRE:
++    case MEMMODEL_SYNC_RELEASE:
++    case MEMMODEL_SYNC_SEQ_CST:
++      model_idx = 4;
++      break;
+     default:
+       gcc_unreachable ();
+     }
+@@ -15823,7 +15828,8 @@ aarch64_atomic_ool_func(machine_mode mode, rtx model_rtx,
+   { "__aarch64_" #B #N "_relax", \
+     "__aarch64_" #B #N "_acq", \
+     "__aarch64_" #B #N "_rel", \
+-    "__aarch64_" #B #N "_acq_rel" }
++    "__aarch64_" #B #N "_acq_rel", \
++    "__aarch64_" #B #N "_sync" }
+ 
+ #define DEF4(B)  DEF0(B, 1), DEF0(B, 2), DEF0(B, 4), DEF0(B, 8), \
+ 		 { NULL, NULL, NULL, NULL }
 diff --git a/gcc/config/aarch64/arm_acle.h b/gcc/config/aarch64/arm_acle.h
 index 56147352c23..8c622a3985b 100644
 --- a/gcc/config/aarch64/arm_acle.h
@@ -15082,6 +15142,65 @@ index 00000000000..5171c9b4577
 +    __builtin_abort ();
 +  return 0;
 +}
+diff --git a/gcc/testsuite/gcc.target/aarch64/sync-comp-swap-ool.c b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap-ool.c
+new file mode 100644
+index 00000000000..372f4aa8746
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sync-comp-swap-ool.c
+@@ -0,0 +1,6 @@
++/* { dg-do compile } */
++/* { dg-options "-march=armv8-a+nolse -O2 -fno-ipa-icf -moutline-atomics" } */
++
++#include "sync-comp-swap.x"
++
++/* { dg-final { scan-assembler-times "bl.*__aarch64_cas4_sync" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/sync-op-acquire-ool.c b/gcc/testsuite/gcc.target/aarch64/sync-op-acquire-ool.c
+new file mode 100644
+index 00000000000..95d9c56b5e1
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sync-op-acquire-ool.c
+@@ -0,0 +1,6 @@
++/* { dg-do compile } */
++/* { dg-options "-march=armv8-a+nolse -O2 -moutline-atomics" } */
++
++#include "sync-op-acquire.x"
++
++/* { dg-final { scan-assembler-times "bl.*__aarch64_swp4_sync" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/sync-op-full-ool.c b/gcc/testsuite/gcc.target/aarch64/sync-op-full-ool.c
+new file mode 100644
+index 00000000000..2f3881d9755
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/aarch64/sync-op-full-ool.c
+@@ -0,0 +1,9 @@
++/* { dg-do compile } */
++/* { dg-options "-march=armv8-a+nolse -O2 -moutline-atomics" } */
++
++#include "sync-op-full.x"
++
++/* { dg-final { scan-assembler-times "bl.*__aarch64_ldadd4_sync" 1 } } */
++/* { dg-final { scan-assembler-times "bl.*__aarch64_ldclr4_sync" 1 } } */
++/* { dg-final { scan-assembler-times "bl.*__aarch64_ldeor4_sync" 1 } } */
++/* { dg-final { scan-assembler-times "bl.*__aarch64_ldset4_sync" 1 } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/target_attr_20.c b/gcc/testsuite/gcc.target/aarch64/target_attr_20.c
+index 509fb039e84..c9454fc420b 100644
+--- a/gcc/testsuite/gcc.target/aarch64/target_attr_20.c
++++ b/gcc/testsuite/gcc.target/aarch64/target_attr_20.c
+@@ -24,4 +24,4 @@ bar (void)
+     }
+ }
+ 
+-/* { dg-final { scan-assembler-not "bl.*__aarch64_cas2_acq_rel" } } */
++/* { dg-final { scan-assembler-not "bl.*__aarch64_cas2_sync" } } */
+diff --git a/gcc/testsuite/gcc.target/aarch64/target_attr_21.c b/gcc/testsuite/gcc.target/aarch64/target_attr_21.c
+index acace4c8f2a..b8e56223b02 100644
+--- a/gcc/testsuite/gcc.target/aarch64/target_attr_21.c
++++ b/gcc/testsuite/gcc.target/aarch64/target_attr_21.c
+@@ -24,4 +24,4 @@ bar (void)
+     }
+ }
+ 
+-/* { dg-final { scan-assembler-times "bl.*__aarch64_cas2_acq_rel" 1 } } */
++/* { dg-final { scan-assembler-times "bl.*__aarch64_cas2_sync" 1 } } */
 diff --git a/gcc/testsuite/gcc.target/arm/attr-neon.c b/gcc/testsuite/gcc.target/arm/attr-neon.c
 index 225fb8dc3db..e8e3086247d 100644
 --- a/gcc/testsuite/gcc.target/arm/attr-neon.c
@@ -18591,6 +18710,136 @@ index bdbf77a3e62..0486a0135e8 100644
  	extra_parts="crtbegin.o crtbeginS.o crtbeginT.o crtend.o crtendS.o"
  	;;
  hppa*-*-linux*)
+diff --git a/libgcc/config/aarch64/lse.S b/libgcc/config/aarch64/lse.S
+index e3ae5191103..720281f149e 100644
+--- a/libgcc/config/aarch64/lse.S
++++ b/libgcc/config/aarch64/lse.S
+@@ -87,24 +87,44 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ # define L
+ # define M     0x000000
+ # define N     0x000000
++# define BARRIER
+ #elif MODEL == 2
+ # define SUFF  _acq
+ # define A     a
+ # define L
+ # define M     0x400000
+ # define N     0x800000
++# define BARRIER
+ #elif MODEL == 3
+ # define SUFF  _rel
+ # define A
+ # define L     l
+ # define M     0x008000
+ # define N     0x400000
++# define BARRIER
+ #elif MODEL == 4
+ # define SUFF  _acq_rel
+ # define A     a
+ # define L     l
+ # define M     0x408000
+ # define N     0xc00000
++# define BARRIER
++#elif MODEL == 5
++# define SUFF  _sync
++#ifdef L_swp
++/* swp has _acq semantics.  */
++#  define A    a
++#  define L
++#  define M    0x400000
++#  define N    0x800000
++#else
++/* All other _sync functions have _seq semantics.  */
++#  define A    a
++#  define L    l
++#  define M    0x408000
++#  define N    0xc00000
++#endif
++# define BARRIER dmb		ish
+ #else
+ # error
+ #endif
+@@ -127,7 +147,12 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ #endif
+ 
+ #define NAME(BASE)		glue4(__aarch64_, BASE, SIZE, SUFF)
+-#define LDXR			glue4(ld, A, xr, S)
++#if MODEL == 5
++/* Drop A for _sync functions.  */
++# define LDXR			glue3(ld, xr, S)
++#else
++# define LDXR			glue4(ld, A, xr, S)
++#endif
+ #define STXR			glue4(st, L, xr, S)
+ 
+ /* Temporary registers used.  Other than these, only the return value
+@@ -183,10 +208,16 @@ STARTFN	NAME(cas)
+ 	bne		1f
+ 	STXR		w(tmp1), s(1), [x2]
+ 	cbnz		w(tmp1), 0b
+-1:	ret
++1:	BARRIER
++	ret
+ 
+ #else
+-#define LDXP	glue3(ld, A, xp)
++#if MODEL == 5
++/* Drop A for _sync functions.  */
++# define LDXP	glue2(ld, xp)
++#else
++# define LDXP	glue3(ld, A, xp)
++#endif
+ #define STXP	glue3(st, L, xp)
+ #ifdef HAVE_AS_LSE
+ # define CASP	glue3(casp, A, L)	x0, x1, x2, x3, [x4]
+@@ -205,7 +236,8 @@ STARTFN	NAME(cas)
+ 	bne		1f
+ 	STXP		w(tmp2), x2, x3, [x4]
+ 	cbnz		w(tmp2), 0b
+-1:	ret
++1:	BARRIER
++	ret
+ 
+ #endif
+ 
+@@ -229,6 +261,7 @@ STARTFN	NAME(swp)
+ 0:	LDXR		s(0), [x1]
+ 	STXR		w(tmp1), s(tmp0), [x1]
+ 	cbnz		w(tmp1), 0b
++	BARRIER
+ 	ret
+ 
+ ENDFN	NAME(swp)
+@@ -273,6 +306,7 @@ STARTFN	NAME(LDNM)
+ 	OP		s(tmp1), s(0), s(tmp0)
+ 	STXR		w(tmp2), s(tmp1), [x1]
+ 	cbnz		w(tmp2), 0b
++	BARRIER
+ 	ret
+ 
+ ENDFN	NAME(LDNM)
+diff --git a/libgcc/config/aarch64/t-lse b/libgcc/config/aarch64/t-lse
+index fe3868dacbf..af9b68257fc 100644
+--- a/libgcc/config/aarch64/t-lse
++++ b/libgcc/config/aarch64/t-lse
+@@ -18,13 +18,13 @@
+ # along with GCC; see the file COPYING3.  If not see
+ # <http://www.gnu.org/licenses/>.
+ 
+-# Compare-and-swap has 5 sizes and 4 memory models.
++# Compare-and-swap has 5 sizes and 5 memory models.
+ S0 := $(foreach s, 1 2 4 8 16, $(addsuffix _$(s), cas))
+-O0 := $(foreach m, 1 2 3 4, $(addsuffix _$(m)$(objext), $(S0)))
++O0 := $(foreach m, 1 2 3 4 5, $(addsuffix _$(m)$(objext), $(S0)))
+ 
+-# Swap, Load-and-operate have 4 sizes and 4 memory models
++# Swap, Load-and-operate have 4 sizes and 5 memory models
+ S1 := $(foreach s, 1 2 4 8, $(addsuffix _$(s), swp ldadd ldclr ldeor ldset))
+-O1 := $(foreach m, 1 2 3 4, $(addsuffix _$(m)$(objext), $(S1)))
++O1 := $(foreach m, 1 2 3 4 5, $(addsuffix _$(m)$(objext), $(S1)))
+ 
+ LSE_OBJS := $(O0) $(O1)
+ 
 diff --git a/libgcc/config/aarch64/value-unwind.h b/libgcc/config/aarch64/value-unwind.h
 index 8e99d8e12ae..fb40f639fa9 100644
 --- a/libgcc/config/aarch64/value-unwind.h
@@ -22137,6 +22386,31 @@ index 18407225d7a..aa85d85db46 100644
           a list of predefined macros for any particular installation.
        </p><p>This has been discussed on the mailing lists
           <a class="link" href="http://gcc.gnu.org/cgi-bin/htsearch?method=and&amp;format=builtin-long&amp;sort=score&amp;words=_XOPEN_SOURCE+Solaris" target="_top">quite a bit</a>.
+diff --git a/libstdc++-v3/doc/html/manual/status.html b/libstdc++-v3/doc/html/manual/status.html
+index e303f570e87..8f754758270 100644
+--- a/libstdc++-v3/doc/html/manual/status.html
++++ b/libstdc++-v3/doc/html/manual/status.html
+@@ -1025,7 +1025,10 @@ Feature-testing recommendations for C++</a>.
+         <a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0463r1.html" target="_top">
+ 	P0463R1
+ 	</a>
+-      </td><td align="center"> 8.1 </td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">  Extending <code class="code">make_shared</code> to Support Arrays </td><td align="left">
++      </td><td align="center"> 8.1 </td><td align="left"> </td></tr><tr><td align="left"> Bit operations </td><td align="left">
++        <a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0553r4.html" target="_top">
++        P0553R4 </a>
++      </td><td align="center"> 9.1 </td><td align="left"> <code class="code">__cpp_lib_bitops &gt;= 201907L</code> (macro only defined since 9.4) </td></tr><tr bgcolor="#C8B0B0"><td align="left">  Extending <code class="code">make_shared</code> to Support Arrays </td><td align="left">
+         <a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0674r1.html" target="_top">
+ 	P0674R1
+ 	</a>
+@@ -1150,7 +1153,7 @@ Feature-testing recommendations for C++</a>.
+         <a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0556r3.html" target="_top">
+ 	P0556R3
+ 	</a>
+-      </td><td align="center"> 9.1 </td><td align="left"> </td></tr><tr bgcolor="#C8B0B0"><td align="left">  Reviewing Deprecated Facilities of C++17 for C++20 </td><td align="left">
++      </td><td align="center"> 9.1 </td><td align="left"> <code class="code">__cpp_lib_int_pow2 &gt;= 201806L</code> (macro only defined since 9.4) </td></tr><tr bgcolor="#C8B0B0"><td align="left">  Reviewing Deprecated Facilities of C++17 for C++20 </td><td align="left">
+         <a class="link" href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0619r4.html" target="_top">
+ 	P0619R4
+ 	</a>
 diff --git a/libstdc++-v3/doc/xml/faq.xml b/libstdc++-v3/doc/xml/faq.xml
 index cf8684e1cea..ef673ef4954 100644
 --- a/libstdc++-v3/doc/xml/faq.xml
@@ -22163,6 +22437,36 @@ index 518981559a0..c4c07e8c2f4 100644
      <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="xml" href="status_cxxis29124.xml">
      </xi:include>
    </section>
+diff --git a/libstdc++-v3/doc/xml/manual/status_cxx2020.xml b/libstdc++-v3/doc/xml/manual/status_cxx2020.xml
+index fc7fe0a3d9f..a4dfeb200f0 100644
+--- a/libstdc++-v3/doc/xml/manual/status_cxx2020.xml
++++ b/libstdc++-v3/doc/xml/manual/status_cxx2020.xml
+@@ -64,6 +64,16 @@ Feature-testing recommendations for C++</link>.
+       <entry />
+     </row>
+ 
++    <row>
++      <entry> Bit operations </entry>
++      <entry>
++        <link xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0553r4.html">
++        P0553R4 </link>
++      </entry>
++      <entry align="center"> 9.1 </entry>
++      <entry> <code>__cpp_lib_bitops &gt;= 201907L</code> (macro only defined since 9.4) </entry>
++    </row>
++
+     <row>
+       <?dbhtml bgcolor="#C8B0B0" ?>
+       <entry>  Extending <code>make_shared</code> to Support Arrays </entry>
+@@ -421,7 +431,7 @@ Feature-testing recommendations for C++</link>.
+ 	</link>
+       </entry>
+       <entry align="center"> 9.1 </entry>
+-      <entry />
++      <entry> <code>__cpp_lib_int_pow2 &gt;= 201806L</code> (macro only defined since 9.4) </entry>
+     </row>
+ 
+     <row>
 diff --git a/libstdc++-v3/include/Makefile.am b/libstdc++-v3/include/Makefile.am
 index 7958f436242..cb4308365ca 100644
 --- a/libstdc++-v3/include/Makefile.am
